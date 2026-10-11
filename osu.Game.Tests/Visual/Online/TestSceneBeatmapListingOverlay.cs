@@ -20,6 +20,9 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays;
 using osu.Game.Overlays.BeatmapListing;
 using osu.Game.Scoring;
+using osu.Game.Beatmaps;
+using osu.Game.Models;
+using osu.Game.Rulesets;
 using osuTK.Input;
 using APIUser = osu.Game.Online.API.Requests.Responses.APIUser;
 
@@ -216,6 +219,52 @@ namespace osu.Game.Tests.Visual.Online
             AddUntilStep("wait for loaded", () => this.ChildrenOfType<BeatmapCard>().Count() >= 99);
 
             AddAssert("beatmap not duplicated", () => overlay.ChildrenOfType<BeatmapCard>().Count(c => c.BeatmapSet.Equals(beatmapSet)) == 1);
+        }
+
+        [Test]
+        public void TestDownloadedPagination()
+        {
+            AddStep("populate local beatmaps", () =>
+            {
+                Realm.Write(r =>
+                {
+                    r.RemoveAll<BeatmapSetInfo>();
+                    for (int i = 1; i <= 120; i++)
+                    {
+                        var set = new BeatmapSetInfo
+                        {
+                            OnlineID = i,
+                            DateAdded = DateTimeOffset.UtcNow.AddMinutes(-i),
+                            Status = BeatmapOnlineStatus.Ranked,
+                        };
+                        var beatmap = new BeatmapInfo
+                        {
+                            OnlineID = 1000 + i,
+                            DifficultyName = $"Diff {i}",
+                            StarRating = 5.0,
+                            Metadata = new BeatmapMetadata
+                            {
+                                Title = $"Beatmap {i}",
+                                Artist = "Artist",
+                                Author = new RealmUser { Username = "Mapper" },
+                            },
+                            Difficulty = new BeatmapDifficulty(),
+                            Ruleset = r.Find<RulesetInfo>("osu") ?? new RulesetInfo("osu", "osu!", "osu", 0),
+                        };
+                        set.Beatmaps.Add(beatmap);
+                        r.Add(set);
+                    }
+                });
+            });
+
+            AddStep("select Downloaded filter", () => searchControl.Downloaded.Value = SearchDownloaded.Downloaded);
+            AddUntilStep("wait for page 0 loaded (50 cards)", () => this.ChildrenOfType<BeatmapCard>().Count() == 50);
+
+            AddStep("scroll to end", () => overlay.ChildrenOfType<OverlayScrollContainer>().Single().ScrollToEnd());
+            AddUntilStep("wait for page 1 loaded (100 cards)", () => this.ChildrenOfType<BeatmapCard>().Count() == 100);
+
+            AddStep("scroll to end again", () => overlay.ChildrenOfType<OverlayScrollContainer>().Single().ScrollToEnd());
+            AddUntilStep("wait for page 2 loaded (120 cards)", () => this.ChildrenOfType<BeatmapCard>().Count() == 120);
         }
 
         [Test]

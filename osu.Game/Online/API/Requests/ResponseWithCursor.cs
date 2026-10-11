@@ -11,5 +11,8 @@ namespace osu.Game.Online.API.Requests
     {
         [JsonProperty("cursor")]
         public Cursor Cursor;
+
+        [JsonProperty("cursor_string")]
+        public string CursorString;
     }
 }

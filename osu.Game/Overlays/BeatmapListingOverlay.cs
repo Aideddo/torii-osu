@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -379,9 +379,14 @@ namespace osu.Game.Overlays
 
             const int pagination_scroll_distance = 500;
 
+            bool isScrollable = ScrollFlow.ScrollableExtent > 0;
+            bool reachedEnd = isScrollable
+                ? ScrollFlow.IsScrolledToEnd(pagination_scroll_distance)
+                : (filterControl.HasMorePages && foundContent?.Any() == true);
+
             bool shouldShowMore = panelLoadTask?.IsCompleted != false
                                   && Time.Current - lastFetchDisplayedTime > time_between_fetches
-                                  && (ScrollFlow.ScrollableExtent > 0 && ScrollFlow.IsScrolledToEnd(pagination_scroll_distance));
+                                  && reachedEnd;
 
             if (shouldShowMore)
                 filterControl.FetchNextPage();

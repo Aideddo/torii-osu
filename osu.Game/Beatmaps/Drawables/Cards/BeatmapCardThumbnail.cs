@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
@@ -39,7 +39,7 @@ namespace osu.Game.Beatmaps.Drawables.Cards
         {
             InternalChildren = new Drawable[]
             {
-                new UpdateableOnlineBeatmapSetCover(BeatmapSetCoverType.List, keepLoaded ? 0 : 500, keepLoaded ? double.MaxValue : 1000)
+                new UpdateableOnlineBeatmapSetCover(BeatmapSetCoverType.List, keepLoaded ? 0 : 300, keepLoaded ? double.MaxValue : 1000)
                 {
                     RelativeSizeAxes = Axes.Both,
                     OnlineInfo = onlineInfo
