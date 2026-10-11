@@ -147,6 +147,7 @@ namespace osu.Game.Overlays
         {
             cancellationToken?.Cancel();
 
+            foundContent = null;
             previewTrackManager.StopAnyPlaying(this);
 
             if (panelTarget.Any())
@@ -166,7 +167,7 @@ namespace osu.Game.Overlays
 
             var newCards = createCardsFor(searchResult.Results);
 
-            if (filterControl.CurrentPage == 0)
+            if (foundContent == null)
             {
                 //No matches case — but only dead-end if the API is truly exhausted
                 if (!newCards.Any())

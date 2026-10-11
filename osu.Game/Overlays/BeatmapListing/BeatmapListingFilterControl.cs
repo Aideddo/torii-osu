@@ -201,7 +201,7 @@ namespace osu.Game.Overlays.BeatmapListing
             searchControl.Played.BindValueChanged(_ => queueUpdateSearch());
             searchControl.Downloaded.BindValueChanged(_ =>
             {
-                refreshDownloadedIds();
+                refreshDownloadedIds(true);
                 queueUpdateSearch();
             });
             searchControl.ExplicitContent.BindValueChanged(_ => queueUpdateSearch());
@@ -383,6 +383,7 @@ namespace osu.Game.Overlays.BeatmapListing
                             var terms = query.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
                             sets = sets.Where(s =>
                                 terms.All(t =>
+                                    s.OnlineID.ToString() == t ||
                                     s.Beatmaps.Any(b =>
                                         (b.Metadata.Title ?? "").Contains(t, StringComparison.OrdinalIgnoreCase) ||
                                         (b.Metadata.TitleUnicode ?? "").Contains(t, StringComparison.OrdinalIgnoreCase) ||
@@ -405,7 +406,9 @@ namespace osu.Game.Overlays.BeatmapListing
                             {
                                 OnlineID = s.OnlineID,
                                 Status = s.Status,
-                                Ranked = s.DateAdded,
+                                Ranked = s.DateRanked ?? s.DateSubmitted ?? s.DateAdded,
+                                Submitted = s.DateSubmitted ?? s.DateAdded,
+                                LastUpdated = s.DateRanked ?? s.DateSubmitted ?? s.DateAdded,
                                 Title = first?.Metadata.Title ?? "",
                                 TitleUnicode = first?.Metadata.TitleUnicode ?? "",
                                 Artist = first?.Metadata.Artist ?? "",
@@ -524,7 +527,7 @@ namespace osu.Game.Overlays.BeatmapListing
                 return;
             }
 
-            var downloadedIds = downloadedBeatmapSetIds;
+            var downloadedIds = downloadedBeatmapSetIds ?? new HashSet<int>();
 
             getSetsRequest = new SearchBeatmapSetsRequest(
                 searchControl.Query.Value,

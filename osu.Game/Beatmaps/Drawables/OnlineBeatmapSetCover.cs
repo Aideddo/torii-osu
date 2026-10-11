@@ -61,7 +61,10 @@ namespace osu.Game.Beatmaps.Drawables
                 Texture = localSet?.PerformRead(s =>
                 {
                     var first = s.Beatmaps.FirstOrDefault();
-                    return first != null ? beatmaps.GetWorkingBeatmap(first).GetPanelBackground() ?? beatmaps.GetWorkingBeatmap(first).GetBackground() : null;
+                    if (first == null) return null;
+
+                    var working = beatmaps.GetWorkingBeatmap(first);
+                    return working.GetPanelBackground() ?? working.GetBackground();
                 });
             }
         }

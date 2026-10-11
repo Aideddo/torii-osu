@@ -268,6 +268,117 @@ namespace osu.Game.Tests.Visual.Online
         }
 
         [Test]
+        public void TestDownloadedSearchBySetId()
+        {
+            AddStep("populate local beatmaps", () =>
+            {
+                Realm.Write(r =>
+                {
+                    r.RemoveAll<BeatmapSetInfo>();
+                    var set = new BeatmapSetInfo
+                    {
+                        OnlineID = 99999,
+                        DateAdded = DateTimeOffset.UtcNow,
+                        Status = BeatmapOnlineStatus.Ranked,
+                    };
+                    var beatmap = new BeatmapInfo
+                    {
+                        OnlineID = 123456,
+                        DifficultyName = "Insane",
+                        StarRating = 5.0,
+                        Metadata = new BeatmapMetadata
+                        {
+                            Title = "Specific Title",
+                            Artist = "Specific Artist",
+                            Author = new RealmUser { Username = "Mapper" },
+                        },
+                        Difficulty = new BeatmapDifficulty(),
+                        Ruleset = r.Find<RulesetInfo>("osu") ?? new RulesetInfo("osu", "osu!", "osu", 0),
+                    };
+                    set.Beatmaps.Add(beatmap);
+                    r.Add(set);
+                });
+            });
+
+            AddStep("select Downloaded filter", () => searchControl.Downloaded.Value = SearchDownloaded.Downloaded);
+            AddStep("search by set ID", () => searchControl.Query.Value = "99999");
+            AddUntilStep("wait for 1 card loaded", () => this.ChildrenOfType<BeatmapCard>().Count() == 1);
+            AddAssert("card has matching set ID", () => this.ChildrenOfType<BeatmapCard>().Single().BeatmapSet.OnlineID == 99999);
+        }
+
+        [Test]
+        public void TestNotDownloadedAutoPaginationWhenFirstPageDownloaded()
+        {
+            AddStep("populate 1 local beatmap", () =>
+            {
+                Realm.Write(r =>
+                {
+                    r.RemoveAll<BeatmapSetInfo>();
+                    var set = new BeatmapSetInfo
+                    {
+                        OnlineID = 1,
+                        DateAdded = DateTimeOffset.UtcNow,
+                        Status = BeatmapOnlineStatus.Ranked,
+                    };
+                    var beatmap = new BeatmapInfo
+                    {
+                        OnlineID = 1001,
+                        DifficultyName = "Normal",
+                        StarRating = 2.0,
+                        Metadata = new BeatmapMetadata { Title = "Downloaded Map", Artist = "Artist", Author = new RealmUser { Username = "Mapper" } },
+                        Difficulty = new BeatmapDifficulty(),
+                        Ruleset = r.Find<RulesetInfo>("osu") ?? new RulesetInfo("osu", "osu!", "osu", 0),
+                    };
+                    set.Beatmaps.Add(beatmap);
+                    r.Add(set);
+                });
+            });
+
+            AddStep("configure dummy API for 2-page pagination", () =>
+            {
+                var api = (DummyAPIAccess)API;
+                int reqCount = 0;
+
+                api.HandleRequest = req =>
+                {
+                    if (!(req is SearchBeatmapSetsRequest searchReq)) return false;
+
+                    reqCount++;
+                    if (reqCount == 1)
+                    {
+                        // Page 0: only map 1 (which is already downloaded locally) + has cursor
+                        searchReq.TriggerSuccess(new SearchBeatmapSetsResponse
+                        {
+                            BeatmapSets = new List<APIBeatmapSet>
+                            {
+                                new APIBeatmapSet { OnlineID = 1, Title = "Downloaded Map", Artist = "Artist" }
+                            },
+                            Cursor = new Cursor(),
+                        });
+                    }
+                    else
+                    {
+                        // Page 1: map 2 (not downloaded)
+                        searchReq.TriggerSuccess(new SearchBeatmapSetsResponse
+                        {
+                            BeatmapSets = new List<APIBeatmapSet>
+                            {
+                                new APIBeatmapSet { OnlineID = 2, Title = "Not Downloaded Map", Artist = "Artist" }
+                            },
+                            Cursor = null,
+                        });
+                    }
+
+                    return true;
+                };
+            });
+
+            AddStep("select Not Downloaded filter", () => searchControl.Downloaded.Value = SearchDownloaded.NotDownloaded);
+            AddUntilStep("wait for page 1 loaded (1 card)", () => this.ChildrenOfType<BeatmapCard>().Count() == 1);
+            AddAssert("card has non-downloaded ID", () => this.ChildrenOfType<BeatmapCard>().Single().BeatmapSet.OnlineID == 2);
+        }
+
+        [Test]
         public void TestUserWithoutSupporterUsesSupporterOnlyFiltersWithoutResults()
         {
             AddStep("fetch for 0 beatmaps", () => fetchFor());
