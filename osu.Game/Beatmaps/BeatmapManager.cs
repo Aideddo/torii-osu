@@ -671,7 +671,19 @@ namespace osu.Game.Beatmaps
             return workingBeatmapCache.GetWorkingBeatmap(beatmapInfo);
         }
 
+        /// <summary>
+        /// Creates a standalone <see cref="WorkingBeatmap"/> instance correlating to the provided <see cref="BeatmapInfo"/> without storing it in the cache.
+        /// </summary>
+        public WorkingBeatmap CreateWorkingBeatmap(BeatmapInfo? beatmapInfo, bool verifyHash = false)
+        {
+            if (beatmapInfo != null && beatmapInfo.IsManaged)
+                beatmapInfo = beatmapInfo.Detach();
+
+            return workingBeatmapCache.CreateWorkingBeatmap(beatmapInfo, verifyHash);
+        }
+
         WorkingBeatmap IWorkingBeatmapCache.GetWorkingBeatmap(BeatmapInfo beatmapInfo) => GetWorkingBeatmap(beatmapInfo);
+        WorkingBeatmap IWorkingBeatmapCache.CreateWorkingBeatmap(BeatmapInfo beatmapInfo, bool verifyHash) => CreateWorkingBeatmap(beatmapInfo, verifyHash);
         void IWorkingBeatmapCache.Invalidate(BeatmapSetInfo beatmapSetInfo) => workingBeatmapCache.Invalidate(beatmapSetInfo);
         void IWorkingBeatmapCache.Invalidate(BeatmapInfo beatmapInfo) => workingBeatmapCache.Invalidate(beatmapInfo);
 

@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -76,6 +76,13 @@ namespace osu.Game.Screens.Select
         /// but otherwise as high as possible to reduce overheads.
         /// </summary>
         public const int DIFFICULTY_CALCULATION_DEBOUNCE = 150;
+
+        /// <summary>
+        /// torii: whether a song select screen is currently the active screen.
+        /// Used by background processors to avoid heavy database writes / invalidations
+        /// while the user is browsing the carousel.
+        /// </summary>
+        public static bool IsSongSelectActive { get; private set; }
 
         private const float logo_scale = 0.4f;
         private const double fade_duration = 300;
@@ -218,6 +225,11 @@ namespace osu.Game.Screens.Select
         private IDisposable? customUiHueBinding;
 
         private IDisposable? modSelectOverlayRegistration;
+
+        protected SongSelect()
+        {
+            IsSongSelectActive = true;
+        }
 
         [BackgroundDependencyLoader]
         private void load(AudioManager audio, OsuConfigManager config)
@@ -956,6 +968,8 @@ namespace osu.Game.Screens.Select
 
         public override bool OnExiting(ScreenExitEvent e)
         {
+            IsSongSelectActive = false;
+
             this.FadeOut(fade_duration, Easing.OutQuint);
             onLeavingScreen();
 
@@ -964,6 +978,8 @@ namespace osu.Game.Screens.Select
 
         private void onArrivingAtScreen()
         {
+            IsSongSelectActive = true;
+
             modSelectOverlay.Beatmap.BindTo(Beatmap);
             modSelectOverlay.Ruleset.BindTo(Ruleset);
             // required due to https://github.com/ppy/osu-framework/issues/3218
@@ -1644,6 +1660,8 @@ namespace osu.Game.Screens.Select
 
         protected override void Dispose(bool isDisposing)
         {
+            IsSongSelectActive = false;
+
             if (skinSource is not null)
                 skinSource.SourceChanged -= onSkinChangedWhileLegacy;
 
