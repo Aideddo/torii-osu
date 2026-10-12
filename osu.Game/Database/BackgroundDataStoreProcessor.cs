@@ -543,6 +543,7 @@ namespace osu.Game.Database
 
                         // Pathological or corrupt aspire maps can take minutes/hours in slider path approximations.
                         // Bound individual calculation to 5 seconds to prevent stalling the batch.
+                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                         var calcTask = Task.Run(() =>
                         {
                             var working = beatmapManager.CreateWorkingBeatmap(beatmap, verifyHash: false);
@@ -551,8 +552,8 @@ namespace osu.Game.Database
                             Debug.Assert(ruleset != null);
 
                             var calculator = ruleset.CreateDifficultyCalculator(working);
-                            return calculator.Calculate().StarRating;
-                        });
+                            return calculator.Calculate(cts.Token).StarRating;
+                        }, cts.Token);
 
                         if (calcTask.Wait(TimeSpan.FromSeconds(5)))
                         {
@@ -560,6 +561,7 @@ namespace osu.Game.Database
                         }
                         else
                         {
+                            cts.Cancel();
                             Logger.Log($"Background difficulty processing timed out on {beatmap} (>5s), skipping.");
                             Interlocked.Increment(ref failedCount);
                             failedIds.Add(beatmap.ID);
