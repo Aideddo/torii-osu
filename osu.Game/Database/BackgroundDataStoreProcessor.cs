@@ -541,15 +541,29 @@ namespace osu.Game.Database
                     {
                         thread.Priority = ThreadPriority.Lowest;
 
-                        var working = beatmapManager.CreateWorkingBeatmap(beatmap, verifyHash: false);
-                        var ruleset = getRuleset(working.BeatmapInfo.Ruleset);
+                        // Pathological or corrupt aspire maps can take minutes/hours in slider path approximations.
+                        // Bound individual calculation to 5 seconds to prevent stalling the batch.
+                        var calcTask = Task.Run(() =>
+                        {
+                            var working = beatmapManager.CreateWorkingBeatmap(beatmap, verifyHash: false);
+                            var ruleset = getRuleset(working.BeatmapInfo.Ruleset);
 
-                        Debug.Assert(ruleset != null);
+                            Debug.Assert(ruleset != null);
 
-                        var calculator = ruleset.CreateDifficultyCalculator(working);
+                            var calculator = ruleset.CreateDifficultyCalculator(working);
+                            return calculator.Calculate().StarRating;
+                        });
 
-                        double starRating = calculator.Calculate().StarRating;
-                        results.Add((beatmap.ID, starRating));
+                        if (calcTask.Wait(TimeSpan.FromSeconds(5)))
+                        {
+                            results.Add((beatmap.ID, calcTask.GetResultSafely()));
+                        }
+                        else
+                        {
+                            Logger.Log($"Background difficulty processing timed out on {beatmap} (>5s), skipping.");
+                            Interlocked.Increment(ref failedCount);
+                            failedIds.Add(beatmap.ID);
+                        }
                     }
                     catch (Exception e)
                     {
