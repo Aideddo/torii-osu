@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -80,6 +80,12 @@ namespace osu.Game.Screens.Edit
         /// Coming to this value involved running various tests with existing users / beatmaps.
         /// This included both visual and audible comparisons. Ballpark confidence is ≈2 ms.
         /// </remarks>
+        /// <summary>
+        /// torii: whether the beatmap editor is currently active.
+        /// Background tasks pause while this is true to prevent disk and database contention while editing.
+        /// </summary>
+        public static bool IsEditorActive { get; private set; }
+
         public const float WAVEFORM_VISUAL_OFFSET = 20;
 
         public override float BackgroundParallaxAmount => 0.1f;
@@ -248,6 +254,7 @@ namespace osu.Game.Screens.Edit
         public Editor(EditorLoader loader = null)
         {
             this.loader = loader;
+            IsEditorActive = true;
         }
 
         [BackgroundDependencyLoader]
@@ -513,6 +520,7 @@ namespace osu.Game.Screens.Edit
 
         protected override void Dispose(bool isDisposing)
         {
+            IsEditorActive = false;
             base.Dispose(isDisposing);
 
             modSelectOverlayRegistration?.Dispose();
@@ -935,6 +943,7 @@ namespace osu.Game.Screens.Edit
             resetTrack();
             refetchBeatmap();
 
+            IsEditorActive = false;
             return base.OnExiting(e);
         }
 

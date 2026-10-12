@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -41,6 +41,8 @@ namespace osu.Game.Beatmaps.Formats
 
             string? line;
 
+            int parseErrorCount = 0;
+
             while ((line = stream.ReadLine()) != null)
             {
                 if (ShouldSkipLine(line))
@@ -69,7 +71,15 @@ namespace osu.Game.Beatmaps.Formats
                 }
                 catch (Exception e)
                 {
-                    Logger.Log($"Failed to process line \"{line}\" into \"{output}\": {e.Message}");
+                    if (parseErrorCount++ < 10)
+                    {
+                        string logLine = line.Length > 120 ? $"{line.Substring(0, 120)}... ({line.Length} chars)" : line;
+                        Logger.Log($"Failed to process line \"{logLine}\" into \"{output}\": {e.Message}");
+                    }
+                    else if (parseErrorCount == 11)
+                    {
+                        Logger.Log($"Further line parse errors suppressed for \"{output}\".");
+                    }
                 }
             }
         }

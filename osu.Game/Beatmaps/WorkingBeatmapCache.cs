@@ -118,6 +118,14 @@ namespace osu.Game.Beatmaps
             }
         }
 
+        public virtual WorkingBeatmap CreateWorkingBeatmap([CanBeNull] BeatmapInfo beatmapInfo, bool verifyHash = false)
+        {
+            if (beatmapInfo == null || ReferenceEquals(beatmapInfo, DefaultBeatmap.BeatmapInfo))
+                return DefaultBeatmap;
+
+            return new BeatmapManagerWorkingBeatmap(beatmapInfo.IsManaged ? beatmapInfo.Detach() : beatmapInfo, this, verifyHash);
+        }
+
         private bool confirmFileHashIsUpToDate(BeatmapInfo beatmapInfo)
         {
             string refetchPath = realm.Run(r => r.Find<BeatmapInfo>(beatmapInfo.ID)?.File?.File.Hash);
@@ -142,11 +150,13 @@ namespace osu.Game.Beatmaps
         {
             [NotNull]
             private readonly IBeatmapResourceProvider resources;
+            private readonly bool verifyHash;
 
-            public BeatmapManagerWorkingBeatmap(BeatmapInfo beatmapInfo, [NotNull] IBeatmapResourceProvider resources)
+            public BeatmapManagerWorkingBeatmap(BeatmapInfo beatmapInfo, [NotNull] IBeatmapResourceProvider resources, bool verifyHash = true)
                 : base(beatmapInfo, resources.AudioManager)
             {
                 this.resources = resources;
+                this.verifyHash = verifyHash;
             }
 
             protected override IBeatmap GetBeatmap()
@@ -166,21 +176,24 @@ namespace osu.Game.Beatmaps
                         return null;
                     }
 
-                    string streamMD5 = stream.ComputeMD5Hash();
-                    string streamSHA2 = stream.ComputeSHA2Hash();
-
-                    if (streamMD5 != BeatmapInfo.MD5Hash)
+                    if (verifyHash)
                     {
-                        Logger.Log($"Beatmap failed to load (file {BeatmapInfo.Path} does not have the expected hash).", level: LogLevel.Error);
-                        return null;
+                        string streamMD5 = stream.ComputeMD5Hash();
+                        string streamSHA2 = stream.ComputeSHA2Hash();
+
+                        if (streamMD5 != BeatmapInfo.MD5Hash)
+                        {
+                            Logger.Log($"Beatmap failed to load (file {BeatmapInfo.Path} does not have the expected hash).", level: LogLevel.Error);
+                            return null;
+                        }
                     }
 
                     using (var reader = new LineBufferedReader(stream))
                     {
                         var beatmap = Decoder.GetDecoder<Beatmap>(reader).Decode(reader);
 
-                        beatmap.BeatmapInfo.MD5Hash = streamMD5;
-                        beatmap.BeatmapInfo.Hash = streamSHA2;
+                        beatmap.BeatmapInfo.MD5Hash = BeatmapInfo.MD5Hash;
+                        beatmap.BeatmapInfo.Hash = BeatmapInfo.Hash;
                         beatmap.BeatmapInfo.UpdateStatisticsFromBeatmap(beatmap);
 
                         return beatmap;
