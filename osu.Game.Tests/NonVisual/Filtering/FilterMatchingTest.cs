@@ -21,7 +21,7 @@ using osu.Game.Screens.Select.Filter;
 namespace osu.Game.Tests.NonVisual.Filtering
 {
     [TestFixture]
-    public class FilterMatchingTest
+    public partial class FilterMatchingTest
     {
         private BeatmapInfo getExampleBeatmap() => new BeatmapInfo
         {
