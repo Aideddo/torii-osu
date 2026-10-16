@@ -1,8 +1,9 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using osu.Desktop.LegacyIpc;
 using osu.Desktop.Windows;
@@ -182,10 +183,10 @@ namespace osu.Desktop
             }
         }
 
-        private static bool isVulkanConfigured(string frameworkIni)
+        private static string? readConfiguredRenderer(string frameworkIni)
         {
             if (!File.Exists(frameworkIni))
-                return false;
+                return null;
 
             try
             {
@@ -197,16 +198,26 @@ namespace osu.Desktop
                     if (eq <= 0 || !line[..eq].Trim().Equals("Renderer", StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    string value = line[(eq + 1)..].Trim();
-                    return value.Equals("Vulkan", StringComparison.OrdinalIgnoreCase)
-                           || value.Equals("Deferred_Vulkan", StringComparison.OrdinalIgnoreCase);
+                    return line[(eq + 1)..].Trim();
                 }
             }
             catch
             {
             }
 
-            return false;
+            return null;
+        }
+
+        private static bool isVulkanConfigured(string frameworkIni)
+        {
+            string? value = readConfiguredRenderer(frameworkIni);
+            if (string.IsNullOrEmpty(value))
+                return false;
+
+            return value.Equals("Vulkan", StringComparison.OrdinalIgnoreCase)
+                   || value.Equals("Deferred_Vulkan", StringComparison.OrdinalIgnoreCase)
+                   || value.Equals("Direct3D11_DXVK", StringComparison.OrdinalIgnoreCase)
+                   || value.Equals("OpenGL_Zink", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void resetRendererToAutomatic(string frameworkIni)
@@ -290,13 +301,49 @@ namespace osu.Desktop
 
         private static bool isFirstRun;
 
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
+
+        private static void logFatalError(string context, Exception ex)
+        {
+            try
+            {
+                string text = $"[{DateTime.UtcNow:O}] {context}: {ex}\n";
+                string baseLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "torii-crash.txt");
+                File.AppendAllText(baseLog, text);
+
+                if (OperatingSystem.IsWindows())
+                {
+                    MessageBoxW(IntPtr.Zero, $"{context}:\n\n{ex.Message}\n\nCheck torii-crash.txt for full details.", "Torii - Fatal Error", 0x10);
+                }
+            }
+            catch
+            {
+            }
+        }
+
         [STAThread]
         public static void Main(string[] args)
         {
-            // IMPORTANT DON'T IGNORE: For general sanity, velopack's setup needs to run before anything else.
-            // This has bitten us in the rear before (bricked updater), and although the underlying issue from
-            // last time has been fixed, let's not tempt fate.
-            setupVelopack(args);
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            {
+                if (e.ExceptionObject is Exception ex)
+                    logFatalError("Unhandled AppDomain Exception", ex);
+            };
+
+            try
+            {
+                // IMPORTANT DON'T IGNORE: For general sanity, velopack's setup needs to run before anything else.
+                // This has bitten us in the rear before (bricked updater), and although the underlying issue from
+                // last time has been fixed, let's not tempt fate.
+                try
+                {
+                    setupVelopack(args);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[Torii] Velopack setup failed: {ex.Message}", LoggingTarget.Runtime, LogLevel.Important);
+                }
 
             if (OperatingSystem.IsWindows())
             {
@@ -393,60 +440,83 @@ namespace osu.Desktop
                 }
             }
 
+            string storageFolder = resolveDefaultStorageFolder();
+
+            if (OperatingSystem.IsWindows())
+            {
+                string frameworkIni = Path.Combine(storageFolder, "framework.ini");
+                string? configuredRenderer = readConfiguredRenderer(frameworkIni);
+
+                foreach (string arg in args)
+                {
+                    if (arg.StartsWith("--renderer=", StringComparison.OrdinalIgnoreCase))
+                        configuredRenderer = arg["--renderer=".Length..].Trim();
+                }
+
+                NovaRendererBootstrap.PrepareRenderer(configuredRenderer);
+            }
+
             var hostOptions = new HostOptions
             {
                 IPCPipeName = !tournamentClient ? OsuGame.IPC_PIPE_NAME : null,
                 FriendlyGameName = OsuGameBase.GAME_NAME,
             };
 
-            FileStream? vulkanSessionMarker = beginVulkanSessionRecovery(resolveDefaultStorageFolder());
+            FileStream? vulkanSessionMarker = beginVulkanSessionRecovery(storageFolder);
 
-            using (DesktopGameHost host = Host.GetSuitableDesktopHost(gameName, hostOptions))
+            try
             {
-                if (!host.IsPrimaryInstance)
+                using (DesktopGameHost host = Host.GetSuitableDesktopHost(gameName, hostOptions))
                 {
-                    if (trySendIPCMessage(host, cwd, args))
+                    if (!host.IsPrimaryInstance)
                     {
-                        finishVulkanSessionIfNeeded(vulkanSessionMarker);
-                        return;
+                        if (trySendIPCMessage(host, cwd, args))
+                            return;
+
+                        // we want to allow multiple instances to be started when in debug.
+                        if (!DebugUtils.IsDebugBuild)
+                        {
+                            Logger.Log(@"Torii does not support multiple running instances.", LoggingTarget.Runtime, LogLevel.Error);
+                            return;
+                        }
                     }
 
-                    // we want to allow multiple instances to be started when in debug.
-                    if (!DebugUtils.IsDebugBuild)
+                    if (host.IsPrimaryInstance)
                     {
-                        Logger.Log(@"Torii does not support multiple running instances.", LoggingTarget.Runtime, LogLevel.Error);
-                        finishVulkanSessionIfNeeded(vulkanSessionMarker);
-                        return;
+                        try
+                        {
+                            Logger.Log("Starting legacy IPC provider...");
+                            legacyIpc = new LegacyTcpIpcProvider();
+                            legacyIpc.Bind();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error(ex, "Failed to start legacy IPC provider");
+                        }
                     }
-                }
 
-                if (host.IsPrimaryInstance)
-                {
-                    try
+                    if (tournamentClient)
+                        host.Run(new TournamentGame());
+                    else
                     {
-                        Logger.Log("Starting legacy IPC provider...");
-                        legacyIpc = new LegacyTcpIpcProvider();
-                        legacyIpc.Bind();
+                        host.Run(new OsuGameDesktop(args)
+                        {
+                            IsFirstRun = isFirstRun,
+                            EnableWebSocketServer = Environment.GetEnvironmentVariable("OSU_WEBSOCKET_SERVER") == "1",
+                        });
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.Error(ex, "Failed to start legacy IPC provider");
-                    }
-                }
-
-                if (tournamentClient)
-                    host.Run(new TournamentGame());
-                else
-                {
-                    host.Run(new OsuGameDesktop(args)
-                    {
-                        IsFirstRun = isFirstRun,
-                        EnableWebSocketServer = Environment.GetEnvironmentVariable("OSU_WEBSOCKET_SERVER") == "1",
-                    });
                 }
             }
-
-            finishVulkanSessionIfNeeded(vulkanSessionMarker);
+            finally
+            {
+                finishVulkanSessionIfNeeded(vulkanSessionMarker);
+            }
+            }
+            catch (Exception ex)
+            {
+                logFatalError("Fatal Startup Exception", ex);
+                throw;
+            }
         }
 
         private static bool trySendIPCMessage(IIpcHost host, string cwd, string[] args)

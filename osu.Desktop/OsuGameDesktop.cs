@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Versioning;
@@ -125,7 +126,33 @@ namespace osu.Desktop
 
         public override bool RestartAppWhenExited()
         {
-            RestartOnExitAction = () => Velopack.UpdateExe.Start(waitPid: (uint)Environment.ProcessId);
+            RestartOnExitAction = () =>
+            {
+                try
+                {
+                    Velopack.UpdateExe.Start(waitPid: (uint)Environment.ProcessId);
+                }
+                catch
+                {
+                    try
+                    {
+                        string? processPath = Environment.ProcessPath;
+                        if (!string.IsNullOrEmpty(processPath))
+                        {
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = processPath,
+                                UseShellExecute = true,
+                                WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Failed to restart application on exit.");
+                    }
+                }
+            };
             return true;
         }
 
