@@ -359,6 +359,36 @@ namespace osu.Game.Tests.Visual.SongSelect
         }
 
         [Test]
+        public async Task TestLastEffectiveStarRatingsHoldSortedStarRatings()
+        {
+            var setA = TestResources.CreateTestBeatmapSetInfo(1);
+            setA.Beatmaps[0].StarRating = 4.0;
+
+            var setB = TestResources.CreateTestBeatmapSetInfo(1);
+            setB.Beatmaps[0].StarRating = 5.0;
+
+            var mods = new[] { new OsuModDoubleTime() };
+
+            // Only the first beatmap has an exact star rating cached, so the second is sorted by an approximation.
+            var cache = new TestBeatmapDifficultyCache
+            {
+                PresetDifficulty = _ => new StarDifficulty(8.0, 0)
+            };
+
+            await cache.GetDifficultyAsync(setA.Beatmaps[0], null, mods);
+
+            var sorter = new BeatmapCarouselFilterSorting(() => new FilterCriteria { Sort = SortMode.Difficulty, Mods = mods })
+            {
+                DifficultyCache = cache
+            };
+
+            await sorter.Run(new[] { setA, setB }.SelectMany(s => s.Beatmaps).Select(b => new CarouselItem(b)), CancellationToken.None);
+
+            Assert.That(sorter.LastEffectiveStarRatings[setA.Beatmaps[0]], Is.EqualTo(8.0));
+            Assert.That(sorter.LastEffectiveStarRatings[setB.Beatmaps[0]], Is.EqualTo(StarRatingApproximator.Approximate(setB.Beatmaps[0], null, mods)));
+        }
+
+        [Test]
         public async Task TestSortByDifficultyTiedEffectiveStarsFallsBackToBaseStars()
         {
             var setA = TestResources.CreateTestBeatmapSetInfo(1);

@@ -23,6 +23,11 @@ namespace osu.Game.Screens.Select
         /// </summary>
         public BeatmapDifficultyCache? DifficultyCache { get; set; }
 
+        /// <summary>
+        /// The mod-adjusted star ratings used by the most recent sort, for each beatmap whose star rating was compared.
+        /// </summary>
+        public IReadOnlyDictionary<BeatmapInfo, double> LastEffectiveStarRatings { get; private set; } = new Dictionary<BeatmapInfo, double>();
+
         private readonly Func<FilterCriteria> getCriteria;
 
         public BeatmapCarouselFilterSorting(Func<FilterCriteria> getCriteria)
@@ -69,6 +74,9 @@ namespace osu.Game.Screens.Select
 
                 return compare(ab, bb, criteria.Sort, aggregate: false, getEffectiveStarRating);
             });
+
+            // No longer modified now that sorting is done, so it can be shared as-is.
+            LastEffectiveStarRatings = effectiveStarRatings;
 
             return list;
         }, cancellationToken).ConfigureAwait(false);
