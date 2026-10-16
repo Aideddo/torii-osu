@@ -26,7 +26,7 @@ namespace osu.Game.Graphics.UserEffects.Presets
     /// vertical gold rays that no other variant has, plus a
     /// gold-rimmed seal with a pink-to-gold gradient torii inside.
     /// </summary>
-    public class FounderSunrisePillarPreset : AuraPreset
+    public partial class FounderSunrisePillarPreset : AuraPreset
     {
         public const string ID = "founder-variant-sunrise-pillar";
 

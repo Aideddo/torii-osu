@@ -26,7 +26,7 @@ namespace osu.Game.Graphics.UserEffects.Presets
     /// "hanami breeze" effect, plus persistent pale-gold seals that
     /// frame the name like wax-stamped origami.
     /// </summary>
-    public class FounderSakuraGardenPreset : AuraPreset
+    public partial class FounderSakuraGardenPreset : AuraPreset
     {
         public const string ID = "founder-variant-sakura-garden";
 

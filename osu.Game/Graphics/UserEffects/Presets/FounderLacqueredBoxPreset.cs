@@ -27,7 +27,7 @@ namespace osu.Game.Graphics.UserEffects.Presets
     /// the persistent crests carry the aura's weight — quality over
     /// quantity.
     /// </summary>
-    public class FounderLacqueredBoxPreset : AuraPreset
+    public partial class FounderLacqueredBoxPreset : AuraPreset
     {
         public const string ID = "founder-variant-lacquered-box";
 

@@ -25,7 +25,7 @@ namespace osu.Game.Graphics.UserEffects.Presets
     /// briefly blooming above the username — gives it the moment of
     /// brand recognition without leaning on the red palette.
     /// </summary>
-    public class FounderImperialGoldPreset : AuraPreset
+    public partial class FounderImperialGoldPreset : AuraPreset
     {
         public const string ID = "founder-variant-imperial-gold";
 

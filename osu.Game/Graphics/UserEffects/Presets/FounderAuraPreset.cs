@@ -38,7 +38,7 @@ namespace osu.Game.Graphics.UserEffects.Presets
     ///       blooming above the username — the namesake identity hook.</item>
     /// </list>
     /// </summary>
-    public class FounderAuraPreset : AuraPreset
+    public partial class FounderAuraPreset : AuraPreset
     {
         public const string ID = "founder-torii";
 
