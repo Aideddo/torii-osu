@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics.Carousel;
 using osu.Game.Screens.Select.Filter;
@@ -38,22 +39,21 @@ namespace osu.Game.Screens.Select
             BeatmapItemsCount = items.Count();
 
             var lookupEffectiveStarRating = criteria.CreateEffectiveStarRatingLookup(DifficultyCache);
-            var effectiveStarRatings = new Dictionary<BeatmapInfo, double>();
+            var effectiveStarRatings = new Dictionary<BeatmapInfo, double>(BeatmapItemsCount);
 
-            // Star rating adjusted for the currently selected mods, computed at most once per beatmap per run.
-            // Held as a single delegate instance: passing a capturing local function as a Func allocates a new delegate on every comparison.
+            // star rating adjusted for selected mods, cached per beatmap per run
             Func<BeatmapInfo, double> getEffectiveStarRating = beatmap =>
             {
-                if (!effectiveStarRatings.TryGetValue(beatmap, out double stars))
-                {
+                ref double stars = ref CollectionsMarshal.GetValueRefOrAddDefault(effectiveStarRatings, beatmap, out bool exists);
+                if (!exists)
                     stars = lookupEffectiveStarRating(beatmap);
-                    effectiveStarRatings[beatmap] = stars;
-                }
 
                 return stars;
             };
 
-            return items.Order(Comparer<CarouselItem>.Create((a, b) =>
+            var list = items as List<CarouselItem> ?? items.ToList();
+
+            list.Sort((a, b) =>
             {
                 var ab = (BeatmapInfo)a.Model;
                 var bb = (BeatmapInfo)b.Model;
@@ -68,7 +68,9 @@ namespace osu.Game.Screens.Select
                 }
 
                 return compare(ab, bb, criteria.Sort, aggregate: false, getEffectiveStarRating);
-            })).ToList();
+            });
+
+            return list;
         }, cancellationToken).ConfigureAwait(false);
 
         private static int compare(BeatmapInfo a, BeatmapInfo b, SortMode sort, bool aggregate, Func<BeatmapInfo, double> getEffectiveStarRating)

@@ -490,17 +490,29 @@ namespace osu.Game.Beatmaps
         {
             private readonly BeatmapDifficultyCache cache;
             private readonly IRulesetInfo? rulesetInfo;
-            private readonly IEnumerable<Mod>? mods;
             private readonly Mod[] orderedMods;
+            private readonly Mod[] flattenedMods;
+            private readonly double rate;
             private readonly bool modsAffectDifficulty;
 
             public EffectiveStarRatingLookup(BeatmapDifficultyCache cache, IRulesetInfo? rulesetInfo, IEnumerable<Mod>? mods)
             {
                 this.cache = cache;
                 this.rulesetInfo = rulesetInfo;
-                this.mods = mods;
 
-                modsAffectDifficulty = mods != null && ModUtils.FlattenMods(mods).Any(StarRatingApproximator.ModAffectsDifficulty);
+                if (mods != null)
+                {
+                    flattenedMods = ModUtils.FlattenMods(mods).ToArray();
+                    modsAffectDifficulty = flattenedMods.Any(StarRatingApproximator.ModAffectsDifficulty);
+                    rate = ModUtils.CalculateRateWithMods(mods);
+                }
+                else
+                {
+                    flattenedMods = Array.Empty<Mod>();
+                    modsAffectDifficulty = false;
+                    rate = 1.0;
+                }
+
                 orderedMods = modsAffectDifficulty ? DifficultyCacheLookup.OrderMods(mods) : Array.Empty<Mod>();
             }
 
@@ -509,13 +521,13 @@ namespace osu.Game.Beatmaps
                 if (!modsAffectDifficulty)
                     return beatmapInfo.StarRating;
 
-                // Same as GetExistingDifficulty, but sharing one ordered copy of the mods across all lookups.
+                // same as GetExistingDifficulty, but sharing one ordered copy of the mods across all lookups
                 if ((rulesetInfo ?? beatmapInfo.Ruleset) is RulesetInfo localRulesetInfo
                     && cache.CheckExists(DifficultyCacheLookup.FromOrderedMods(beatmapInfo, localRulesetInfo, orderedMods), out var existing)
                     && existing != null)
                     return existing.Value.Stars;
 
-                return StarRatingApproximator.Approximate(beatmapInfo, rulesetInfo, mods!);
+                return StarRatingApproximator.Approximate(beatmapInfo, rulesetInfo, rate, flattenedMods);
             }
         }
 

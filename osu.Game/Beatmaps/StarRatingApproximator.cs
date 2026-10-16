@@ -29,14 +29,19 @@ namespace osu.Game.Beatmaps
         /// </summary>
         public static double Approximate(IBeatmapInfo beatmapInfo, IRulesetInfo? rulesetInfo, IEnumerable<Mod> mods)
         {
+            double rate = ModUtils.CalculateRateWithMods(mods);
+            var flattenedMods = ModUtils.FlattenMods(mods).ToArray();
+            return Approximate(beatmapInfo, rulesetInfo, rate, flattenedMods);
+        }
+
+        // overload used by carousel lookups to avoid re-flattening mods per beatmap
+        public static double Approximate(IBeatmapInfo beatmapInfo, IRulesetInfo? rulesetInfo, double rate, IReadOnlyList<Mod> flattenedMods)
+        {
             double baseStars = beatmapInfo.StarRating;
             if (baseStars <= 0)
                 return baseStars;
 
             string rulesetName = rulesetInfo?.ShortName ?? beatmapInfo.Ruleset?.ShortName ?? @"osu";
-            double rate = ModUtils.CalculateRateWithMods(mods);
-            var flattenedMods = ModUtils.FlattenMods(mods).ToList();
-
             double multiplier = 1.0;
 
             switch (rulesetName)

@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -14,6 +14,7 @@ using osu.Game.Rulesets;
 using osu.Game.Rulesets.Filter;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Select.Filter;
+using osu.Game.Utils;
 
 namespace osu.Game.Screens.Select
 {
@@ -315,7 +316,11 @@ namespace osu.Game.Screens.Select
             var mods = Mods;
 
             if (mods != null)
-                return beatmap => StarRatingApproximator.Approximate(beatmap, ruleset, mods);
+            {
+                double rate = ModUtils.CalculateRateWithMods(mods);
+                var flattenedMods = ModUtils.FlattenMods(mods).ToArray();
+                return beatmap => StarRatingApproximator.Approximate(beatmap, ruleset, rate, flattenedMods);
+            }
 
             return beatmap => beatmap.StarRating;
         }
