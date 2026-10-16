@@ -442,6 +442,8 @@ namespace osu.Desktop
 
             string storageFolder = resolveDefaultStorageFolder();
 
+            FileStream? vulkanSessionMarker = beginVulkanSessionRecovery(storageFolder);
+
             if (OperatingSystem.IsWindows())
             {
                 string frameworkIni = Path.Combine(storageFolder, "framework.ini");
@@ -461,8 +463,6 @@ namespace osu.Desktop
                 IPCPipeName = !tournamentClient ? OsuGame.IPC_PIPE_NAME : null,
                 FriendlyGameName = OsuGameBase.GAME_NAME,
             };
-
-            FileStream? vulkanSessionMarker = beginVulkanSessionRecovery(storageFolder);
 
             try
             {
