@@ -153,6 +153,11 @@ namespace osu.Game.Screens.Select
             if (comparison == 0)
                 comparison = b.BeatmapSet!.ID.CompareTo(a.BeatmapSet!.ID);
 
+            // Difficulties from the same set can still tie. The sort is unstable, so break that tie by GUID too,
+            // otherwise tied difficulties could swap places between filter runs.
+            if (comparison == 0)
+                comparison = b.ID.CompareTo(a.ID);
+
             return comparison;
         }
 
@@ -165,6 +170,10 @@ namespace osu.Game.Screens.Select
 
             if (comparison == 0)
                 comparison = a.StarRating.CompareTo(b.StarRating);
+
+            // See the equivalent fallback in compare().
+            if (comparison == 0)
+                comparison = b.ID.CompareTo(a.ID);
 
             return comparison;
         }

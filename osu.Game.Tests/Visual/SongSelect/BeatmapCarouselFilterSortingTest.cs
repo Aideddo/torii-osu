@@ -483,13 +483,56 @@ namespace osu.Game.Tests.Visual.SongSelect
             Assert.That(results[1].Ruleset.ShortName, Is.EqualTo("taiko"));
         }
 
-        private static async Task<IEnumerable<BeatmapInfo>> runSorting(SortMode sort, List<BeatmapSetInfo> beatmapSets, IReadOnlyList<Mod>? mods = null, BeatmapDifficultyCache? difficultyCache = null)
+        [Test]
+        public async Task TestSortByDifficultyTiedDifficultiesInSameSetOrderedById()
+        {
+            var set = TestResources.CreateTestBeatmapSetInfo(tied_difficulty_count);
+            set.Beatmaps.ForEach(b => b.StarRating = 5.0);
+
+            await assertTiedDifficultiesOrderedById(SortMode.Difficulty, set);
+        }
+
+        [Test]
+        public async Task TestWithinSetOrderTiedDifficultiesOrderedById()
+        {
+            var set = TestResources.CreateTestBeatmapSetInfo(tied_difficulty_count);
+            set.Beatmaps.ForEach(b => b.StarRating = 5.0);
+
+            await assertTiedDifficultiesOrderedById(SortMode.Title, set);
+        }
+
+        /// <summary>
+        /// The sort is unstable, but only for more than 16 items (below that, it uses a stable insertion sort).
+        /// </summary>
+        private const int tied_difficulty_count = 24;
+
+        /// <summary>
+        /// Sorts difficulties which tie on every other comparison in several input orders, and checks they always end up in the same order.
+        /// </summary>
+        private static async Task assertTiedDifficultiesOrderedById(SortMode sort, BeatmapSetInfo set)
+        {
+            var expectedIds = set.Beatmaps.Select(b => b.ID).OrderDescending().ToArray();
+            var random = new Random(20261016);
+
+            for (int i = 0; i < 5; i++)
+            {
+                var shuffled = set.Beatmaps.OrderBy(_ => random.Next()).ToList();
+                var results = await runSorting(sort, shuffled);
+
+                Assert.That(results.Select(b => b.ID), Is.EqualTo(expectedIds));
+            }
+        }
+
+        private static Task<IEnumerable<BeatmapInfo>> runSorting(SortMode sort, List<BeatmapSetInfo> beatmapSets, IReadOnlyList<Mod>? mods = null, BeatmapDifficultyCache? difficultyCache = null)
+            => runSorting(sort, beatmapSets.SelectMany(s => s.Beatmaps), mods, difficultyCache);
+
+        private static async Task<IEnumerable<BeatmapInfo>> runSorting(SortMode sort, IEnumerable<BeatmapInfo> beatmaps, IReadOnlyList<Mod>? mods = null, BeatmapDifficultyCache? difficultyCache = null)
         {
             var sorter = new BeatmapCarouselFilterSorting(() => new FilterCriteria { Sort = sort, Mods = mods })
             {
                 DifficultyCache = difficultyCache
             };
-            var carouselItems = await sorter.Run(beatmapSets.SelectMany(s => s.Beatmaps.Select(b => new CarouselItem(b))), CancellationToken.None);
+            var carouselItems = await sorter.Run(beatmaps.Select(b => new CarouselItem(b)), CancellationToken.None);
             return carouselItems.Select(ci => ci.Model).OfType<BeatmapInfo>();
         }
 
