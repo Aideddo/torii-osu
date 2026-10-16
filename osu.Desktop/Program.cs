@@ -444,7 +444,7 @@ namespace osu.Desktop
 
             FileStream? vulkanSessionMarker = beginVulkanSessionRecovery(storageFolder);
 
-            if (OperatingSystem.IsWindows())
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
             {
                 string frameworkIni = Path.Combine(storageFolder, "framework.ini");
                 string? configuredRenderer = readConfiguredRenderer(frameworkIni);

@@ -8,7 +8,6 @@ using osu.Framework.Logging;
 
 namespace osu.Desktop.Windows
 {
-    [SupportedOSPlatform("windows")]
     internal static class NovaRendererBootstrap
     {
         private static readonly string[] dxvk_files = ["dxgi.dll", "d3d11.dll"];
@@ -16,26 +15,42 @@ namespace osu.Desktop.Windows
 
         public static void PrepareRenderer(string? requestedRenderer)
         {
-            if (!OperatingSystem.IsWindows())
-                return;
-
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string rendererLower = (requestedRenderer ?? string.Empty).Trim().ToLowerInvariant();
 
-            if (rendererLower.Contains("dxvk"))
+            if (OperatingSystem.IsWindows())
             {
-                setupDxvk(baseDir);
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+
+                if (rendererLower.Contains("dxvk"))
+                {
+                    setupDxvk(baseDir);
+                }
+                else if (rendererLower.Contains("zink"))
+                {
+                    setupZink(baseDir);
+                }
+                else
+                {
+                    cleanupAll(baseDir);
+                }
             }
-            else if (rendererLower.Contains("zink"))
+            else if (OperatingSystem.IsLinux())
             {
-                setupZink(baseDir);
-            }
-            else
-            {
-                cleanupAll(baseDir);
+                if (rendererLower.Contains("zink"))
+                {
+                    Environment.SetEnvironmentVariable("MESA_LOADER_DRIVER_OVERRIDE", "zink");
+                    Environment.SetEnvironmentVariable("GALLIUM_DRIVER", "zink");
+                    Logger.Log("[Nova Zink] Enabled Mesa Zink (OpenGL over Vulkan) for Linux.", LoggingTarget.Runtime, LogLevel.Important);
+                }
+                else
+                {
+                    Environment.SetEnvironmentVariable("MESA_LOADER_DRIVER_OVERRIDE", null);
+                    Environment.SetEnvironmentVariable("GALLIUM_DRIVER", null);
+                }
             }
         }
 
+        [SupportedOSPlatform("windows")]
         private static void setupDxvk(string baseDir)
         {
             cleanFiles(baseDir, zink_files);
