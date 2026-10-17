@@ -31,6 +31,7 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Online.API;
 using osu.Game.Rulesets;
 using osu.Game.Scoring;
+using osu.Game.Utils;
 using Realms;
 
 namespace osu.Game.Screens.Select
@@ -132,6 +133,11 @@ namespace osu.Game.Screens.Select
             matching.DifficultyCache = difficultyCache;
             sorting.DifficultyCache = difficultyCache;
             grouping.DifficultyCache = difficultyCache;
+
+            this.difficultyCache = difficultyCache;
+
+            if (difficultyCache != null)
+                difficultyCache.TrackedDifficultyUpdated += trackedDifficultyUpdated;
 
             setupPools();
             detachedBeatmaps = beatmapStore.GetBeatmapSets(cancellationToken);
@@ -814,6 +820,12 @@ namespace osu.Game.Screens.Select
             base.Update();
 
             selectionFocusOffset = (float)Interpolation.DampContinuously(selectionFocusOffset, VisuallyFocusSelected ? 300 : 0, 100, Time.Elapsed);
+
+            if (Scroll.Current != lastScrollPosition)
+            {
+                lastScrollPosition = Scroll.Current;
+                lastScrollMovementTime = Time.Current;
+            }
         }
 
         protected override float GetPanelXOffset(Drawable panel)
@@ -834,6 +846,12 @@ namespace osu.Game.Screens.Select
             bool resetDisplay = grouping.BeatmapSetsGroupedTogether != BeatmapCarouselFilterGrouping.ShouldGroupBeatmapsTogether(criteria);
 
             Criteria = criteria;
+
+            // Exact star ratings are only used for sorting when a mod changes star rating. Otherwise, the stored star rating is used regardless.
+            criteriaUsesExactStarRatings = criteria.Mods != null && ModUtils.FlattenMods(criteria.Mods).Any(StarRatingApproximator.ModAffectsDifficulty);
+
+            // This filter picks up every exact star rating cached so far, so nothing pending needs a separate re-sort.
+            resetStarRatingResort();
 
             loadingDebounce ??= Scheduler.AddDelayed(() =>
             {
@@ -860,6 +878,116 @@ namespace osu.Game.Screens.Select
                 return Task.FromResult(Enumerable.Empty<CarouselItem>());
 
             return base.FilterAsync(clearExistingPanels);
+        }
+
+        #endregion
+
+        #region Re-sorting on exact star ratings
+
+        /// <summary>
+        /// How long to wait after the last exact star rating arrives before re-sorting, so arrivals while browsing are batched into one re-sort.
+        /// </summary>
+        public const double STAR_RATING_RESORT_DEBOUNCE = 1000;
+
+        /// <summary>
+        /// How long scrolling must have stopped before a pending re-sort is applied.
+        /// </summary>
+        private const double star_rating_resort_scroll_idle_time = 500;
+
+        /// <summary>
+        /// How often to check again when a pending re-sort can't be applied yet.
+        /// </summary>
+        private const double star_rating_resort_retry_delay = 250;
+
+        private BeatmapDifficultyCache? difficultyCache;
+
+        private bool criteriaUsesExactStarRatings;
+
+        /// <summary>
+        /// The latest exact star ratings which differ from the ones used for sorting, waiting for the next re-sort.
+        /// </summary>
+        private readonly Dictionary<BeatmapInfo, double> pendingStarRatings = new Dictionary<BeatmapInfo, double>();
+
+        /// <summary>
+        /// Beatmaps which have already caused a re-sort for the current criteria. Each beatmap causes at most one,
+        /// so a star rating which the sort can't use (and would keep differing) can't cause repeated re-sorts.
+        /// </summary>
+        private readonly HashSet<BeatmapInfo> starRatingResortedBeatmaps = new HashSet<BeatmapInfo>();
+
+        private ScheduledDelegate? pendingStarRatingResort;
+
+        private double lastScrollPosition;
+        private double lastScrollMovementTime;
+
+        private void trackedDifficultyUpdated(IBeatmapInfo beatmap, StarDifficulty difficulty)
+        {
+            // Unsubscribing in Dispose() can race with this being invoked from the update thread.
+            if (IsDisposed || !criteriaUsesExactStarRatings || beatmap is not BeatmapInfo beatmapInfo)
+                return;
+
+            if (starRatingResortedBeatmaps.Contains(beatmapInfo))
+                return;
+
+            // While filtering, the star ratings being sorted by aren't known yet, so keep this to be checked once the filter completes.
+            if (!IsFiltering && !differsFromSortedStarRating(beatmapInfo, difficulty.Stars))
+                return;
+
+            pendingStarRatings[beatmapInfo] = difficulty.Stars;
+
+            pendingStarRatingResort?.Cancel();
+            pendingStarRatingResort = Scheduler.AddDelayed(resortForExactStarRatings, STAR_RATING_RESORT_DEBOUNCE);
+        }
+
+        private void resortForExactStarRatings()
+        {
+            pendingStarRatingResort = null;
+
+            // Moving panels while the user is scrolling is disorienting, so wait until scrolling stops.
+            // A filter which is already running may also use the new star ratings itself, which is checked below once it completes.
+            if (IsFiltering || Scroll.IsUserDragging || Time.Current - lastScrollMovementTime < star_rating_resort_scroll_idle_time)
+            {
+                pendingStarRatingResort = Scheduler.AddDelayed(resortForExactStarRatings, star_rating_resort_retry_delay);
+                return;
+            }
+
+            bool resortRequired = false;
+
+            foreach (var (beatmap, stars) in pendingStarRatings)
+            {
+                // Check again against the most recent sort, which may have already used this star rating.
+                if (differsFromSortedStarRating(beatmap, stars) && starRatingResortedBeatmaps.Add(beatmap))
+                    resortRequired = true;
+            }
+
+            pendingStarRatings.Clear();
+
+            if (resortRequired)
+                FilterAsync();
+        }
+
+        /// <summary>
+        /// Whether a star rating would be displayed differently to the one the beatmap was sorted by (see <see cref="FormatUtils.FormatStarRating"/>).
+        /// Beatmaps whose star rating wasn't used by the most recent sort never differ.
+        /// </summary>
+        private bool differsFromSortedStarRating(BeatmapInfo beatmap, double stars)
+            => sorting.LastEffectiveStarRatings.TryGetValue(beatmap, out double sortedStars)
+               && stars.FloorToDecimalDigits(2) != sortedStars.FloorToDecimalDigits(2);
+
+        private void resetStarRatingResort()
+        {
+            pendingStarRatingResort?.Cancel();
+            pendingStarRatingResort = null;
+
+            pendingStarRatings.Clear();
+            starRatingResortedBeatmaps.Clear();
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (difficultyCache != null)
+                difficultyCache.TrackedDifficultyUpdated -= trackedDifficultyUpdated;
         }
 
         #endregion

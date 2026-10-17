@@ -68,6 +68,12 @@ namespace osu.Game.Beatmaps
         private ModSettingChangeTracker? modSettingChangeTracker;
         private ScheduledDelegate? debouncedModSettingsChange;
 
+        /// <summary>
+        /// Invoked on the update thread whenever a bindable from <see cref="GetBindableDifficulty"/> receives a difficulty for the current ruleset and mods.
+        /// Invoked once per bindable update, so a beatmap tracked by multiple bindables is reported once for each of them.
+        /// </summary>
+        internal event Action<IBeatmapInfo, StarDifficulty>? TrackedDifficultyUpdated;
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -321,9 +327,12 @@ namespace osu.Game.Beatmaps
         /// <param name="computationDelay">In the case a cached lookup was not possible, a value in milliseconds of to wait until performing potentially intensive lookup.</param>
         private void updateBindable(BindableStarDifficulty bindable, IRulesetInfo? rulesetInfo, IEnumerable<Mod>? mods, CancellationTokenSource linkedCancellationTokenSource, int computationDelay = 0)
         {
+            // The bindable's beatmap may be replaced by Invalidate() before this completes, so report the beatmap this computation was for.
+            var beatmapInfo = bindable.BeatmapInfo;
+
             // GetDifficultyAsync will fall back to existing data from IBeatmapInfo if not locally available
             // (contrary to GetAsync)
-            GetDifficultyAsync(bindable.BeatmapInfo, rulesetInfo, mods, linkedCancellationTokenSource.Token, computationDelay)
+            GetDifficultyAsync(beatmapInfo, rulesetInfo, mods, linkedCancellationTokenSource.Token, computationDelay)
                 .ContinueWith(task =>
                     {
                         // We're on a threadpool thread, but we should exit back to the update thread so consumers can safely handle value-changed events.
@@ -334,7 +343,10 @@ namespace osu.Game.Beatmaps
                                 StarDifficulty? starDifficulty = task.GetResultSafely();
 
                                 if (starDifficulty != null)
+                                {
                                     bindable.Value = starDifficulty.Value;
+                                    TrackedDifficultyUpdated?.Invoke(beatmapInfo, starDifficulty.Value);
+                                }
                             }
 
                             // Once the linked cancellation token source is of no remaining use to anybody, clean it up.

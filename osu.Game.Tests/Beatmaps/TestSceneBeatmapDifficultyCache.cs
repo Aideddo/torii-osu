@@ -478,6 +478,55 @@ namespace osu.Game.Tests.Beatmaps
             AddStep("release computations", () => difficultyCache.ReleaseComputations(new StarDifficulty(4.0, 0)));
         }
 
+        [Test]
+        public void TestTrackedDifficultyUpdatedReportsEachBindable()
+        {
+            var updates = new List<(IBeatmapInfo beatmap, StarDifficulty difficulty)>();
+            var beatmap = createDetachedBeatmap();
+            IBindable<StarDifficulty> first = null;
+            IBindable<StarDifficulty> second = null;
+
+            AddStep("set computation function", () => difficultyCache.ComputeDifficulty = _ => new StarDifficulty(7.5, 0));
+            AddStep("subscribe", () => difficultyCache.TrackedDifficultyUpdated += (b, d) => updates.Add((b, d)));
+
+            AddStep("get two bindables for one beatmap", () =>
+            {
+                first = difficultyCache.GetBindableDifficulty(beatmap);
+                second = difficultyCache.GetBindableDifficulty(beatmap);
+            });
+
+            AddUntilStep("both bindables updated", () => first.Value.Stars == 7.5 && second.Value.Stars == 7.5);
+            AddAssert("reported once per bindable", () => updates.Count(u => u.beatmap.Equals(beatmap)), () => Is.EqualTo(2));
+            AddAssert("reported computed difficulty", () => updates.Where(u => u.beatmap.Equals(beatmap)).Select(u => u.difficulty.Stars), () => Is.All.EqualTo(7.5));
+        }
+
+        [Test]
+        public void TestTrackedDifficultyUpdatedNotReportedForCancelledBindable()
+        {
+            var reportedBeatmaps = new List<IBeatmapInfo>();
+            var cancelledBeatmap = createDetachedBeatmap();
+            var otherBeatmap = createDetachedBeatmap();
+            var cancellationSource = new CancellationTokenSource();
+            IBindable<StarDifficulty> cancelled = null;
+            IBindable<StarDifficulty> other = null;
+
+            AddStep("subscribe", () => difficultyCache.TrackedDifficultyUpdated += (b, _) => reportedBeatmaps.Add(b));
+            AddStep("hold computations", () => difficultyCache.HoldComputations());
+
+            AddStep("get bindables", () =>
+            {
+                cancelled = difficultyCache.GetBindableDifficulty(cancelledBeatmap, cancellationSource.Token);
+                other = difficultyCache.GetBindableDifficulty(otherBeatmap);
+            });
+
+            AddStep("cancel first bindable", () => cancellationSource.Cancel());
+            AddStep("release computations", () => difficultyCache.ReleaseComputations(new StarDifficulty(7.5, 0)));
+
+            AddUntilStep("other bindable updated", () => other.Value.Stars == 7.5 && reportedBeatmaps.Contains(otherBeatmap));
+            AddAssert("cancelled bindable not updated", () => cancelled.Value.Stars, () => Is.EqualTo(cancelledBeatmap.StarRating));
+            AddAssert("cancelled bindable not reported", () => reportedBeatmaps.Contains(cancelledBeatmap), () => Is.False);
+        }
+
         private static BeatmapInfo createDetachedBeatmap() => new BeatmapInfo { ID = Guid.NewGuid(), StarRating = 4.0, Ruleset = new RulesetInfo { OnlineID = 0 } };
 
         private partial class TestBeatmapDifficultyCache : BeatmapDifficultyCache
