@@ -21,6 +21,13 @@ namespace osu.Game.Online.API
         protected override void PrePerform()
         {
             AddHeader(@"X-Torii-HWID", HardwareFingerprint.Get());
+            AddHeader(@"X-Torii-HWID-V2", HardwareFingerprint.GetV2());
+            AddHeader(@"X-Torii-Device-Token", HardwareFingerprint.GetDeviceToken());
+
+            string? env = EnvironmentTelemetry.Get();
+            if (!string.IsNullOrEmpty(env))
+                AddHeader(@"X-Torii-Env", env);
+
             base.PrePerform();
         }
     }

@@ -430,6 +430,46 @@ namespace osu.Game
                     API.RefreshLocalUser();
             };
 
+            // Torii environment telemetry provider: supplies tablet model, active area,
+            // monitor refresh rate and audio offset for server anti-cheat correlation.
+            EnvironmentTelemetry.Provider = () =>
+            {
+                try
+                {
+                    var sb = new System.Text.StringBuilder();
+                    var tablet = Host?.AvailableInputHandlers.OfType<ITabletHandler>().FirstOrDefault(t => t.Enabled.Value);
+                    if (tablet != null && tablet.Tablet.Value != null)
+                    {
+                        string name = tablet.Tablet.Value.Name;
+                        var size = tablet.AreaSize.Value;
+                        var offset = tablet.AreaOffset.Value;
+                        sb.Append($"tablet={Uri.EscapeDataString(name)};area={size.X:F1}x{size.Y:F1};off={offset.X:F1}x{offset.Y:F1}|");
+                    }
+
+                    var window = Host?.Window;
+                    if (window != null)
+                    {
+                        var mode = window.CurrentDisplayMode.Value;
+                        if (mode.Size.Width > 0)
+                        {
+                            sb.Append($"disp={mode.Size.Width}x{mode.Size.Height}@{mode.RefreshRate:F0}|");
+                        }
+                    }
+
+                    double audioOffset = LocalConfig?.Get<double>(OsuSetting.AudioOffset) ?? 0;
+                    if (audioOffset != 0)
+                    {
+                        sb.Append($"audio={audioOffset:F0}|");
+                    }
+
+                    return sb.Length > 0 ? sb.ToString().TrimEnd('|') : null;
+                }
+                catch
+                {
+                    return null;
+                }
+            };
+
             base.Content.Add(new BeatmapOnlineChangeIngest(beatmapUpdater, realm, metadataClient));
 
             BeatmapManager.ProcessBeatmap = (beatmapSet, scope) => beatmapUpdater.Process(beatmapSet, scope);

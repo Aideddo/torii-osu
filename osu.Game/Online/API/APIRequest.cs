@@ -135,6 +135,12 @@ namespace osu.Game.Online.API
             WebRequest.AddHeader(@"Accept-Language", API.Language.ToCultureCode());
             WebRequest.AddHeader(@"x-api-version", API.APIVersion.ToString(CultureInfo.InvariantCulture));
             WebRequest.AddHeader(@"X-Torii-HWID", HardwareFingerprint.Get());
+            WebRequest.AddHeader(@"X-Torii-HWID-V2", HardwareFingerprint.GetV2());
+            WebRequest.AddHeader(@"X-Torii-Device-Token", HardwareFingerprint.GetDeviceToken());
+
+            string? env = EnvironmentTelemetry.Get();
+            if (!string.IsNullOrEmpty(env))
+                WebRequest.AddHeader(@"X-Torii-Env", env);
 
             if (!string.IsNullOrEmpty(API.AccessToken))
                 WebRequest.AddHeader(@"Authorization", $@"Bearer {API.AccessToken}");
