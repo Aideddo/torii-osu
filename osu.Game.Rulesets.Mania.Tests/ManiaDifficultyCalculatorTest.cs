@@ -14,11 +14,11 @@ namespace osu.Game.Rulesets.Mania.Tests
     {
         protected override string ResourceAssembly => "osu.Game.Rulesets.Mania.Tests";
 
-        [TestCase(2.3493769750220914d, 242, "diffcalc-test")]
+        [TestCase(2.6712184650034807d, 242, "diffcalc-test")]
         public void Test(double expectedStarRating, int expectedMaxCombo, string name)
             => base.Test(expectedStarRating, expectedMaxCombo, name);
 
-        [TestCase(2.797245912537965d, 242, "diffcalc-test")]
+        [TestCase(2.9303126221275826d, 242, "diffcalc-test")]
         public void TestClockRateAdjusted(double expectedStarRating, int expectedMaxCombo, string name)
             => Test(expectedStarRating, expectedMaxCombo, name, new ManiaModDoubleTime());
 
