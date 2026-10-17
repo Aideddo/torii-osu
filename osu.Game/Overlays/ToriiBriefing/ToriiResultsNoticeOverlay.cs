@@ -229,6 +229,7 @@ namespace osu.Game.Overlays.ToriiBriefing
 
         protected override void PopOut()
         {
+            noticeSeen.Value = true;
             samplePopOut?.Play();
             this.FadeOut(BriefingTheme.DismissDuration, Easing.OutQuint);
             panel.ScaleTo(0.97f, BriefingTheme.DismissDuration, Easing.OutQuint);

@@ -138,7 +138,6 @@ namespace osu.Game.Screens.Ranking
             config.BindWith(Configuration.OsuSetting.UseV2ResultsScreen, useV2ResultsScreen);
             config.BindWith(Configuration.OsuSetting.ToriiStableResults, useLegacyResults);
             config.BindWith(Configuration.OsuSetting.ToriiResultsNoticeSeen, noticeSeen);
-            noticeSeen.Value = false;
 
             popInSample = audio.Samples.Get(@"UI/overlay-pop-in");
 
