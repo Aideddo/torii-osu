@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -1009,12 +1009,23 @@ namespace osu.Game.Screens.Select
         {
             if (legacyUi.Value)
             {
-                // (C) en la stable recomendamos el auto-hide para la mejor experiencia.
-                Scheduler.AddDelayed(() =>
+                if (!gameConfig.Get<bool>(OsuSetting.ToriiStableDisclaimerSeen))
                 {
-                    if (this.IsCurrentScreen())
-                        (game as OsuGame)?.ShowAutoHideHint(true);
-                }, 2000);
+                    Scheduler.AddDelayed(() =>
+                    {
+                        if (this.IsCurrentScreen())
+                            (game as OsuGame)?.ShowStableSongSelectDisclaimer();
+                    }, 1200);
+                }
+                else
+                {
+                    // (C) en la stable recomendamos el auto-hide para la mejor experiencia.
+                    Scheduler.AddDelayed(() =>
+                    {
+                        if (this.IsCurrentScreen())
+                            (game as OsuGame)?.ShowAutoHideHint(true);
+                    }, 2000);
+                }
             }
             else
             {

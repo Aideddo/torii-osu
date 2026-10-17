@@ -4,6 +4,7 @@
 #nullable disable
 
 using System;
+using System.Collections.Generic;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -44,12 +45,14 @@ namespace osu.Game.Screens.Play
         public Action OnDismiss;
 
         private readonly Bindable<bool> singleConfirmation;
+        private readonly Bindable<bool>? skipBreaksEnabled;
 
         private Container panel;
 
-        public SkipBreakBriefingOverlay(Bindable<bool> singleConfirmation)
+        public SkipBreakBriefingOverlay(Bindable<bool> singleConfirmation, Bindable<bool>? skipBreaksEnabled = null)
         {
             this.singleConfirmation = singleConfirmation;
+            this.skipBreaksEnabled = skipBreaksEnabled;
             RelativeSizeAxes = Axes.Both;
         }
 
@@ -151,21 +154,7 @@ namespace osu.Game.Screens.Play
                         Direction = FillDirection.Vertical,
                         Spacing = new Vector2(0, BriefingTheme.SpacingSm),
                         Padding = new MarginPadding(BriefingTheme.SpacingMd),
-                        Children = new Drawable[]
-                        {
-                            new OsuSpriteText
-                            {
-                                Text = ToriiSettingsStrings.SkipBreakBriefingInlineTip,
-                                Font = OsuFont.GetFont(size: BriefingTheme.TypeCaption, weight: FontWeight.Bold),
-                                Colour = BriefingTheme.AccentCyan,
-                            },
-                            new FormCheckBox
-                            {
-                                Caption = ToriiSettingsStrings.SkipBreaksSingleConfirmation,
-                                HintText = ToriiSettingsStrings.SkipBreaksSingleConfirmationHint,
-                                Current = { BindTarget = singleConfirmation },
-                            },
-                        },
+                        Children = getInlineControls(),
                     },
                 },
                 new DismissButton(BriefingTheme.AccentPink)
@@ -178,6 +167,37 @@ namespace osu.Game.Screens.Play
                     Action = dismiss,
                 },
             });
+        }
+
+        private Drawable[] getInlineControls()
+        {
+            var controls = new List<Drawable>
+            {
+                new OsuSpriteText
+                {
+                    Text = ToriiSettingsStrings.SkipBreakBriefingInlineTip,
+                    Font = OsuFont.GetFont(size: BriefingTheme.TypeCaption, weight: FontWeight.Bold),
+                    Colour = BriefingTheme.AccentCyan,
+                },
+                new FormCheckBox
+                {
+                    Caption = ToriiSettingsStrings.SkipBreaksSingleConfirmation,
+                    HintText = ToriiSettingsStrings.SkipBreaksSingleConfirmationHint,
+                    Current = { BindTarget = singleConfirmation },
+                },
+            };
+
+            if (skipBreaksEnabled != null)
+            {
+                controls.Add(new FormCheckBox
+                {
+                    Caption = ToriiSettingsStrings.SkipBreaks,
+                    HintText = ToriiSettingsStrings.SkipBreaksHint,
+                    Current = { BindTarget = skipBreaksEnabled },
+                });
+            }
+
+            return controls.ToArray();
         }
 
         private void dismiss()

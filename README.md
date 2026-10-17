@@ -95,6 +95,14 @@ A small gradient torii-gate icon shown next to online users in the Friends / Onl
 
 A daily portal overlay greeting users on first login of the day. Shows server status, what's new since last login, friend activity, and quick-jump entries. Designed so the home screen of a Torii session has more "warmth" than an empty Lazer main menu.
 
+### Results screen styles (Modern V2 & Stable)
+
+Torii gives players choice over their results screen presentation via **Settings → User Interface → Results Screen**:
+
+- **Modern V2 (g0v0)**: A sleek, modern results screen design conceptualized and created by **g0v0** ([GooGuTeam](https://github.com/GooGuTeam)). Features vector rank emblems, detailed hit-distribution statistics, score metric visualizers, local PP and if-FC estimates, and expandable leaderboard / score details drawers.
+- **Torii (Stable)**: A faithful rendition of the osu!stable results screen for players who prefer the classic layout.
+- **Lazer Classic**: Upstream's standard results screen.
+
 ### Performance work
 
 - **Hiccup queue** — gameplay frame-time outliers are detected, snapshotted, and (with explicit opt-in) uploaded to the Torii server so we can see real-world stutter patterns instead of just our own profiles. Hiccup polling is paused during gameplay so we never *cause* a hiccup measuring one.
@@ -284,7 +292,7 @@ The Torii client source is licensed under the [MIT License](LICENCE), inheriting
 
 - [ppy](https://github.com/ppy) and the osu! lazer team — without their work, none of this would exist. Please support [osu!](https://osu.ppy.sh) and consider becoming a [supporter](https://osu.ppy.sh/home/support).
 - [shigetiro](https://github.com/shigetiro) — earlier fork work that Torii builds on.
-- [GooGuTeam](https://github.com/GooGuTeam) — `g0v0-server` upstream + ongoing collaboration on the server side.
+- [GooGuTeam](https://github.com/GooGuTeam) / **g0v0** — original **Modern V2 (g0v0)** results screen design and concept, `g0v0-server` upstream, and ongoing collaboration.
 - The Torii community — for bug reports, ideas, and putting up with experimental builds on the Nova stream.
 
 ---

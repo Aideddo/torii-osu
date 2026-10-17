@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -163,6 +163,7 @@ namespace osu.Game
         private Bindable<bool> legacyStableDisclaimerWatcher;
         private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay autoHideHint;
         private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay stableSongSelectPromo;
+        private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay stableSongSelectDisclaimer;
         private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay newDefaultThemeHint;
         private bool newThemeHintScheduled;
 
@@ -1539,6 +1540,15 @@ namespace osu.Game
                 Toggle = LocalConfig.GetBindable<bool>(OsuSetting.ToriiLegacyFooterUseSkin),
             }, topMostOverlayContent.Add);
 
+            loadComponentSingleFile(stableSongSelectDisclaimer = new osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay
+            {
+                Title = "Stable song select is experimental",
+                ToggleCaption = "Stable song select",
+                ToggleHint = "Turn off any time if you experience visual bugs or prefer the default.",
+                Accent = osu.Game.Overlays.ToriiBriefing.BriefingTheme.AccentCyan,
+                Toggle = LocalConfig.GetBindable<bool>(OsuSetting.ToriiLegacyFooterUseSkin),
+            }, topMostOverlayContent.Add);
+
             // torii: aviso (una sola vez) de que glass es el nuevo theme default. sin toggle, solo informa;
             // el que quiera el look de antes tiene "Torii Legacy" en settings. lo prende la migracion de
             // OsuGameBase (flag pending) y sale cuando el menu esta listo (ver showNewDefaultThemeHint).
@@ -2333,13 +2343,22 @@ namespace osu.Game
             cursorSizePreview?.OnAdjusted();
         }
 
+        public void ShowStableSongSelectDisclaimer()
+        {
+            if (OverlayActivationMode.Value == OverlayActivation.Disabled)
+                return;
+
+            if (LocalConfig.Get<bool>(OsuSetting.ToriiStableDisclaimerSeen))
+                return;
+
+            LocalConfig.SetValue(OsuSetting.ToriiStableDisclaimerSeen, true);
+
+            stableSongSelectDisclaimer?.Present("Heads up: the stable song select is experimental. Some skins may look broken and there can be bugs. You can turn it off below or anytime in Settings.");
+        }
+
         private void postStableSongSelectDisclaimer()
         {
-            Notifications.Post(new SimpleNotification
-            {
-                Text = "Heads up: the stable song select is experimental. Some skins may look a bit broken and there can be bugs. You can turn it off anytime in Settings.",
-                Icon = FontAwesome.Solid.ToriiGate,
-            });
+            ShowStableSongSelectDisclaimer();
         }
 
         protected virtual void ScreenChanged([CanBeNull] IOsuScreen current, [CanBeNull] IOsuScreen newScreen)

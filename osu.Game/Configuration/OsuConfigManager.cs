@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -372,6 +372,9 @@ namespace osu.Game.Configuration
             // panel de stable, y se abre sola despues de jugar un mapa). OPT-IN igual que el
             // stable song select: arranca APAGADO asi el look default (glass) queda coherente.
             SetDefault(OsuSetting.ToriiStableResults, false);
+            SetDefault(OsuSetting.UseV2ResultsScreen, true);
+            SetDefault(OsuSetting.ToriiResultsNoticeSeen, false);
+            SetDefault(OsuSetting.ToriiStableDisclaimerSeen, false);
             // Torii: la UI legacy usa la fuente moderna de lazer por default; este toggle la
             // pasa a "Aller" (la fuente real de osu!stable) para un look 1:1 stable.
             SetDefault(OsuSetting.ToriiLegacyFont, false);
@@ -750,6 +753,9 @@ namespace osu.Game.Configuration
         ToriiStableOptInMigrated,
         ToriiLegacySongSelectFooter,
         ToriiStableResults,
+        UseV2ResultsScreen,
+        ToriiResultsNoticeSeen,
+        ToriiStableDisclaimerSeen,
         ToriiLegacyFont,
         ToriiDifficultyRecalcMode,
         ToriiAppliedDifficultyVersions,

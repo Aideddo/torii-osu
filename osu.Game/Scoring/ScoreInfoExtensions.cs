@@ -69,6 +69,20 @@ namespace osu.Game.Scoring
         public static int GetMaximumAchievableCombo(this ScoreInfo score) => score.MaximumStatistics.Where(kvp => kvp.Key.AffectsCombo()).Sum(kvp => kvp.Value);
 
         /// <summary>
+        /// Returns whether the supplied <paramref name="score"/> is a "perfect" score (also referred to as "full combo").
+        /// </summary>
+        public static bool IsPerfect(this ScoreInfo score) => score.MaxCombo == score.GetMaximumAchievableCombo();
+
+        /// <summary>
+        /// A perfect full combo requires both perfect accuracy and the complete achievable combo.
+        /// Bonus judgements are intentionally excluded: spinner bonus does not determine PFC.
+        /// </summary>
+        public static bool IsPerfectCombo(this ScoreInfo score)
+            => score.Passed && score.Rank != ScoreRank.F && score.Accuracy == 1
+               && score.GetMaximumAchievableCombo() > 0 && score.MaxCombo == score.GetMaximumAchievableCombo()
+               && !score.Statistics.Any(s => s.Value > 0 && (s.Key.BreaksCombo() || (s.Key.IsMiss() && s.Key.AffectsAccuracy())));
+
+        /// <summary>
         /// Performs a realm filter that returns all scores that belong to the user with the given <paramref name="userId"/>.
         /// <see langword="null"/> <paramref name="userId"/> (for guests) is supported.
         /// </summary>
