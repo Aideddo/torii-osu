@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -375,6 +375,8 @@ namespace osu.Game.Scoring
                     case HitResult.SmallBonus:
                         if (MaximumStatistics.TryGetValue(r.result, out int count) && count > 0)
                             yield return new HitResultDisplayStatistic(r.result, value, count, r.displayName);
+                        else if (r.result.IsBonus() && value > 0)
+                            yield return new HitResultDisplayStatistic(r.result, value, null, r.displayName);
 
                         break;
 

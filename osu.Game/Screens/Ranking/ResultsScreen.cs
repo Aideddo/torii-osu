@@ -26,9 +26,11 @@ using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
 using osu.Game.Online.Placeholders;
 using osu.Game.Overlays;
+using osu.Game.Overlays.ToriiBriefing;
 using osu.Game.Overlays.Volume;
 using osu.Game.Scoring;
 using osu.Game.Screens.Play;
+using osu.Game.Screens.Ranking.Expanded;
 using osu.Game.Screens.Ranking.Expanded.Accuracy;
 using osu.Game.Screens.Ranking.Statistics;
 using osu.Game.Skinning;
@@ -49,6 +51,11 @@ namespace osu.Game.Screens.Ranking
         protected override OverlayActivation InitialOverlayActivationMode => OverlayActivation.UserTriggered;
 
         public readonly Bindable<ScoreInfo?> SelectedScore = new Bindable<ScoreInfo?>();
+
+        public readonly BindableBool IsPersonalBest = new BindableBool();
+        public readonly Bindable<ScoreInfo?> ComparisonScore = new Bindable<ScoreInfo?>();
+        public readonly BindableBool V2DetailsVisible = new BindableBool();
+        public readonly BindableBool V2LeaderboardVisible = new BindableBool();
 
         public readonly ScoreInfo? Score;
 
@@ -74,9 +81,28 @@ namespace osu.Game.Screens.Ranking
         protected StatisticsPanel StatisticsPanel { get; private set; } = null!;
 
         private Drawable bottomPanel = null!;
+        private V2ResultsFooter v2Footer = null!;
+        private Box classicFooterBackground = null!;
+        private FillFlowContainer buttons = null!;
         private Container<ScorePanel> detachedPanelContainer = null!;
 
         private Task lastFetchTask = Task.CompletedTask;
+
+        private readonly Bindable<bool> useV2ResultsScreen = new Bindable<bool>();
+        private readonly Bindable<bool> useLegacyResults = new Bindable<bool>();
+        private Container v2PanelContainer = null!;
+        private ShearedButton layoutButton = null!;
+        private ShearedButton backButton = null!;
+        private bool showingOriginalLayout;
+        private bool v2PanelLoading;
+        private bool hasEntered;
+
+        private ToriiResultsNoticeOverlay? noticeOverlay;
+        private readonly Bindable<bool> noticeSeen = new Bindable<bool>();
+
+        private bool v2LayoutEnabled => !useLegacyResults.Value && useV2ResultsScreen.Value && this is SoloResultsScreen && Score?.BeatmapInfo != null;
+        private bool showingV2Layout => v2LayoutEnabled && !showingOriginalLayout;
+        private bool shouldFlairForCurrentScore => player != null && Score?.User.IsBot == false && !(useLegacyResults.Value && this is SoloResultsScreen);
 
         /// <summary>
         /// Whether the user can retry the beatmap from the results screen.
@@ -109,7 +135,10 @@ namespace osu.Game.Screens.Ranking
         [BackgroundDependencyLoader]
         private void load(AudioManager audio, Configuration.OsuConfigManager config)
         {
-            FillFlowContainer buttons;
+            config.BindWith(Configuration.OsuSetting.UseV2ResultsScreen, useV2ResultsScreen);
+            config.BindWith(Configuration.OsuSetting.ToriiStableResults, useLegacyResults);
+            config.BindWith(Configuration.OsuSetting.ToriiResultsNoticeSeen, noticeSeen);
+            noticeSeen.Value = false;
 
             popInSample = audio.Samples.Get(@"UI/overlay-pop-in");
 
@@ -149,6 +178,11 @@ namespace osu.Game.Screens.Ranking
                                         {
                                             RelativeSizeAxes = Axes.Both
                                         },
+                                        v2PanelContainer = new Container
+                                        {
+                                            RelativeSizeAxes = Axes.Both,
+                                            Alpha = 0,
+                                        },
                                     }
                                 }
                             },
@@ -164,7 +198,7 @@ namespace osu.Game.Screens.Ranking
                                 Alpha = 0,
                                 Children = new Drawable[]
                                 {
-                                    new Box
+                                    classicFooterBackground = new Box
                                     {
                                         RelativeSizeAxes = Axes.Both,
                                         Colour = Color4Extensions.FromHex("#333")
@@ -189,31 +223,70 @@ namespace osu.Game.Screens.Ranking
                 }
             };
 
-            // torii: results estilo stable. en solo (SoloResultsScreen cubre post-gameplay, replay,
-            // spectator Y ver un score del leaderboard desde el song select) se entra DIRECTO a la vista
-            // legacy desde el primer frame — antes esto pedia player != null, asi que al clickear un score
-            // del leaderboard (sin player) caia en la lista de paneles de lazer en vez de la results stable
-            // con el boton de watch replay. en multi/playlists se mantiene la lista stock de paneles (ver
-            // los scores de todos) y el panel legacy abre al clickear un score, como siempre.
-            bool stableResults = config.Get<bool>(Configuration.OsuSetting.ToriiStableResults);
-            bool stableAutoShow = stableResults && this is SoloResultsScreen;
+            ((Container)bottomPanel).Add(v2Footer = new V2ResultsFooter
+            {
+                Alpha = 0,
+                Score = Score,
+                AllowWatchingReplay = AllowWatchingReplay,
+                BackAction = () =>
+                {
+                    if (!OnBackButton())
+                        this.Exit();
+                },
+                RankingAction = () =>
+                {
+                    foreach (var panel in v2PanelContainer.Children.OfType<V2ResultsPanel>())
+                        panel.ToggleLeaderboard();
+                },
+                DetailsAction = () =>
+                {
+                    foreach (var panel in v2PanelContainer.Children.OfType<V2ResultsPanel>())
+                        panel.ToggleDetails();
+                },
+                RetryAction = player != null && AllowRetry ? restartPlayer : null,
+            });
+
+            v2Footer.DetailsVisible.BindTo(V2DetailsVisible);
+            v2Footer.LeaderboardVisible.BindTo(V2LeaderboardVisible);
 
             if (Score != null)
             {
                 // only show flair / animation when arriving after watching a play that isn't autoplay.
-                // torii: en el modo stable directo el accuracy circle queda tapado por el panel legacy
-                // desde el frame uno — sin flair, que si no sonaria (ticks + aplauso) detras de un
-                // panel invisible. el aplauso lo dispara el overlay al entrar, como stable.
-                bool shouldFlair = player != null && !Score.User.IsBot && !stableAutoShow;
+                bool shouldFlair = shouldFlairForCurrentScore;
 
-                ScorePanelList.AddScore(Score, shouldFlair);
+                ScorePanelList.AddScore(Score, shouldFlair && !v2LayoutEnabled);
+
+                if (v2LayoutEnabled)
+                    v2PanelContainer.Add(new V2ResultsPanel(Score, shouldFlair));
+
                 // this is mostly for medal display.
                 // we don't want the medal animation to trample on the results screen animation, so we (ab)use `OverlayActivationMode`
                 // to give the results screen enough time to play the animation out before the medals can be shown.
-                // torii: en el modo stable directo la animacion de entrada del panel legacy dura
-                // ~3-4s; sin esta demora las medallas caerian encima apenas arranca.
-                Scheduler.AddDelayed(() => OverlayActivationMode.Value = OverlayActivation.All, shouldFlair ? AccuracyCircle.TOTAL_DURATION + 1000 : stableAutoShow ? 4000 : 0);
+                Scheduler.AddDelayed(() => OverlayActivationMode.Value = OverlayActivation.All, shouldFlair ? AccuracyCircle.TOTAL_DURATION + 1000 : useLegacyResults.Value && this is SoloResultsScreen ? 4000 : 0);
             }
+
+            buttons.Add(backButton = new ShearedButton
+            {
+                Text = CommonStrings.Back,
+                Width = 140,
+                Height = 30,
+                DarkerColour = Color4Extensions.FromHex("#CF2BA5"),
+                Action = this.Exit,
+                Alpha = 0,
+            });
+
+            buttons.Add(layoutButton = new ShearedButton
+            {
+                Width = 220,
+                Height = 30,
+                Action = () =>
+                {
+                    StatisticsPanel.Hide();
+                    showingOriginalLayout = !showingOriginalLayout;
+                    updateResultsLayout();
+                },
+                Alpha = 0,
+            });
 
             bool allowHotkeyRetry = false;
 
@@ -259,6 +332,12 @@ namespace osu.Game.Screens.Ranking
                     {
                         if (!this.IsCurrentScreen()) return;
 
+                        if (showingV2Layout && v2Footer.RetryButton.Enabled.Value)
+                        {
+                            v2Footer.RetryButton.TriggerClick();
+                            return;
+                        }
+
                         skipExitTransition = true;
                         player?.Restart(true);
                     },
@@ -276,8 +355,13 @@ namespace osu.Game.Screens.Ranking
             // stable, la barra stock de abajo se re-estiliza flotante y el back button pasa a ser
             // el legacy skineado. Depth MinValue: los subclasses (multi team results) agregan su
             // chrome DESPUES de este load y quedaria dibujado encima del panel legacy si no.
-            if (stableResults)
-                AddInternal(legacyOverlay = new LegacyRankingOverlay(this, StatisticsPanel, VerticalScrollContent, bottomPanel, autoShowDetails: stableAutoShow) { Depth = float.MinValue });
+            if (useLegacyResults.Value)
+                AddInternal(legacyOverlay = new LegacyRankingOverlay(this, StatisticsPanel, VerticalScrollContent, bottomPanel, autoShowDetails: this is SoloResultsScreen) { Depth = float.MinValue });
+
+            AddInternal(noticeOverlay = new ToriiResultsNoticeOverlay(useV2ResultsScreen, useLegacyResults, noticeSeen)
+            {
+                Depth = float.MinValue + 1,
+            });
         }
 
         protected override void LoadComplete()
@@ -285,13 +369,118 @@ namespace osu.Game.Screens.Ranking
             base.LoadComplete();
 
             StatisticsPanel.State.BindValueChanged(onStatisticsStateChanged, true);
+            useV2ResultsScreen.BindValueChanged(_ =>
+            {
+                showingOriginalLayout = false;
+                updateResultsLayout();
+            }, true);
+            useLegacyResults.BindValueChanged(_ =>
+            {
+                showingOriginalLayout = false;
+                updateResultsLayout();
+            });
 
             fetchScores(null);
+        }
+
+        private void restartPlayer()
+        {
+            skipExitTransition = true;
+            player!.Restart(true);
+        }
+
+        public IEnumerable<ScoreInfo> GetOverviewScores() => ScorePanelList.GetScorePanels().Select(p => p.Score);
+
+        public void SelectOverviewScore(ScoreInfo score)
+        {
+            Schedule(() =>
+            {
+                V2LeaderboardVisible.Value = false;
+                V2DetailsVisible.Value = false;
+                SelectedScore.Value = score;
+                v2PanelContainer.Clear();
+                v2PanelContainer.Add(new V2ResultsPanel(score));
+            });
+        }
+
+        private void showOriginalResults(bool showStatistics)
+        {
+            V2LeaderboardVisible.Value = false;
+            V2DetailsVisible.Value = false;
+
+            foreach (var panel in v2PanelContainer.Children.OfType<V2ResultsPanel>())
+            {
+                panel.CloseLeaderboard();
+                panel.CloseDetails();
+            }
+
+            showingOriginalLayout = true;
+            updateResultsLayout();
+            if (showStatistics && SelectedScore.Value != null)
+                StatisticsPanel.Show();
+        }
+
+        private void updateResultsLayout()
+        {
+            if (showingV2Layout)
+            {
+                VerticalScrollContent.ScrollToStart(false);
+                StatisticsPanel.Hide();
+                SelectedScore.Value = Score;
+            }
+            else
+            {
+                V2LeaderboardVisible.Value = false;
+                V2DetailsVisible.Value = false;
+
+                foreach (var panel in v2PanelContainer.Children.OfType<V2ResultsPanel>())
+                {
+                    panel.CloseLeaderboard();
+                    panel.CloseDetails();
+                }
+            }
+
+            BackButtonVisibility.Value = !showingV2Layout && !useLegacyResults.Value;
+            VerticalScrollContent.FitToViewport = showingV2Layout;
+            v2Footer.Alpha = showingV2Layout ? 1 : 0;
+            classicFooterBackground.Alpha = showingV2Layout ? 0 : 1;
+            buttons.Alpha = showingV2Layout ? 0 : 1;
+            bottomPanel.Height = useLegacyResults.Value ? 0 : showingV2Layout ? DrawWidth * V2ResultsFooter.DESIGN_HEIGHT / 1280 : TwoLayerButton.SIZE_EXTENDED.Y;
+
+            ScorePanelList.Alpha = showingV2Layout ? 0 : 1;
+            ScorePanelList.HandleInput = !showingV2Layout;
+            detachedPanelContainer.Alpha = showingV2Layout ? 0 : 1;
+            v2PanelContainer.Alpha = showingV2Layout ? 1 : 0;
+            layoutButton.Alpha = v2LayoutEnabled ? 1 : 0;
+            backButton.Alpha = v2LayoutEnabled ? 1 : 0;
+            layoutButton.Text = showingV2Layout ? ResultsScreenStrings.LeaderboardAndDetails : ResultsScreenStrings.ScoreOverview;
+
+            foreach (var button in buttons.Children.OfType<ReplayDownloadButton>())
+                button.Width = v2LayoutEnabled ? 180 : 300;
+
+            foreach (var button in buttons.Children.OfType<RetryButton>())
+                button.Width = v2LayoutEnabled ? 180 : 300;
+
+            if (showingV2Layout && v2PanelContainer.Count == 0 && !v2PanelLoading && Score != null)
+            {
+                v2PanelLoading = true;
+                LoadComponentAsync(new V2ResultsPanel(Score, shouldFlairForCurrentScore), panel =>
+                {
+                    v2PanelContainer.Add(panel);
+                    v2PanelLoading = false;
+                });
+            }
+
+            if (hasEntered && this.IsCurrentScreen())
+                ApplyToBackground(b => b.BlurAmount.Value = showingV2Layout ? 0 : BACKGROUND_BLUR);
         }
 
         protected override void Update()
         {
             base.Update();
+
+            if (showingV2Layout)
+                bottomPanel.Height = DrawWidth * V2ResultsFooter.DESIGN_HEIGHT / 1280;
 
             if (ScorePanelList.IsScrolledToStart)
                 fetchScores(-1);
@@ -440,16 +629,26 @@ namespace osu.Game.Screens.Ranking
         public override void OnEntering(ScreenTransitionEvent e)
         {
             base.OnEntering(e);
+            hasEntered = true;
 
             ApplyToBackground(b =>
             {
-                b.BlurAmount.Value = BACKGROUND_BLUR;
+                b.BlurAmount.Value = showingV2Layout ? 0 : BACKGROUND_BLUR;
                 b.FadeColour(OsuColour.Gray(0.5f), 250);
             });
 
             bottomPanel.FadeTo(1, 250);
 
             popInSample?.Play();
+
+            if (v2LayoutEnabled && !noticeSeen.Value)
+            {
+                Scheduler.AddDelayed(() =>
+                {
+                    if (this.IsCurrentScreen() && showingV2Layout)
+                        noticeOverlay?.Show();
+                }, 800);
+            }
         }
 
         public override bool OnExiting(ScreenExitEvent e)
@@ -471,11 +670,27 @@ namespace osu.Game.Screens.Ranking
 
         public override bool OnBackButton()
         {
+            if (noticeOverlay?.State.Value == Visibility.Visible)
+            {
+                noticeOverlay.Hide();
+                return true;
+            }
+
             // torii: en el modo stable directo no hay vista intermedia a la que "volver" (el
             // chrome stock no se ve nunca): si la vista esta scrolleada en los extras primero
             // vuelve arriba, y despues back sale del screen de una, como stable.
             if (LegacyStableDirectMode)
                 return legacyOverlay?.HandleBackScroll() == true;
+
+            if (showingV2Layout && v2PanelContainer.Children.OfType<V2ResultsPanel>().Any(p => p.CloseLeaderboard() || p.CloseDetails()))
+                return true;
+
+            if (v2LayoutEnabled && showingOriginalLayout && StatisticsPanel.State.Value != Visibility.Visible)
+            {
+                showingOriginalLayout = false;
+                updateResultsLayout();
+                return true;
+            }
 
             if (StatisticsPanel.State.Value == Visibility.Visible)
             {
@@ -565,6 +780,14 @@ namespace osu.Game.Screens.Ranking
                     if (LegacyStableDirectMode)
                         return true;
 
+                    if (showingV2Layout)
+                    {
+                        foreach (var panel in v2PanelContainer.Children.OfType<V2ResultsPanel>())
+                            panel.ToggleDetails();
+
+                        return true;
+                    }
+
                     if (SelectedScore.Value != null)
                         StatisticsPanel.ToggleVisibility();
                     return true;
@@ -589,6 +812,8 @@ namespace osu.Game.Screens.Ranking
 
         protected partial class VerticalScrollContainer : OsuScrollContainer
         {
+            public bool FitToViewport { get; set; }
+
             protected override Container<Drawable> Content => content;
 
             private readonly Container content;
@@ -605,7 +830,7 @@ namespace osu.Game.Screens.Ranking
             protected override void Update()
             {
                 base.Update();
-                content.Height = Math.Max(screen_height, DrawHeight);
+                content.Height = FitToViewport ? DrawHeight : Math.Max(screen_height, DrawHeight);
             }
         }
     }

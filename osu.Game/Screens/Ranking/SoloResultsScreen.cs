@@ -79,6 +79,10 @@ namespace osu.Game.Screens.Ranking
                 return [];
             }
 
+            bool isPersonalBest = Score.UserID == api.LocalUser.Value.OnlineID && result.UserScore != null
+                                  && (Score.Equals(result.UserScore) || Score.MatchesOnlineID(result.UserScore));
+            Schedule(() => IsPersonalBest.Value = isPersonalBest);
+
             var clonedScores = result.AllScores.Select(s => s.DeepClone()).ToArray();
 
             List<ScoreInfo> sortedScores = [];

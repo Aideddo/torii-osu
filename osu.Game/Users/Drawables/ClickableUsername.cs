@@ -25,7 +25,7 @@ namespace osu.Game.Users.Drawables
         [Resolved]
         private OsuGame? game { get; set; }
 
-        public ClickableUsername(APIUser? user, FontUsage? font = null)
+        public ClickableUsername(APIUser? user, FontUsage? font = null, bool useV2Style = false)
         {
             TooltipContent = this.user = user ?? new GuestUser();
 
@@ -40,12 +40,18 @@ namespace osu.Game.Users.Drawables
             // font so the name keeps the surrounding column's size/style.
             Child = UserAuraContainer.Wrap(user, new OsuSpriteText
             {
-                Text = user!.Username,
-                Font = font ?? OsuFont.Torus.With(size: 16, weight: FontWeight.SemiBold),
+                Text = this.user.Username,
+                Font = font ?? (useV2Style ? OsuFont.Default.With(size: 16, weight: FontWeight.SemiBold) : OsuFont.Torus.With(size: 16, weight: FontWeight.SemiBold)),
+                Shadow = !useV2Style,
             });
 
-            if (user.Id != APIUser.SYSTEM_USER_ID)
+            if (this.user.Id != APIUser.SYSTEM_USER_ID)
                 Action = openProfile;
+        }
+
+        public ClickableUsername(APIUser? user, bool useV2Style)
+            : this(user, null, useV2Style)
+        {
         }
 
         private void openProfile()
