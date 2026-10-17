@@ -462,6 +462,12 @@ namespace osu.Game
                         sb.Append($"audio={audioOffset:F0}|");
                     }
 
+                    string? otdPlugins = EnvironmentTelemetry.GetDetectedTabletPlugins();
+                    if (!string.IsNullOrEmpty(otdPlugins))
+                    {
+                        sb.Append($"otd={otdPlugins}|");
+                    }
+
                     return sb.Length > 0 ? sb.ToString().TrimEnd('|') : null;
                 }
                 catch
