@@ -357,6 +357,9 @@ namespace osu.Game.Screens.Select
                 case BeatmapOnlineStatus.Loved:
                     return new RankedStatusGroupDefinition(7, status).Yield();
 
+                case BeatmapOnlineStatus.Blacklisted:
+                    return new RankedStatusGroupDefinition(8, status).Yield();
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(status), status, null);
             }

@@ -282,6 +282,16 @@ namespace osu.Game.Beatmaps.Drawables.Cards
                 });
             }
 
+            if (BlacklistedBeatmapBadge.ShouldShowFor(BeatmapSet))
+            {
+                titleBadgeArea.Add(new BlacklistedBeatmapBadge
+                {
+                    Anchor = Anchor.BottomRight,
+                    Origin = Anchor.BottomRight,
+                    Margin = new MarginPadding { Left = 4 }
+                });
+            }
+
             if (MapperatorinatorBeatmapBadge.ShouldShowFor(BeatmapSet))
             {
                 titleBadgeArea.Add(new MapperatorinatorBeatmapBadge

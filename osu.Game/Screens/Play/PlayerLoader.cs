@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -323,6 +323,10 @@ namespace osu.Game.Screens.Play
 
                 case BeatmapOnlineStatus.Qualified:
                     disclaimers.Add(new PlayerLoaderDisclaimer(PlayerLoaderStrings.QualifiedBeatmapDisclaimerTitle, PlayerLoaderStrings.QualifiedBeatmapDisclaimerContent));
+                    break;
+
+                case BeatmapOnlineStatus.Blacklisted:
+                    disclaimers.Add(new PlayerLoaderDisclaimer("Blacklisted Beatmap", "This beatmap is blacklisted and will not award any Performance Points (PP)."));
                     break;
             }
         }

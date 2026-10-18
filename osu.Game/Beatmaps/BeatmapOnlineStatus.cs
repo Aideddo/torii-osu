@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.ComponentModel;
@@ -42,6 +42,9 @@ namespace osu.Game.Beatmaps
 
         [LocalisableDescription(typeof(BeatmapsetsStrings), nameof(BeatmapsetsStrings.ShowStatusLoved))]
         Loved = 4,
+
+        [Description("Blacklisted")]
+        Blacklisted = 5,
     }
 
     public static class BeatmapSetOnlineStatusExtensions

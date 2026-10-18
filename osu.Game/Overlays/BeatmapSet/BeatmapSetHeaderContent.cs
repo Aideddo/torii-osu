@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -312,6 +312,12 @@ namespace osu.Game.Overlays.BeatmapSet
                     {
                         title.AddArbitraryDrawable(Empty().With(d => d.Width = 10));
                         title.AddArbitraryDrawable(new ToriiExclusiveBeatmapBadge());
+                    }
+
+                    if (BlacklistedBeatmapBadge.ShouldShowFor(newBeatmapSet))
+                    {
+                        title.AddArbitraryDrawable(Empty().With(d => d.Width = 10));
+                        title.AddArbitraryDrawable(new BlacklistedBeatmapBadge());
                     }
 
                     if (MapperatorinatorBeatmapBadge.ShouldShowFor(newBeatmapSet))

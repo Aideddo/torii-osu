@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -19,8 +19,28 @@ namespace osu.Game.Online.API.Requests.Responses
         [JsonProperty(@"beatmapset_id")]
         public int OnlineBeatmapSetID { get; set; }
 
+        private BeatmapOnlineStatus status;
+
         [JsonProperty(@"status")]
-        public BeatmapOnlineStatus Status { get; set; }
+        public BeatmapOnlineStatus Status
+        {
+            get => isBlacklisted ? BeatmapOnlineStatus.Blacklisted : status;
+            set => status = value;
+        }
+
+        private bool isBlacklisted;
+
+        [JsonProperty(@"is_blacklisted")]
+        public bool IsBlacklisted
+        {
+            get => isBlacklisted;
+            set
+            {
+                isBlacklisted = value;
+                if (value)
+                    status = BeatmapOnlineStatus.Blacklisted;
+            }
+        }
 
         [JsonProperty("checksum")]
         public string Checksum { get; set; } = string.Empty;

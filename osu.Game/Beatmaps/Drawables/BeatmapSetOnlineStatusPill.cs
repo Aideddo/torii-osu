@@ -1,8 +1,9 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
 using osu.Framework.Extensions;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -129,10 +130,21 @@ namespace osu.Game.Beatmaps.Drawables
 
             Color4 statusTextColour;
 
-            if (colourProvider != null)
-                statusTextColour = status == BeatmapOnlineStatus.Graveyard ? colourProvider.Background1 : colourProvider.Background3;
+            if (Status == BeatmapOnlineStatus.Blacklisted)
+            {
+                statusTextColour = Color4Extensions.FromHex(@"ff3b3b");
+                BorderThickness = 1.5f;
+                BorderColour = Color4Extensions.FromHex(@"ef4444");
+            }
             else
-                statusTextColour = status == BeatmapOnlineStatus.Graveyard ? colours.GreySeaFoamLight : Color4.Black;
+            {
+                BorderThickness = 0;
+
+                if (colourProvider != null)
+                    statusTextColour = status == BeatmapOnlineStatus.Graveyard ? colourProvider.Background1 : colourProvider.Background3;
+                else
+                    statusTextColour = status == BeatmapOnlineStatus.Graveyard ? colours.GreySeaFoamLight : Color4.Black;
+            }
 
             statusText.FadeColour(statusTextColour, duration, Easing.OutQuint);
             background.FadeColour(OsuColour.ForBeatmapSetOnlineStatus(Status) ?? colourProvider?.Light1 ?? colours.GreySeaFoamLighter, duration, Easing.OutQuint);
@@ -148,6 +160,9 @@ namespace osu.Game.Beatmaps.Drawables
                 {
                     case BeatmapOnlineStatus.LocallyModified:
                         return SongSelectStrings.LocallyModifiedTooltip;
+
+                    case BeatmapOnlineStatus.Blacklisted:
+                        return "This beatmap is blacklisted and does not award Performance Points (PP).";
                 }
 
                 return string.Empty;

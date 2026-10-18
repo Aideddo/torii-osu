@@ -388,6 +388,9 @@ namespace osu.Game.Screens.Select
                 case BeatmapOnlineStatus.Approved:
                     return OsuIcon.Crown;
 
+                case BeatmapOnlineStatus.Blacklisted:
+                    return OsuIcon.CrossCircle;
+
                 default:
                     return OsuIcon.EditCircle;
             }
