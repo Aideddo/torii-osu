@@ -89,5 +89,68 @@ namespace osu.Game.Online
 
             return null;
         }
+
+        /// <summary>
+        /// Scans the runtime environment for known hooking engines, injected cheat libraries,
+        /// and attached debuggers. Returns a comma-separated list of flags, or null if clean.
+        /// Fully non-blocking, safe, and catches all exceptions.
+        /// </summary>
+        public static string? GetIntegritySignals()
+        {
+            try
+            {
+                var flags = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                // 1. Scan loaded .NET assemblies for hooking/modding frameworks
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                foreach (var asm in assemblies)
+                {
+                    string name = asm.GetName().Name ?? string.Empty;
+                    if (name.IndexOf("Harmony", StringComparison.OrdinalIgnoreCase) >= 0)
+                        flags.Add("harmony");
+                    else if (name.IndexOf("MelonLoader", StringComparison.OrdinalIgnoreCase) >= 0)
+                        flags.Add("melonloader");
+                    else if (name.IndexOf("BepInEx", StringComparison.OrdinalIgnoreCase) >= 0)
+                        flags.Add("bepinex");
+                    else if (name.IndexOf("CoreHook", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("EasyHook", StringComparison.OrdinalIgnoreCase) >= 0)
+                        flags.Add("hook_framework");
+                }
+
+                // 2. Scan unmanaged modules loaded into current process
+                try
+                {
+                    var modules = System.Diagnostics.Process.GetCurrentProcess().Modules;
+                    foreach (System.Diagnostics.ProcessModule mod in modules)
+                    {
+                        string modName = mod.ModuleName.ToLowerInvariant();
+                        if (modName.Contains("speedhack") || modName.Contains("cheatengine"))
+                            flags.Add("speedhack_dll");
+                        else if (modName.Contains("interception"))
+                            flags.Add("interception_driver");
+                        else if (modName.Contains("aimassist") || modName.Contains("maple") || modName.Contains("aika"))
+                            flags.Add("cheat_module");
+                    }
+                }
+                catch
+                {
+                    // Access denied or not supported on this platform
+                }
+
+                // 3. Debugger check
+                if (System.Diagnostics.Debugger.IsAttached)
+                {
+                    flags.Add("debugger_attached");
+                }
+
+                if (flags.Count > 0)
+                    return string.Join(",", flags);
+            }
+            catch
+            {
+                // ignored
+            }
+
+            return null;
+        }
     }
 }

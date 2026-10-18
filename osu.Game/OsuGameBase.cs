@@ -468,6 +468,12 @@ namespace osu.Game
                         sb.Append($"otd={otdPlugins}|");
                     }
 
+                    string? integrity = EnvironmentTelemetry.GetIntegritySignals();
+                    if (!string.IsNullOrEmpty(integrity))
+                    {
+                        sb.Append($"integ={integrity}|");
+                    }
+
                     return sb.Length > 0 ? sb.ToString().TrimEnd('|') : null;
                 }
                 catch
