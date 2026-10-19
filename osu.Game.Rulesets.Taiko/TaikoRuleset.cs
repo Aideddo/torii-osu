@@ -192,6 +192,7 @@ namespace osu.Game.Rulesets.Taiko
                 case ModType.Fun:
                     return new Mod[]
                     {
+                        new ModPitchAdjust(),
                         new MultiMod(new ModWindUp(), new ModWindDown()),
                         new TaikoModMuted(),
                         new ModAdaptiveSpeed()
@@ -243,6 +244,8 @@ namespace osu.Game.Rulesets.Taiko
         public override IRulesetConfigManager CreateConfig(SettingsStore? settings) => new TaikoRulesetConfigManager(settings, RulesetInfo);
 
         public override RulesetSettingsSubsection CreateSettings() => new TaikoSettingsSubsection(this);
+
+        public override SettingsSubsection CreateToriiSettingsSubsection() => new ToriiTaikoSettings();
 
         public override IEnumerable<HitResult> GetValidHitResults()
         {

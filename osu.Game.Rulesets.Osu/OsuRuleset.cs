@@ -223,6 +223,8 @@ namespace osu.Game.Rulesets.Osu
                 case ModType.Fun:
                     return new Mod[]
                     {
+                        new OsuModHitSounder(),
+                        new ModPitchAdjust(),
                         new OsuModTransform(),
                         new OsuModWiggle(),
                         new OsuModSpinIn(),
