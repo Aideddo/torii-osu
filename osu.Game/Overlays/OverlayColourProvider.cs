@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -267,9 +267,12 @@ namespace osu.Game.Overlays
         /// Returns an <see cref="IDisposable"/>; store it and dispose from the consumer's
         /// own <c>Dispose</c> override so the subscription doesn't outlive the drawable.
         /// </summary>
-        public static IDisposable BindThemeColour<T>(this T drawable, OverlayColourProvider provider, Func<OverlayColourProvider, Color4> selector)
+        public static IDisposable BindThemeColour<T>(this T? drawable, OverlayColourProvider? provider, Func<OverlayColourProvider, Color4> selector)
             where T : Drawable
         {
+            if (drawable == null || provider == null)
+                return new ColourSubscription(() => { });
+
             void apply() => drawable.Colour = selector(provider);
             apply();
             provider.ColoursChanged += apply;
@@ -281,9 +284,12 @@ namespace osu.Game.Overlays
         /// child colour, text colour, wave colours, etc.). The <paramref name="apply"/>
         /// callback is invoked once now and again whenever the theme changes.
         /// </summary>
-        public static IDisposable BindThemeColour<T>(this T drawable, OverlayColourProvider provider, Action<T, OverlayColourProvider> apply)
+        public static IDisposable BindThemeColour<T>(this T? drawable, OverlayColourProvider? provider, Action<T, OverlayColourProvider> apply)
             where T : Drawable
         {
+            if (drawable == null || provider == null)
+                return new ColourSubscription(() => { });
+
             void run() => apply(drawable, provider);
             run();
             provider.ColoursChanged += run;

@@ -74,11 +74,13 @@ namespace osu.Game.Overlays.Chat.ChannelList
                     hoverBox = new Box
                     {
                         RelativeSizeAxes = Axes.Both,
+                        Colour = colourProvider.Background3,
                         Alpha = 0f,
                     },
                     selectBox = new Box
                     {
                         RelativeSizeAxes = Axes.Both,
+                        Colour = colourProvider.Background4,
                         Alpha = 0f,
                     },
                     new GridContainer
@@ -119,6 +121,10 @@ namespace osu.Game.Overlays.Chat.ChannelList
             loadWrapper.DelayedLoadComplete += _ =>
             {
                 loadWrapper.FadeInFromZero(300, Easing.OutQuint);
+                hoverBoxThemeBinding?.Dispose();
+                selectBoxThemeBinding?.Dispose();
+                hoverBoxThemeBinding = hoverBox.BindThemeColour(colourProvider, p => p.Background3);
+                selectBoxThemeBinding = selectBox.BindThemeColour(colourProvider, p => p.Background4);
                 updateState();
             };
         }
@@ -130,10 +136,7 @@ namespace osu.Game.Overlays.Chat.ChannelList
             selectedChannel.BindValueChanged(_ => updateState(), true);
             Unread.BindValueChanged(_ => updateState(), true);
 
-            // Live re-tint the static boxes (hover/select) and re-trigger
-            // updateState() so the text colour fade picks up the new theme.
-            hoverBoxThemeBinding = hoverBox.BindThemeColour(colourProvider, p => p.Background3);
-            selectBoxThemeBinding = selectBox.BindThemeColour(colourProvider, p => p.Background4);
+            // Re-trigger updateState() on theme change so the text colour fade picks up the new theme.
             colourProvider.ColoursChanged += updateState;
         }
 
