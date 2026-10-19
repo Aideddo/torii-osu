@@ -37,6 +37,7 @@ namespace osu.Game.Graphics.Containers
 
         public ParallaxContainer()
         {
+            RelativeSizeAxes = Axes.Both;
             AddInternal(content = new Container
             {
                 RelativeSizeAxes = Axes.Both,
