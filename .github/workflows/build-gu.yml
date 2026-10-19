@@ -229,7 +229,7 @@ jobs:
       if: matrix.runtime == 'android'
       shell: bash
       run: |
-        dotnet workload install android
+        dotnet workload install android --version 10.0.402
         dotnet workload list
         echo "Android SDK Root: $ANDROID_SDK_ROOT"
         echo "Java Home: $JAVA_HOME"
