@@ -2198,17 +2198,21 @@ namespace osu.Game
 
             // Adentro del buffer de escena, no afuera: si no, el buffer arranca debajo de la
             // barra y su franja no existe para nadie.
-            screenInsetContainer.Padding = new MarginPadding { Top = screenTopInset };
+            if (screenInsetContainer != null)
+                screenInsetContainer.Padding = new MarginPadding { Top = screenTopInset };
 
             // Y el inset se lo devolvemos al FONDO nada mas. El contenido conserva su lugar
             // (no se tapa nada) pero detras de la barra vuelve a haber juego dibujado, que es
             // lo que el frost necesita para existir.
-            ScreenStack.BackgroundTopExtension = screenTopInset;
-            overlayOffsetContainer.Padding = new MarginPadding { Top = toolbarOffset };
+            if (ScreenStack != null)
+                ScreenStack.BackgroundTopExtension = screenTopInset;
+            if (overlayOffsetContainer != null)
+                overlayOffsetContainer.Padding = new MarginPadding { Top = toolbarOffset };
 
             adjustGlobalScreenOffset();
 
-            GlobalCursorDisplay.ShowCursor = (ScreenStack.CurrentScreen as IOsuScreen)?.CursorVisible ?? false;
+            if (GlobalCursorDisplay != null)
+                GlobalCursorDisplay.ShowCursor = (ScreenStack?.CurrentScreen as IOsuScreen)?.CursorVisible ?? false;
 
             updateAutoHideToolbar();
         }
@@ -2392,9 +2396,9 @@ namespace osu.Game
         {
             float adjust = 0f;
 
-            if (Settings.IsLoaded && Settings.State.Value == Visibility.Visible)
+            if (Settings?.IsLoaded == true && Settings.State.Value == Visibility.Visible)
                 adjust += SettingsPanel.WIDTH * SIDE_OVERLAY_OFFSET_RATIO;
-            if (Notifications.IsLoaded && Notifications.State.Value == Visibility.Visible)
+            if (Notifications?.IsLoaded == true && Notifications.State.Value == Visibility.Visible)
                 adjust -= NotificationOverlay.WIDTH * SIDE_OVERLAY_OFFSET_RATIO;
 
             horizontalOffsetAdjust = (float)Interpolation.DampContinuously(horizontalOffsetAdjust, adjust, 100, Time.Elapsed);
@@ -2402,8 +2406,10 @@ namespace osu.Game
             if (adjust == 0 && Math.Abs(horizontalOffsetAdjust) < 0.2f)
                 horizontalOffsetAdjust = 0;
 
-            ScreenOffsetContainer.X = horizontalOffsetAdjust;
-            overlayContent.X = horizontalOffsetAdjust * 1.2f;
+            if (ScreenOffsetContainer != null)
+                ScreenOffsetContainer.X = horizontalOffsetAdjust;
+            if (overlayContent != null)
+                overlayContent.X = horizontalOffsetAdjust * 1.2f;
         }
 
         protected virtual void ScreenChanged([CanBeNull] IOsuScreen current, [CanBeNull] IOsuScreen newScreen)
