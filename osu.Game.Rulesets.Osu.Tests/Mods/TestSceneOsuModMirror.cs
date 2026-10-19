@@ -17,6 +17,19 @@ namespace osu.Game.Rulesets.Osu.Tests.Mods
 {
     public partial class TestSceneOsuModMirror : OsuModTestScene
     {
+        [TestCase(OsuModMirror.MirrorType.Horizontal, 448, 288)]
+        [TestCase(OsuModMirror.MirrorType.Vertical, 64, 96)]
+        [TestCase(OsuModMirror.MirrorType.Both, 448, 96)]
+        public void TestCombinedWithHardRock(OsuModMirror.MirrorType type, float expectedX, float expectedY)
+        {
+            var hitObject = new HitCircle { Position = new Vector2(64, 96) };
+
+            new OsuModHardRock().ApplyToHitObject(hitObject);
+            new OsuModMirror { Reflection = { Value = type } }.ApplyToHitObject(hitObject);
+
+            Assert.That(hitObject.Position, Is.EqualTo(new Vector2(expectedX, expectedY)));
+        }
+
         [Test]
         public void TestCorrectReflections([Values] OsuModMirror.MirrorType type, [Values] bool withStrictTracking) => CreateModTest(new ModTestData
         {

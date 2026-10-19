@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using osu.Framework.Bindables;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
@@ -15,7 +14,6 @@ namespace osu.Game.Rulesets.Osu.Mods
     public class OsuModMirror : ModMirror, IApplicableToHitObject
     {
         public override LocalisableString Description => "Flip objects on the chosen axes.";
-        public override Type[] IncompatibleMods => new[] { typeof(ModHardRock) };
 
         [SettingSource("Flipped axes")]
         public Bindable<MirrorType> Reflection { get; } = new Bindable<MirrorType>();

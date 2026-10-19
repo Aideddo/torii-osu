@@ -204,6 +204,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             #region Combinations
 
             [new Mod[] { new OsuModHidden(), new OsuModHardRock() }, 1.04 * 1.09],
+            [new Mod[] { new OsuModHardRock(), new OsuModMirror() }, 1.09],
 
             [new Mod[] { new OsuModHidden(), new OsuModWiggle() }, 1.02],
             [new Mod[] { new OsuModHidden(), new OsuModGrow() }, 1.02],

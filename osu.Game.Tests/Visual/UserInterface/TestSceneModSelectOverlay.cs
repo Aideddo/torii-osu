@@ -179,10 +179,11 @@ namespace osu.Game.Tests.Visual.UserInterface
             AddAssert("HR panel active", () => getPanelForMod(typeof(OsuModHardRock)).Active.Value);
 
             AddStep("activate MR", () => getPanelForMod(typeof(OsuModMirror)).TriggerClick());
-            AddAssert("NC+MR active", () => SelectedMods.Value.Any(mod => mod.GetType() == typeof(OsuModNightcore))
+            AddAssert("NC+HR+MR active", () => SelectedMods.Value.Any(mod => mod.GetType() == typeof(OsuModNightcore))
+                                            && SelectedMods.Value.Any(mod => mod.GetType() == typeof(OsuModHardRock))
                                             && SelectedMods.Value.Any(mod => mod.GetType() == typeof(OsuModMirror)));
             AddAssert("NC panel active", () => getPanelForMod(typeof(OsuModNightcore)).Active.Value);
-            AddAssert("HR panel not active", () => !getPanelForMod(typeof(OsuModHardRock)).Active.Value);
+            AddAssert("HR panel active", () => getPanelForMod(typeof(OsuModHardRock)).Active.Value);
             AddAssert("MR panel active", () => getPanelForMod(typeof(OsuModMirror)).Active.Value);
         }
 
