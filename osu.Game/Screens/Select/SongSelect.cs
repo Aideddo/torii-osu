@@ -1486,6 +1486,7 @@ namespace osu.Game.Screens.Select
 
             onlineLookupCancellation?.Cancel();
             onlineLookupCancellation = null;
+            currentOnlineLookup = null;
 
             if (beatmapSetInfo.OnlineID < 0)
             {
@@ -1507,21 +1508,25 @@ namespace osu.Game.Screens.Select
             currentOnlineLookup = onlineLookupSource.GetBeatmapSetAsync(lookupOnlineID, onlineLookupCancellation.Token);
             currentOnlineLookup.ContinueWith(t =>
             {
-                if (t.IsCompletedSuccessfully)
+                var exception = t.Exception;
+                Schedule(() =>
                 {
-                    var result = t.GetResultSafely();
-                    Schedule(() =>
+                    // una respuesta del mapa anterior no puede pisar la seleccion actual.
+                    if (IsDisposed || !ReferenceEquals(currentOnlineLookup, t))
+                        return;
+
+                    if (t.IsCompletedSuccessfully)
                     {
+                        var result = t.GetResultSafely();
                         onlineLookupCache[lookupOnlineID] = result;
                         lastLookupResult.Value = BeatmapSetLookupResult.Completed(result);
-                    });
-                }
-
-                if (t.Exception != null)
-                {
-                    Logger.Log($"Error when fetching online beatmap set: {t.Exception}", LoggingTarget.Network);
-                    Schedule(() => lastLookupResult.Value = BeatmapSetLookupResult.Completed(null));
-                }
+                    }
+                    else if (exception != null)
+                    {
+                        Logger.Log($"Error when fetching online beatmap set: {exception}", LoggingTarget.Network);
+                        lastLookupResult.Value = BeatmapSetLookupResult.Completed(null);
+                    }
+                });
             });
         }
 

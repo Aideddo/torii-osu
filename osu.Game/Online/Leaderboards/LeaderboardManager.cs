@@ -35,6 +35,7 @@ namespace osu.Game.Online.Leaderboards
         public LeaderboardCriteria? CurrentCriteria { get; private set; }
 
         private IDisposable? localScoreSubscription;
+        private IDisposable? beatmapUpdateSubscription;
         private GetScoresRequest? inFlightOnlineRequest;
 
         [Resolved]
@@ -60,7 +61,10 @@ namespace osu.Game.Online.Leaderboards
 
             CurrentCriteria = newCriteria;
             localScoreSubscription?.Dispose();
+            beatmapUpdateSubscription?.Dispose();
+            beatmapUpdateSubscription = null;
             inFlightOnlineRequest?.Cancel();
+            inFlightOnlineRequest = null;
             scores.Value = null;
 
             if (newCriteria.Beatmap == null || newCriteria.Ruleset == null)
@@ -100,8 +104,12 @@ namespace osu.Game.Online.Leaderboards
                     }
 
                     if (newCriteria.Beatmap.OnlineID <= 0 || newCriteria.Beatmap.Status <= BeatmapOnlineStatus.Pending)
+                        BeatmapOnlineInfoRecovery.RefreshFromRealm(newCriteria.Beatmap, realm);
+
+                    if (newCriteria.Beatmap.OnlineID <= 0 || newCriteria.Beatmap.Status <= BeatmapOnlineStatus.Pending)
                     {
                         scores.Value = LeaderboardScores.Failure(LeaderboardFailState.BeatmapUnavailable);
+                        watchForBeatmapUpdate(newCriteria);
                         return;
                     }
 
@@ -131,7 +139,7 @@ namespace osu.Game.Online.Leaderboards
                     var newRequest = new GetScoresRequest(newCriteria.Beatmap, newCriteria.Ruleset, newCriteria.Scope, requestMods);
                     newRequest.Success += response =>
                     {
-                        if (inFlightOnlineRequest != null && !newRequest.Equals(inFlightOnlineRequest))
+                        if (IsDisposed || !ReferenceEquals(inFlightOnlineRequest, newRequest))
                             return;
 
                         var result = LeaderboardScores.Success
@@ -153,6 +161,10 @@ namespace osu.Game.Online.Leaderboards
                     };
                     newRequest.Failure += ex =>
                     {
+                        if (IsDisposed || !ReferenceEquals(inFlightOnlineRequest, newRequest))
+                            return;
+
+                        inFlightOnlineRequest = null;
                         Logger.Log($@"Failed to fetch leaderboards when displaying results: {ex}", LoggingTarget.Network);
                         if (ex is not OperationCanceledException)
                             scores.Value = LeaderboardScores.Failure(LeaderboardFailState.NetworkFailure);
@@ -162,6 +174,24 @@ namespace osu.Game.Online.Leaderboards
                     break;
                 }
             }
+        }
+
+        private void watchForBeatmapUpdate(LeaderboardCriteria criteria)
+        {
+            Guid id = criteria.Beatmap!.ID;
+            beatmapUpdateSubscription = realm.RegisterForNotifications(r => r.All<BeatmapInfo>().Where(b => b.ID == id), (sender, _) =>
+            {
+                var live = sender.FirstOrDefault();
+                if (live == null || live.OnlineID <= 0 || live.Status <= BeatmapOnlineStatus.Pending
+                    || criteria.Beatmap.Status == BeatmapOnlineStatus.LocallyModified || live.MD5Hash != criteria.Beatmap.MD5Hash)
+                    return;
+
+                Schedule(() =>
+                {
+                    if (!IsDisposed && ReferenceEquals(CurrentCriteria, criteria))
+                        FetchWithCriteria(criteria, forceRefresh: true);
+                });
+            });
         }
 
         private void localScoresChanged(IRealmCollection<ScoreInfo> sender, ChangeSet? changes)
@@ -203,6 +233,8 @@ namespace osu.Game.Online.Leaderboards
             base.Dispose(isDisposing);
 
             localScoreSubscription?.Dispose();
+            beatmapUpdateSubscription?.Dispose();
+            inFlightOnlineRequest?.Cancel();
         }
     }
 

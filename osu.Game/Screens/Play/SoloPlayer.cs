@@ -8,6 +8,7 @@ using System.Diagnostics;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Game.Beatmaps;
+using osu.Game.Database;
 using osu.Game.Extensions;
 using osu.Game.Online.API;
 using osu.Game.Online.Rooms;
@@ -21,6 +22,12 @@ namespace osu.Game.Screens.Play
     {
         [Cached(typeof(IGameplayLeaderboardProvider))]
         private readonly SoloGameplayLeaderboardProvider leaderboardProvider = new SoloGameplayLeaderboardProvider();
+
+        [Resolved]
+        private IAPIProvider api { get; set; }
+
+        [Resolved]
+        private RealmAccess realm { get; set; }
 
         public SoloPlayer([CanBeNull] PlayerConfiguration configuration = null)
             : base(configuration)
@@ -36,16 +43,15 @@ namespace osu.Game.Screens.Play
 
         protected override APIRequest<APIScoreToken> CreateTokenRequest()
         {
-            int beatmapId = Beatmap.Value.BeatmapInfo.OnlineID;
             int rulesetId = Ruleset.Value.OnlineID;
 
-            if (beatmapId <= 0)
+            if (!Ruleset.Value.IsLegacyRuleset())
                 return null;
 
             if (Beatmap.Value.BeatmapInfo.Status == BeatmapOnlineStatus.LocallyModified)
                 return null;
 
-            if (!Ruleset.Value.IsLegacyRuleset())
+            if (!BeatmapOnlineInfoRecovery.TryRecover(Beatmap.Value.BeatmapInfo, api, realm))
                 return null;
 
             return new CreateSoloScoreRequest(Beatmap.Value.BeatmapInfo, rulesetId, Game.VersionHash);

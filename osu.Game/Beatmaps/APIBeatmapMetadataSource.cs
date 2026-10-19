@@ -40,11 +40,12 @@ namespace osu.Game.Beatmaps
                 // intentionally blocking to limit web request concurrency
                 api.Perform(req);
 
-                if (req.CompletionState == APIRequestCompletionState.Failed)
+                if (req.CompletionState != APIRequestCompletionState.Completed)
                 {
                     logForModel(beatmapInfo.BeatmapSet, $@"Online retrieval failed for {beatmapInfo}");
                     onlineMetadata = null;
-                    return true;
+                    // un fallo del mirror no prueba que el mapa no exista.
+                    return false;
                 }
 
                 var res = req.Response;

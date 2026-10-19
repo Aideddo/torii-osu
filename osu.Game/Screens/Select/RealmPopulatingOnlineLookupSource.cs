@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -54,21 +55,34 @@ namespace osu.Game.Screens.Select
             //   (rather than having to enforce that `GetBeatmapSetAsync()` can only be called from update thread, or locally scheduling)
             request.Success += async onlineBeatmapSet =>
             {
-                if (token.IsCancellationRequested)
+                try
                 {
-                    tcs.SetCanceled(token);
-                    return;
-                }
+                    if (token.IsCancellationRequested)
+                    {
+                        tcs.TrySetCanceled(token);
+                        return;
+                    }
 
-                await realm.WriteAsync(r => updateRealmBeatmapSet(r, onlineBeatmapSet)).ConfigureAwait(true);
-                tcs.SetResult(onlineBeatmapSet);
+                    await realm.WriteAsync(r => UpdateRealmBeatmapSet(r, onlineBeatmapSet)).ConfigureAwait(true);
+                    tcs.TrySetResult(onlineBeatmapSet);
+                }
+                catch (Exception e)
+                {
+                    tcs.TrySetException(e);
+                }
             };
-            request.Failure += tcs.SetException;
+            request.Failure += e =>
+            {
+                if (token.IsCancellationRequested)
+                    tcs.TrySetCanceled(token);
+                else
+                    tcs.TrySetException(e);
+            };
             api.Queue(request);
             return tcs.Task;
         }
 
-        private static void updateRealmBeatmapSet(Realm r, APIBeatmapSet onlineBeatmapSet)
+        internal static void UpdateRealmBeatmapSet(Realm r, APIBeatmapSet onlineBeatmapSet)
         {
             var onlineBeatmaps = onlineBeatmapSet.Beatmaps.ToDictionary(b => b.OnlineID);
 
@@ -88,16 +102,28 @@ namespace osu.Game.Screens.Select
 
                 foreach (var dbBeatmap in dbBeatmapSet.Beatmaps)
                 {
-                    if (onlineBeatmaps.TryGetValue(dbBeatmap.OnlineID, out var onlineBeatmap))
+                    onlineBeatmaps.TryGetValue(dbBeatmap.OnlineID, out var onlineBeatmap);
+
+                    // el lookup viejo pudo borrar el id por un fallo de red. el checksum permite recuperarlo.
+                    if (onlineBeatmap == null && dbBeatmap.OnlineID <= 0 && dbBeatmap.Status != BeatmapOnlineStatus.LocallyModified
+                        && !string.IsNullOrEmpty(dbBeatmap.MD5Hash))
+                    {
+                        onlineBeatmap = onlineBeatmapSet.Beatmaps.FirstOrDefault(b => b.MD5Hash == dbBeatmap.MD5Hash && b.OnlineID > 0);
+                        if (onlineBeatmap != null)
+                            dbBeatmap.OnlineID = onlineBeatmap.OnlineID;
+                    }
+
+                    if (onlineBeatmap != null)
                     {
                         // compare `BeatmapUpdaterMetadataLookup`
-                        if (dbBeatmap.OnlineMD5Hash != onlineBeatmap.MD5Hash)
+                        if (!string.IsNullOrEmpty(onlineBeatmap.MD5Hash) && dbBeatmap.OnlineMD5Hash != onlineBeatmap.MD5Hash)
                             dbBeatmap.OnlineMD5Hash = onlineBeatmap.MD5Hash;
 
-                        if (dbBeatmap.LastOnlineUpdate != onlineBeatmap.LastUpdated)
+                        if (!string.IsNullOrEmpty(onlineBeatmap.MD5Hash) && dbBeatmap.LastOnlineUpdate != onlineBeatmap.LastUpdated)
                             dbBeatmap.LastOnlineUpdate = onlineBeatmap.LastUpdated;
 
-                        if (dbBeatmap.MatchesOnlineVersion && dbBeatmap.Status != onlineBeatmap.Status)
+                        if (!string.IsNullOrEmpty(dbBeatmap.OnlineMD5Hash) && dbBeatmap.MatchesOnlineVersion && dbBeatmap.Status != onlineBeatmap.Status
+                            && dbBeatmap.Status != BeatmapOnlineStatus.LocallyModified)
                             dbBeatmap.Status = onlineBeatmap.Status;
 
                         HashSet<string> userTags = onlineBeatmap.GetTopUserTags(confirmedOnly: true)
