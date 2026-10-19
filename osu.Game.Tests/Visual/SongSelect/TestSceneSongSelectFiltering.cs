@@ -10,12 +10,15 @@ using osu.Framework.Screens;
 using osu.Framework.Testing;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
+using osu.Game.Database;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Online.Chat;
 using osu.Game.Rulesets.Catch;
 using osu.Game.Rulesets.Mania.Mods;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Mods;
+using osu.Game.Screens;
 using osu.Game.Screens.Select;
 using osu.Game.Screens.Select.Filter;
 using osuTK.Input;
@@ -29,6 +32,15 @@ namespace osu.Game.Tests.Visual.SongSelect
         private FilterControl filter => SongSelect.ChildrenOfType<FilterControl>().Single();
         private ShearedFilterTextBox filterTextBox => SongSelect.ChildrenOfType<ShearedFilterTextBox>().Single();
         private int filterOperationsCount;
+        private int filterCountBaseline;
+        private FilterCriteria? lastCriteria;
+
+        public override void SetUpSteps()
+        {
+            base.SetUpSteps();
+
+            AddStep("reset star range", () => Config.GetBindable<double>(OsuSetting.DisplayStarsMinimum).SetDefault());
+        }
 
         protected override void LoadSongSelect()
         {
@@ -37,7 +49,9 @@ namespace osu.Game.Tests.Visual.SongSelect
             AddStep("hook filter event", () =>
             {
                 filterOperationsCount = 0;
+                lastCriteria = null;
                 filter.CriteriaChanged += _ => filterOperationsCount++;
+                filter.CriteriaChanged += c => lastCriteria = c;
             });
         }
 
@@ -222,6 +236,206 @@ namespace osu.Game.Tests.Visual.SongSelect
             // Add filterable mod. Should re-filter.
             AddStep("add filterable mod", () => SelectedMods.Value = new Mod[] { new ManiaModKey3() });
             AddAssert("filter count is 5", () => filterOperationsCount, () => Is.EqualTo(5));
+        }
+
+        [TestCase(DifficultyCriterion.Sort)]
+        [TestCase(DifficultyCriterion.Group)]
+        [TestCase(DifficultyCriterion.StarQuery)]
+        [TestCase(DifficultyCriterion.StarRange)]
+        [TestCase(DifficultyCriterion.GroupedSets)]
+        public void TestDifficultyModToggleWithDifficultyCriteria(DifficultyCriterion criterion)
+        {
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            applyDifficultyCriterion(criterion);
+            recordFilterCount();
+
+            // Mod-adjusted star ratings change, so the carousel should re-filter.
+            ChangeMods(new OsuModDoubleTime());
+            assertNewFilterCount(1);
+
+            ChangeMods();
+            assertNewFilterCount(2);
+        }
+
+        [Test]
+        public void TestDifficultyModToggleWithoutDifficultyCriteria()
+        {
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            splitBeatmapSets();
+            recordFilterCount();
+
+            ChangeMods(new OsuModDoubleTime());
+            assertNewFilterCount(0);
+
+            ChangeMods();
+            assertNewFilterCount(0);
+        }
+
+        [Test]
+        public void TestNonDifficultyModToggleWithDifficultyCriteria()
+        {
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            applyDifficultyCriterion(DifficultyCriterion.Sort);
+            recordFilterCount();
+
+            ChangeMods(new OsuModMirror());
+            assertNewFilterCount(0);
+
+            ChangeMods(new OsuModMirror(), new OsuModDoubleTime());
+            assertNewFilterCount(1);
+
+            // Only the non-difficulty mod is removed. The new double time instance is equal by value, so isn't a change.
+            ChangeMods(new OsuModDoubleTime());
+            assertNewFilterCount(1);
+        }
+
+        [TestCase(DifficultyCriterion.Sort)]
+        [TestCase(DifficultyCriterion.Group)]
+        [TestCase(DifficultyCriterion.StarQuery)]
+        [TestCase(DifficultyCriterion.StarRange)]
+        [TestCase(DifficultyCriterion.GroupedSets)]
+        public void TestDifficultyModSettingChangeWithDifficultyCriteria(DifficultyCriterion criterion)
+        {
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            applyDifficultyCriterion(criterion);
+            ChangeMods(new OsuModDoubleTime());
+            recordFilterCount();
+
+            changeModSetting("change rate", () => selectedDoubleTime.SpeedChange.Value = 1.8);
+            assertNewFilterCount(1);
+
+            // Rapid changes (e.g. dragging a slider) should only re-filter once.
+            changeModSetting("change rate repeatedly", () =>
+            {
+                selectedDoubleTime.SpeedChange.Value = 1.6;
+                selectedDoubleTime.SpeedChange.Value = 1.7;
+                selectedDoubleTime.SpeedChange.Value = 1.9;
+            });
+            assertNewFilterCount(2);
+        }
+
+        [Test]
+        public void TestDifficultyModSettingChangeWithoutDifficultyCriteria()
+        {
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            splitBeatmapSets();
+            ChangeMods(new OsuModDoubleTime());
+            recordFilterCount();
+
+            changeModSetting("change rate", () => selectedDoubleTime.SpeedChange.Value = 1.8);
+            assertNewFilterCount(0);
+        }
+
+        [Test]
+        public void TestNonDifficultyModSettingChangeWithDifficultyCriteria()
+        {
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            applyDifficultyCriterion(DifficultyCriterion.Sort);
+            ChangeMods(new OsuModMirror());
+            recordFilterCount();
+
+            changeModSetting("change reflection", () => SelectedMods.Value.OfType<OsuModMirror>().Single().Reflection.Value = OsuModMirror.MirrorType.Vertical);
+            assertNewFilterCount(0);
+        }
+
+        [Test]
+        public void TestDifficultyModSettingChangeWithModSelectedBeforeEntering()
+        {
+            ImportBeatmapForRuleset(0);
+            SortBy(SortMode.Difficulty);
+            ChangeMods(new OsuModDoubleTime());
+
+            LoadSongSelect();
+            recordFilterCount();
+
+            changeModSetting("change rate", () => selectedDoubleTime.SpeedChange.Value = 1.8);
+            assertNewFilterCount(1);
+        }
+
+        [Test]
+        public void TestSettingChangeOfDeselectedModIgnored()
+        {
+            ModDoubleTime? deselectedDoubleTime = null;
+
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            applyDifficultyCriterion(DifficultyCriterion.Sort);
+            ChangeMods(new OsuModDoubleTime());
+            AddStep("store selected double time", () => deselectedDoubleTime = selectedDoubleTime);
+            ChangeMods();
+            recordFilterCount();
+
+            changeModSetting("change rate of deselected mod", () => deselectedDoubleTime!.SpeedChange.Value = 1.8);
+            assertNewFilterCount(0);
+        }
+
+        [Test]
+        public void TestCriteriaModsUnaffectedByLaterSettingChanges()
+        {
+            FilterCriteria? storedCriteria = null;
+
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            applyDifficultyCriterion(DifficultyCriterion.Sort);
+            ChangeMods(new OsuModDoubleTime());
+
+            // Criteria from a setting change are created from the selected mod instance, which later setting changes apply to.
+            changeModSetting("change rate", () => selectedDoubleTime.SpeedChange.Value = 1.8);
+            AddStep("store criteria", () => storedCriteria = lastCriteria);
+
+            changeModSetting("change rate again", () => selectedDoubleTime.SpeedChange.Value = 1.9);
+            AddAssert("stored criteria rate unchanged", () => storedCriteria?.Mods?.OfType<ModRateAdjust>().Single().SpeedChange.Value, () => Is.EqualTo(1.8));
+            AddAssert("latest criteria rate changed", () => lastCriteria?.Mods?.OfType<ModRateAdjust>().Single().SpeedChange.Value, () => Is.EqualTo(1.9));
+        }
+
+        [Test]
+        public void TestPendingSettingChangeRefilterSurvivesNonRefilteringModChange()
+        {
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            applyDifficultyCriterion(DifficultyCriterion.Sort);
+            ChangeMods(new OsuModDoubleTime());
+            recordFilterCount();
+
+            changeModSetting("change rate and add non-difficulty mod", () =>
+            {
+                selectedDoubleTime.SpeedChange.Value = 1.8;
+                SelectedMods.Value = new Mod[] { selectedDoubleTime, new OsuModMirror() };
+            });
+            assertNewFilterCount(1);
+        }
+
+        [Test]
+        public void TestPendingSettingChangeRefilterSupersededByRefilteringModChange()
+        {
+            ImportBeatmapForRuleset(0);
+
+            LoadSongSelect();
+            applyDifficultyCriterion(DifficultyCriterion.Sort);
+            ChangeMods(new OsuModDoubleTime());
+            recordFilterCount();
+
+            changeModSetting("change rate and add difficulty mod", () =>
+            {
+                selectedDoubleTime.SpeedChange.Value = 1.8;
+                SelectedMods.Value = new Mod[] { selectedDoubleTime, new OsuModHardRock() };
+            });
+            assertNewFilterCount(1);
         }
 
         [Test]
@@ -572,6 +786,37 @@ namespace osu.Game.Tests.Visual.SongSelect
             AddAssert("normal difficulty is selected", () => Beatmap.Value.BeatmapInfo, () => Is.EqualTo(findBeatmap("Normal")));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TestUnscopeByPresentingBeatmap(bool grouped)
+        {
+            bool showConverts = Config.Get<bool>(OsuSetting.ShowConvertedBeatmaps);
+
+            AddStep("hide converts", () => Config.SetValue(OsuSetting.ShowConvertedBeatmaps, false));
+
+            ImportBeatmapForRuleset(_ => { }, 2, 0, 0);
+            ImportBeatmapForRuleset(_ => { }, 4, 0, 0, 0, 0);
+            ImportBeatmapForRuleset(_ => { }, 3, 1, 1, 1);
+
+            LoadSongSelect();
+            ChangeRuleset(1);
+            SortBy(grouped ? SortMode.Title : SortMode.Difficulty);
+            checkMatchedBeatmaps(3);
+
+            scopeBeatmap(grouped);
+            checkMatchedBeatmaps(3);
+
+            AddStep("present osu! beatmap", () =>
+            {
+                var beatmap = Realm.Run(r => r.All<BeatmapSetInfo>().AsEnumerable().First(s => s.Beatmaps.Count == 2).Beatmaps.First().Detach());
+                var working = Beatmaps.GetWorkingBeatmap(beatmap);
+                ((IHandlePresentBeatmap)SongSelect).PresentBeatmap(working, new OsuRuleset().RulesetInfo);
+            });
+            AddUntilStep("selection changed", () => Beatmap.Value.BeatmapSetInfo.Beatmaps, () => Has.Count.EqualTo(2));
+
+            AddStep("revert convert setting", () => Config.SetValue(OsuSetting.ShowConvertedBeatmaps, showConverts));
+        }
+
         private void scopeBeatmap(bool grouped)
         {
             if (grouped)
@@ -593,5 +838,85 @@ namespace osu.Game.Tests.Visual.SongSelect
         private NoResultsPlaceholder? getPlaceholder() => SongSelect.ChildrenOfType<NoResultsPlaceholder>().FirstOrDefault();
 
         private void checkMatchedBeatmaps(int expected) => AddUntilStep($"{expected} matching shown", () => Carousel.MatchedBeatmapsCount, () => Is.EqualTo(expected));
+
+        private void recordFilterCount() => AddStep("record filter count", () => filterCountBaseline = filterOperationsCount);
+
+        private void assertNewFilterCount(int expected) =>
+            AddAssert($"{expected} new filter operations", () => filterOperationsCount - filterCountBaseline, () => Is.EqualTo(expected));
+
+        // The mod select overlay replaces selected mods with its own instances, so settings must be changed on those.
+        private ModDoubleTime selectedDoubleTime => SelectedMods.Value.OfType<ModDoubleTime>().Single();
+
+        private void changeModSetting(string description, Action change)
+        {
+            double changeTime = 0;
+
+            AddStep(description, () =>
+            {
+                change();
+                changeTime = filter.Time.Current;
+            });
+
+            // Allow any debounced re-filter to run.
+            AddUntilStep("wait for debounce period", () => filter.Time.Current - changeTime > 200);
+        }
+
+        private bool beatmapSetsGroupedTogether => Carousel.Filters.OfType<BeatmapCarouselFilterGrouping>().Single().BeatmapSetsGroupedTogether;
+
+        /// <summary>
+        /// Groups by rank achieved, which splits sets apart without any difficulty criteria being active.
+        /// </summary>
+        private void splitBeatmapSets()
+        {
+            GroupBy(GroupMode.RankAchieved);
+            AddUntilStep("wait for group applied", () => lastCriteria?.Group, () => Is.EqualTo(GroupMode.RankAchieved));
+            AddUntilStep("sets split apart", () => beatmapSetsGroupedTogether, () => Is.False);
+        }
+
+        private void applyDifficultyCriterion(DifficultyCriterion criterion)
+        {
+            switch (criterion)
+            {
+                case DifficultyCriterion.Sort:
+                    SortBy(SortMode.Difficulty);
+                    AddUntilStep("wait for sort applied", () => lastCriteria?.Sort, () => Is.EqualTo(SortMode.Difficulty));
+                    break;
+
+                case DifficultyCriterion.Group:
+                    GroupBy(GroupMode.Difficulty);
+                    AddUntilStep("wait for group applied", () => lastCriteria?.Group, () => Is.EqualTo(GroupMode.Difficulty));
+                    break;
+
+                // Star rating filters are checked with sets split apart, so that they are the only active difficulty criterion.
+                case DifficultyCriterion.StarQuery:
+                    splitBeatmapSets();
+                    AddStep("set star rating query", () => filterTextBox.Current.Value = "stars>1");
+                    AddUntilStep("wait for query applied", () => lastCriteria?.StarDifficulty.HasFilter, () => Is.True);
+                    break;
+
+                case DifficultyCriterion.StarRange:
+                    splitBeatmapSets();
+                    AddStep("set minimum star rating", () => Config.SetValue(OsuSetting.DisplayStarsMinimum, 1.0));
+                    AddUntilStep("wait for range applied", () => lastCriteria?.UserStarDifficulty.HasFilter, () => Is.True);
+                    break;
+
+                case DifficultyCriterion.GroupedSets:
+                    // Sets are grouped together by default.
+                    AddUntilStep("sets grouped together", () => beatmapSetsGroupedTogether, () => Is.True);
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(criterion), criterion, null);
+            }
+        }
+
+        public enum DifficultyCriterion
+        {
+            Sort,
+            Group,
+            StarQuery,
+            StarRange,
+            GroupedSets,
+        }
     }
 }

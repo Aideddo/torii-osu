@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics.Carousel;
 using osu.Game.Screens.Select.Filter;
@@ -16,6 +17,16 @@ namespace osu.Game.Screens.Select
     public class BeatmapCarouselFilterSorting : ICarouselFilter
     {
         public int BeatmapItemsCount { get; private set; }
+
+        /// <summary>
+        /// Used to sort by mod-adjusted star rating. When not set, an approximation is used for difficulty-altering mods.
+        /// </summary>
+        public BeatmapDifficultyCache? DifficultyCache { get; set; }
+
+        /// <summary>
+        /// The mod-adjusted star ratings used by the most recent sort, for each beatmap whose star rating was compared.
+        /// </summary>
+        public IReadOnlyDictionary<BeatmapInfo, double> LastEffectiveStarRatings { get; private set; } = new Dictionary<BeatmapInfo, double>();
 
         private readonly Func<FilterCriteria> getCriteria;
 
@@ -32,7 +43,22 @@ namespace osu.Game.Screens.Select
 
             BeatmapItemsCount = items.Count();
 
-            return items.Order(Comparer<CarouselItem>.Create((a, b) =>
+            var lookupEffectiveStarRating = criteria.CreateEffectiveStarRatingLookup(DifficultyCache);
+            var effectiveStarRatings = new Dictionary<BeatmapInfo, double>(BeatmapItemsCount);
+
+            // star rating adjusted for selected mods, cached per beatmap per run
+            Func<BeatmapInfo, double> getEffectiveStarRating = beatmap =>
+            {
+                ref double stars = ref CollectionsMarshal.GetValueRefOrAddDefault(effectiveStarRatings, beatmap, out bool exists);
+                if (!exists)
+                    stars = lookupEffectiveStarRating(beatmap);
+
+                return stars;
+            };
+
+            var list = items as List<CarouselItem> ?? items.ToList();
+
+            list.Sort((a, b) =>
             {
                 var ab = (BeatmapInfo)a.Model;
                 var bb = (BeatmapInfo)b.Model;
@@ -40,17 +66,22 @@ namespace osu.Game.Screens.Select
                 if (groupedSets)
                 {
                     if (ab.BeatmapSet!.Equals(bb.BeatmapSet))
-                        return compareDifficulty(ab, bb, criteria.Sort);
+                        return compareDifficulty(ab, bb, getEffectiveStarRating);
 
                     // If we're grouping by sets, all fallback sorts need to be aggregates for the set.
-                    return compare(ab, bb, criteria.Sort, aggregate: true);
+                    return compare(ab, bb, criteria.Sort, aggregate: true, getEffectiveStarRating);
                 }
 
-                return compare(ab, bb, criteria.Sort, aggregate: false);
-            })).ToList();
+                return compare(ab, bb, criteria.Sort, aggregate: false, getEffectiveStarRating);
+            });
+
+            // No longer modified now that sorting is done, so it can be shared as-is.
+            LastEffectiveStarRatings = effectiveStarRatings;
+
+            return list;
         }, cancellationToken).ConfigureAwait(false);
 
-        private static int compare(BeatmapInfo a, BeatmapInfo b, SortMode sort, bool aggregate)
+        private static int compare(BeatmapInfo a, BeatmapInfo b, SortMode sort, bool aggregate, Func<BeatmapInfo, double> getEffectiveStarRating)
         {
             int comparison;
 
@@ -75,7 +106,9 @@ namespace osu.Game.Screens.Select
                     break;
 
                 case SortMode.Difficulty:
-                    comparison = a.StarRating.CompareTo(b.StarRating);
+                    comparison = getEffectiveStarRating(a).CompareTo(getEffectiveStarRating(b));
+                    if (comparison == 0)
+                        comparison = a.StarRating.CompareTo(b.StarRating);
                     break;
 
                 case SortMode.DateAdded:
@@ -128,15 +161,27 @@ namespace osu.Game.Screens.Select
             if (comparison == 0)
                 comparison = b.BeatmapSet!.ID.CompareTo(a.BeatmapSet!.ID);
 
+            // Difficulties from the same set can still tie. The sort is unstable, so break that tie by GUID too,
+            // otherwise tied difficulties could swap places between filter runs.
+            if (comparison == 0)
+                comparison = b.ID.CompareTo(a.ID);
+
             return comparison;
         }
 
-        private static int compareDifficulty(BeatmapInfo a, BeatmapInfo b, SortMode sort)
+        private static int compareDifficulty(BeatmapInfo a, BeatmapInfo b, Func<BeatmapInfo, double> getEffectiveStarRating)
         {
             int comparison = a.Ruleset.CompareTo(b.Ruleset);
 
             if (comparison == 0)
+                comparison = getEffectiveStarRating(a).CompareTo(getEffectiveStarRating(b));
+
+            if (comparison == 0)
                 comparison = a.StarRating.CompareTo(b.StarRating);
+
+            // See the equivalent fallback in compare().
+            if (comparison == 0)
+                comparison = b.ID.CompareTo(a.ID);
 
             return comparison;
         }

@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -29,7 +29,9 @@ namespace osu.Desktop
 {
     internal partial class DiscordRichPresence : Component
     {
-        private const string client_id = "1558129693134422208";
+        // era la aplicacion de Discord de ppy: mostraba "Playing osu!" con el logo de osu!
+        // a toda la lista de amigos. Apagado hasta que exista una app propia de Torii.
+        private const string client_id = "";
 
         private DiscordRpcClient? client;
 
@@ -237,8 +239,8 @@ namespace osu.Desktop
             }
 
             // small image
-            presence.Assets.SmallImageKey = ruleset.Value.IsLegacyRuleset() ? $"mode_{ruleset.Value.OnlineID}" : null;
-            presence.Assets.SmallImageText = ruleset.Value.IsLegacyRuleset() ? ruleset.Value.Name : null;
+            presence.Assets.SmallImageKey = ruleset.Value.IsLegacyRuleset() ? $"mode_{ruleset.Value.OnlineID}" : "mode_custom";
+            presence.Assets.SmallImageText = ruleset.Value.Name;
         }
 
         private void onJoin(object sender, JoinMessage args) => Scheduler.AddOnce(() =>

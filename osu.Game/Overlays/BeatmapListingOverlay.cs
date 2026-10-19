@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -103,6 +103,13 @@ namespace osu.Game.Overlays
             }));
         }
 
+        /// <summary>
+        /// Performs escaping of the given <paramref name="term"/> when used in a <c>keyword=""term""</c>-style beatmap listing query.
+        /// </summary>
+        /// <seealso href="https://github.com/ppy/osu-web/blob/e86b6876342ea8c326bb12ced22143b81f997860/resources/js/utils/beatmapset-helper.ts#L37-L39"/>
+        public static string EscapeKeywordSearchTerm(string term)
+            => term.Replace(@"""", @"\""");
+
         public void ShowWithSearch(string query)
         {
             filterControl.Search(query);
@@ -147,7 +154,6 @@ namespace osu.Game.Overlays
         {
             cancellationToken?.Cancel();
 
-            foundContent = null;
             previewTrackManager.StopAnyPlaying(this);
 
             if (panelTarget.Any())
@@ -167,7 +173,7 @@ namespace osu.Game.Overlays
 
             var newCards = createCardsFor(searchResult.Results);
 
-            if (foundContent == null)
+            if (filterControl.CurrentPage == 0)
             {
                 //No matches case — but only dead-end if the API is truly exhausted
                 if (!newCards.Any())
@@ -380,14 +386,9 @@ namespace osu.Game.Overlays
 
             const int pagination_scroll_distance = 500;
 
-            bool isScrollable = ScrollFlow.ScrollableExtent > 0;
-            bool reachedEnd = isScrollable
-                ? ScrollFlow.IsScrolledToEnd(pagination_scroll_distance)
-                : (filterControl.HasMorePages && foundContent?.Any() == true);
-
             bool shouldShowMore = panelLoadTask?.IsCompleted != false
                                   && Time.Current - lastFetchDisplayedTime > time_between_fetches
-                                  && reachedEnd;
+                                  && (ScrollFlow.ScrollableExtent > 0 && ScrollFlow.IsScrolledToEnd(pagination_scroll_distance));
 
             if (shouldShowMore)
                 filterControl.FetchNextPage();

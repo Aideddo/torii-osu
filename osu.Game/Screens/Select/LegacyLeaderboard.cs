@@ -270,6 +270,7 @@ namespace osu.Game.Screens.Select
                 case BeatmapOnlineStatus.Approved:
                 case BeatmapOnlineStatus.Qualified:
                 case BeatmapOnlineStatus.Loved:
+                case BeatmapOnlineStatus.Blacklisted:
                     return true;
 
                 default:

@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -25,8 +25,10 @@ using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
+using osu.Game.Overlays.Profile;
 using osu.Game.Overlays.Volume;
 using osu.Game.Rulesets;
+using osu.Game.Screens.Footer;
 using osu.Game.Screens.OnlinePlay.Components;
 using osu.Game.Screens.OnlinePlay.Matchmaking.Match.Gameplay;
 using osu.Game.Screens.OnlinePlay.Matchmaking.Queue;
@@ -42,8 +44,6 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
     [Cached]
     public sealed partial class RankedPlayScreen : OsuScreen, IPreviewTrackOwner, IHandlePresentBeatmap
     {
-        protected override bool InitialBackButtonVisibility => false;
-
         public override bool? ApplyModTrackAdjustments => true;
 
         public override bool DisallowExternalBeatmapRulesetChanges => true;
@@ -131,13 +131,14 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
             this.room = room;
 
             Activity.Value = new UserActivity.InLobby(room);
+            FooterContent.Value = ScreenFooterContent.None;
 
             InternalChildren = new Drawable[]
             {
                 matchInfo = new RankedPlayMatchInfo(),
                 backgroundMusic = new BackgroundMusicManager(),
                 new RankedPlayBeatmapAvailabilityTracker(),
-                new GlobalScrollAdjustsVolume(),
+                new ScrollAdjustsVolume(),
                 content = new InverseScalingDrawSizePreservingFillContainer
                 {
                     Anchor = Anchor.Centre,
@@ -159,6 +160,7 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
                                     new HamburgerMenu
                                     {
                                         Size = new Vector2(56),
+                                        ReportRequested = () => dialogOverlay.Push(new ReportUserDialog(opponentUser)),
                                     }
                                 }
                             }
@@ -314,10 +316,29 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
 
         private void onStageChanged(RankedPlayStage stage)
         {
-            if (stage is RankedPlayStage.GameplayWarmup or RankedPlayStage.Gameplay)
+            bool jugando = stage is RankedPlayStage.GameplayWarmup or RankedPlayStage.Gameplay;
+
+            if (jugando)
                 backgroundMusic.Stop();
             else
                 backgroundMusic.Play();
+
+            // torii GHOST CURSOR: apagarlo tambien por FASE, no solo cuando otra pantalla
+            // se pone encima.
+            //
+            // OnSuspending cubre el gameplay de verdad, que se pushea al stack. Pero el
+            // warmup es una SUB-pantalla (ShowScreen, no Push), asi que ahi no se suspende
+            // nada: el fantasma seguia vivo y sonaban los choques de cursores mientras la
+            // gente se preparaba para jugar.
+            //
+            // Lo mismo el dibujito: la fase de gameplay no es momento de garabatear.
+            ghostCursors.Active = !jugando;
+            drawingLayer.Active = !jugando;
+
+            if (jugando)
+                ghostCursors.FadeOut(200, Easing.OutQuint);
+            else
+                ghostCursors.FadeIn(300, Easing.OutQuint);
 
             if (stage is RankedPlayStage.RoundWarmup && matchInfo.CurrentRound == 1)
                 chat.State.Value = Visibility.Hidden;

@@ -66,7 +66,56 @@ namespace osu.Game.Scoring
         /// </summary>
         /// <param name="score">The <see cref="ScoreInfo"/> to compute the maximum achievable combo for.</param>
         /// <returns>The maximum achievable combo.</returns>
-        public static int GetMaximumAchievableCombo(this ScoreInfo score) => score.MaximumStatistics.Where(kvp => kvp.Key.AffectsCombo()).Sum(kvp => kvp.Value);
+        public static int GetMaximumAchievableCombo(this IScoreInfo score) => score.MaximumStatistics.Where(kvp => kvp.Key.AffectsCombo()).Sum(kvp => kvp.Value);
+
+        /// <summary>
+        /// Returns whether the supplied <paramref name="score"/> is a "perfect" score (also referred to as "full combo").
+        /// </summary>
+        public static bool IsPerfect(this IScoreInfo score) => score.MaxCombo == score.GetMaximumAchievableCombo();
+
+        public static IEnumerable<HitResultDisplayStatistic> GetStatisticsForDisplay(this IScoreInfo scoreInfo)
+        {
+            foreach (var r in scoreInfo.Ruleset.CreateInstance().GetHitResultsForDisplay())
+            {
+                int value = scoreInfo.Statistics.GetValueOrDefault(r.result);
+
+                switch (r.result)
+                {
+                    case HitResult.SmallTickHit:
+                    case HitResult.LargeTickHit:
+                    case HitResult.SliderTailHit:
+                    case HitResult.LargeBonus:
+                    case HitResult.SmallBonus:
+                        if (scoreInfo.MaximumStatistics.TryGetValue(r.result, out int count) && count > 0)
+                            yield return new HitResultDisplayStatistic(r.result, value, count, r.displayName);
+
+                        break;
+
+                    case HitResult.SmallTickMiss:
+                    case HitResult.LargeTickMiss:
+                        break;
+
+                    default:
+                        yield return new HitResultDisplayStatistic(r.result, value, null, r.displayName);
+
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns whether the supplied <paramref name="score"/> is a "perfect" score (also referred to as "full combo").
+        /// </summary>
+        public static bool IsPerfect(this ScoreInfo score) => score.MaxCombo == score.GetMaximumAchievableCombo();
+
+        /// <summary>
+        /// A perfect full combo requires both perfect accuracy and the complete achievable combo.
+        /// Bonus judgements are intentionally excluded: spinner bonus does not determine PFC.
+        /// </summary>
+        public static bool IsPerfectCombo(this ScoreInfo score)
+            => score.Passed && score.Rank != ScoreRank.F && score.Accuracy == 1
+               && score.GetMaximumAchievableCombo() > 0 && score.MaxCombo == score.GetMaximumAchievableCombo()
+               && !score.Statistics.Any(s => s.Value > 0 && (s.Key.BreaksCombo() || (s.Key.IsMiss() && s.Key.AffectsAccuracy())));
 
         /// <summary>
         /// Performs a realm filter that returns all scores that belong to the user with the given <paramref name="userId"/>.

@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -39,8 +39,6 @@ namespace osu.Game.Screens
 
         public virtual bool AllowUserExit => true;
 
-        public virtual bool ShowFooter => false;
-
         /// <summary>
         /// Torii: whether this screen allows the legacy (stable-style) song-select
         /// footer chrome to replace the default footer when a legacy skin is active.
@@ -48,7 +46,6 @@ namespace osu.Game.Screens
         /// which the legacy chrome mirrors).
         /// </summary>
         public virtual bool AllowLegacyFooterSkinning => false;
-
         public virtual bool AllowExternalScreenChange => false;
 
         public virtual bool HideOverlaysOnEnter => false;
@@ -66,14 +63,15 @@ namespace osu.Game.Screens
 
         IBindable<OverlayActivation> IOsuScreen.OverlayActivationMode => OverlayActivationMode;
 
+        public readonly Bindable<ScreenFooterContent> FooterContent;
+
+        IBindable<ScreenFooterContent> IOsuScreen.FooterContent => FooterContent;
+
         /// <summary>
-        /// The initial visibility state of the back button when this screen is entered for the first time.
+        /// Backwards-compatibility wrapper for legacy BackButtonVisibility.
         /// </summary>
-        protected virtual bool InitialBackButtonVisibility => AllowUserExit;
-
-        public readonly Bindable<bool> BackButtonVisibility;
-
-        IBindable<bool> IOsuScreen.BackButtonVisibility => BackButtonVisibility;
+        [Obsolete("Use FooterContent instead.")]
+        public readonly Bindable<bool> BackButtonVisibility = new Bindable<bool>();
 
         public virtual bool CursorVisible => true;
 
@@ -175,7 +173,13 @@ namespace osu.Game.Screens
             Origin = Anchor.Centre;
 
             OverlayActivationMode = new Bindable<OverlayActivation>(InitialOverlayActivationMode);
-            BackButtonVisibility = new Bindable<bool>(InitialBackButtonVisibility);
+            FooterContent = new Bindable<ScreenFooterContent>(ScreenFooterContent.Legacy(showBackButton: AllowUserExit));
+            BackButtonVisibility.Value = AllowUserExit;
+            BackButtonVisibility.BindValueChanged(v =>
+            {
+                if (FooterContent.Value.Mode == ScreenFooterContent.FooterMode.Legacy)
+                    FooterContent.Value = ScreenFooterContent.Legacy(v.NewValue);
+            });
         }
 
         [BackgroundDependencyLoader(true)]
@@ -326,8 +330,6 @@ namespace osu.Game.Screens
         /// Note that the instance created may not be the used instance if it matches the BackgroundMode equality clause.
         /// </summary>
         protected virtual BackgroundScreen CreateBackground() => null;
-
-        public virtual IReadOnlyList<ScreenFooterButton> CreateFooterButtons() => Array.Empty<ScreenFooterButton>();
 
         public virtual bool OnBackButton() => false;
     }

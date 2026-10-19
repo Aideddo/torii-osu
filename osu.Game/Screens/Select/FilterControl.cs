@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -27,6 +28,7 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Select.Filter;
+using osu.Game.Utils;
 using osuTK;
 using osuTK.Input;
 
@@ -46,7 +48,7 @@ namespace osu.Game.Screens.Select
         private DifficultyRangeSlider difficultyRangeSlider = null!;
         private ShearedDropdown<SortMode> sortDropdown = null!;
         private ShearedDropdown<GroupModeDropdownItem> groupDropdown = null!;
-        private CollectionDropdown collectionDropdown = null!;
+        private readonly Bindable<string> configCollectionFilter = new Bindable<string>();
 
         /// <summary>
         /// An optional method which can force certain criteria adjustments.
@@ -82,6 +84,8 @@ namespace osu.Game.Screens.Select
         private FilterCriteria currentCriteria = null!;
 
         private IDisposable? collectionsSubscription;
+        private ModSettingChangeTracker? modSettingChangeTracker;
+        private ScheduledDelegate? debouncedModSettingsChange;
 
         [BackgroundDependencyLoader]
         private void load(IAPIProvider api)
@@ -197,7 +201,7 @@ namespace osu.Game.Screens.Select
                                                 RelativeSizeAxes = Axes.X,
                                             },
                                             Empty(),
-                                            collectionDropdown = new CollectionDropdown
+                                            new CollectionDropdown
                                             {
                                                 RelativeSizeAxes = Axes.X,
                                             },
@@ -226,10 +230,14 @@ namespace osu.Game.Screens.Select
             difficultyRangeSlider.UpperBound = config.GetBindable<double>(OsuSetting.DisplayStarsMaximum);
             config.BindWith(OsuSetting.ShowConvertedBeatmaps, showConvertedBeatmapsButton.Active);
             config.BindWith(OsuSetting.SongSelectSortingMode, sortDropdown.Current);
+            config.BindWith(OsuSetting.SongSelectCollectionFilter, configCollectionFilter);
 
             ruleset.BindValueChanged(_ => updateCriteria());
             mods.BindValueChanged(m =>
             {
+                // Settings are tracked per mod instance, so tracking must be refreshed even if the new mods are equal by value.
+                trackModSettings(m.NewValue);
+
                 // The following is a note carried from old song select and may not be a valid reason anymore:
                 // // Mods are updated once by the mod select overlay when song select is entered,
                 // // regardless of if there are any mods or any changes have taken place.
@@ -240,9 +248,16 @@ namespace osu.Game.Screens.Select
                     return;
 
                 var rulesetCriteria = currentCriteria.RulesetCriteria;
-                if (rulesetCriteria?.FilterMayChangeFromMods(currentCriteria, m) == true)
+
+                // Sorting, grouping and star rating filters use mod-adjusted star ratings,
+                // so ordering, group membership or matches may change when difficulty-altering mods are toggled.
+                bool difficultyCriteriaMayChange = difficultyCriteriaActive && difficultyModsChanged(m.OldValue, m.NewValue);
+
+                if (rulesetCriteria?.FilterMayChangeFromMods(currentCriteria, m) == true || difficultyCriteriaMayChange)
                     updateCriteria();
             });
+
+            trackModSettings(mods.Value);
 
             searchTextBox.Current.BindValueChanged(_ => updateCriteria());
 
@@ -262,15 +277,7 @@ namespace osu.Game.Screens.Select
             showConvertedBeatmapsButton.Active.BindValueChanged(_ => updateCriteria());
             sortDropdown.Current.BindValueChanged(_ => updateCriteria());
             groupDropdown.Current.BindValueChanged(_ => updateCriteria());
-            collectionDropdown.Current.BindValueChanged(v =>
-            {
-                // The hope would be that this never arrives here, but due to bindings receiving changes before
-                // local ValueChanged events, that's not the case (see https://github.com/ppy/osu-framework/pull/1545).
-                if (v.NewValue is ManageCollectionsFilterMenuItem || v.OldValue is ManageCollectionsFilterMenuItem)
-                    return;
-
-                updateCriteria();
-            });
+            configCollectionFilter.BindValueChanged(_ => updateCriteria());
             collectionsSubscription = realm.RegisterForNotifications(r => r.All<BeatmapCollection>(), (_, changeSet) =>
             {
                 if (changeSet != null && groupDropdown.Current.Value.Value == GroupMode.Collections)
@@ -284,10 +291,41 @@ namespace osu.Game.Screens.Select
             updateCriteria();
         }
 
+        /// <summary>
+        /// Whether the current sorting, grouping or star rating filters use mod-adjusted star ratings.
+        /// When beatmaps are grouped by set, difficulties within each set are also ordered by mod-adjusted star rating.
+        /// </summary>
+        private bool difficultyCriteriaActive => currentCriteria.Sort == SortMode.Difficulty
+                                                 || currentCriteria.Group == GroupMode.Difficulty
+                                                 || currentCriteria.StarDifficulty.HasFilter
+                                                 || currentCriteria.UserStarDifficulty.HasFilter
+                                                 || BeatmapCarouselFilterGrouping.ShouldGroupBeatmapsTogether(currentCriteria);
+
+        private static bool difficultyModsChanged(IReadOnlyList<Mod> oldMods, IReadOnlyList<Mod> newMods) =>
+            ModUtils.FlattenMods(oldMods.Except(newMods).Concat(newMods.Except(oldMods))).Any(StarRatingApproximator.ModAffectsDifficulty);
+
+        private void trackModSettings(IReadOnlyList<Mod> currentMods)
+        {
+            modSettingChangeTracker?.Dispose();
+            modSettingChangeTracker = new ModSettingChangeTracker(currentMods);
+            modSettingChangeTracker.SettingChanged += mod =>
+            {
+                // Variant grouping also reads mods, but is invariant to rate and other setting changes today, so it isn't checked here.
+                if (!StarRatingApproximator.ModAffectsDifficulty(mod) || !difficultyCriteriaActive)
+                    return;
+
+                // Settings can change very often (e.g. when dragging a rate slider), so debounce re-filtering.
+                debouncedModSettingsChange?.Cancel();
+                debouncedModSettingsChange = Scheduler.AddDelayed(() => updateCriteria(), 100);
+            };
+        }
+
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);
             collectionsSubscription?.Dispose();
+            modSettingChangeTracker?.Dispose();
+            debouncedModSettingsChange?.Cancel();
         }
 
         /// <summary>
@@ -298,6 +336,11 @@ namespace osu.Game.Screens.Select
             string query = searchTextBox.Current.Value;
             bool isValidUser = localUser.Value.Id > 1;
 
+            IEnumerable<string>? collectionBeatmapMD5Hashes = null;
+
+            if (Guid.TryParse(configCollectionFilter.Value, out var collectionId))
+                collectionBeatmapMD5Hashes = realm.Run(r => r.Find<BeatmapCollection>(collectionId)?.BeatmapMD5Hashes.ToImmutableHashSet());
+
             var criteria = new FilterCriteria
             {
                 SelectedBeatmapSet = ScopedBeatmapSet.Value,
@@ -305,8 +348,9 @@ namespace osu.Game.Screens.Select
                 Group = groupDropdown.Current.Value?.Value ?? GroupMode.None,
                 AllowConvertedBeatmaps = showConvertedBeatmapsButton.Active.Value,
                 Ruleset = ruleset.Value,
-                Mods = mods.Value,
-                Collection = collectionDropdown.Current.Value?.Collection,
+                // Filtering runs on a background thread, so mods are copied to keep their settings fixed for the whole operation.
+                Mods = mods.Value.Select(m => m.DeepClone()).ToArray(),
+                CollectionBeatmapMD5Hashes = collectionBeatmapMD5Hashes,
                 LocalUserId = isValidUser ? localUser.Value.Id : null,
                 LocalUserUsername = isValidUser ? localUser.Value.Username : null,
             };
@@ -336,6 +380,9 @@ namespace osu.Game.Screens.Select
                 return;
             }
 
+            // New criteria include the latest mod settings, so any pending mod setting re-filter is redundant.
+            debouncedModSettingsChange?.Cancel();
+
             currentCriteria = CreateCriteria();
             CriteriaChanged?.Invoke(currentCriteria);
         }
@@ -360,7 +407,9 @@ namespace osu.Game.Screens.Select
             if (existingQuery.Contains(query))
                 return;
 
-            searchTextBox.Current.Value = string.Join(' ', existingQuery.Trim(), query);
+            searchTextBox.Current.Value = string.IsNullOrWhiteSpace(existingQuery)
+                ? query
+                : string.Join(' ', existingQuery.Trim(), query);
         }
 
         /// <summary>
@@ -368,7 +417,6 @@ namespace osu.Game.Screens.Select
         /// search box can bind two-way to the same source the modern filter uses.
         /// </summary>
         public Bindable<string> SearchQuery => searchTextBox.Current;
-
         protected override void PopIn()
         {
             this.MoveToX(0, SongSelect.ENTER_DURATION, Easing.OutQuint)
@@ -468,7 +516,7 @@ namespace osu.Game.Screens.Select
                             break;
 
                         case GroupMode.Variant:
-                            if (rulesetInstance.AvailableVariants.Count() <= 1)
+                            if (rulesetInstance.GameplayVariants.Count() <= 1)
                                 break;
 
                             items.Add(new GroupModeDropdownItem(GroupMode.Variant, rulesetInstance.VariantDescription));

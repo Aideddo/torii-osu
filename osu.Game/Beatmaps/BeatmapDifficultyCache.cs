@@ -26,6 +26,7 @@ using osu.Game.Rulesets.UI;
 using osu.Game.Scoring;
 using osu.Game.Skinning;
 using osu.Game.Storyboards;
+using osu.Game.Utils;
 
 namespace osu.Game.Beatmaps
 {
@@ -51,7 +52,7 @@ namespace osu.Game.Beatmaps
         /// <summary>
         /// Lock to be held when operating on <see cref="trackedBindables"/> or <see cref="linkedCancellationSources"/>.
         /// </summary>
-        private readonly object bindableUpdateLock = new object();
+        private readonly Lock bindableUpdateLock = new Lock();
 
         private CancellationTokenSource trackedUpdateCancellationSource = new CancellationTokenSource();
 
@@ -66,6 +67,12 @@ namespace osu.Game.Beatmaps
 
         private ModSettingChangeTracker? modSettingChangeTracker;
         private ScheduledDelegate? debouncedModSettingsChange;
+
+        /// <summary>
+        /// Invoked on the update thread whenever a bindable from <see cref="GetBindableDifficulty"/> receives a difficulty for the current ruleset and mods.
+        /// Invoked once per bindable update, so a beatmap tracked by multiple bindables is reported once for each of them.
+        /// </summary>
+        internal event Action<IBeatmapInfo, StarDifficulty>? TrackedDifficultyUpdated;
 
         protected override void LoadComplete()
         {
@@ -133,8 +140,8 @@ namespace osu.Game.Beatmaps
         {
             var bindable = new BindableStarDifficulty(beatmapInfo, cancellationToken)
             {
-                // Start with an approximate known value instead of zero.
-                Value = new StarDifficulty(beatmapInfo.StarRating, 0)
+                // Start with the mod-adjusted star rating (cached exact value or approximation) instead of zero.
+                Value = new StarDifficulty(getEffectiveStarRating(beatmapInfo), 0)
             };
 
             lock (bindableUpdateLock)
@@ -182,6 +189,57 @@ namespace osu.Game.Beatmaps
             return GetAsync(new DifficultyCacheLookup(localBeatmapInfo, localRulesetInfo, mods), cancellationToken, computationDelay);
         }
 
+        /// <summary>
+        /// Retrieves the currently cached difficulty if available without performing an asynchronous computation.
+        /// </summary>
+        /// <param name="beatmapInfo">The beatmap to check.</param>
+        /// <param name="rulesetInfo">The ruleset to check with.</param>
+        /// <param name="mods">The mods to check with.</param>
+        /// <returns>The cached <see cref="StarDifficulty"/> if available; otherwise <c>null</c>.</returns>
+        public StarDifficulty? GetExistingDifficulty(IBeatmapInfo beatmapInfo, IRulesetInfo? rulesetInfo = null, IEnumerable<Mod>? mods = null)
+        {
+            rulesetInfo ??= beatmapInfo.Ruleset;
+
+            if (beatmapInfo is not BeatmapInfo localBeatmapInfo || rulesetInfo is not RulesetInfo localRulesetInfo)
+                return null;
+
+            var lookup = new DifficultyCacheLookup(localBeatmapInfo, localRulesetInfo, mods);
+            return CheckExists(lookup, out var existing) ? existing : null;
+        }
+
+        /// <summary>
+        /// Retrieves the effective star rating for a beatmap, considering active mods and cached difficulties.
+        /// If not yet computed in the difficulty cache, falls back to a fast approximation for difficulty-altering mods.
+        /// </summary>
+        /// <param name="beatmapInfo">The beatmap.</param>
+        /// <param name="rulesetInfo">The ruleset.</param>
+        /// <param name="mods">The mods.</param>
+        /// <returns>The effective star rating.</returns>
+        public double GetEffectiveStarRating(BeatmapInfo beatmapInfo, IRulesetInfo? rulesetInfo = null, IEnumerable<Mod>? mods = null)
+        {
+            if (mods == null || !ModUtils.FlattenMods(mods).Any(StarRatingApproximator.ModAffectsDifficulty))
+                return beatmapInfo.StarRating;
+
+            var existing = GetExistingDifficulty(beatmapInfo, rulesetInfo, mods);
+            if (existing != null)
+                return existing.Value.Stars;
+
+            return StarRatingApproximator.Approximate(beatmapInfo, rulesetInfo, mods);
+        }
+
+        /// <summary>
+        /// Creates a lookup which returns the same values as <see cref="GetEffectiveStarRating"/> for many beatmaps with the same ruleset and mods.
+        /// The mods are ordered, copied and checked for difficulty adjustments once, rather than for every beatmap.
+        /// </summary>
+        /// <param name="rulesetInfo">The ruleset.</param>
+        /// <param name="mods">The mods. Their settings must not change while the lookup is in use.</param>
+        internal EffectiveStarRatingLookup CreateEffectiveStarRatingLookup(IRulesetInfo? rulesetInfo, IEnumerable<Mod>? mods)
+            => new EffectiveStarRatingLookup(this, rulesetInfo, mods);
+
+        private double getEffectiveStarRating(IBeatmapInfo beatmapInfo) => beatmapInfo is BeatmapInfo localBeatmapInfo
+            ? GetEffectiveStarRating(localBeatmapInfo, currentRuleset.Value, currentMods.Value)
+            : beatmapInfo.StarRating;
+
         protected override Task<StarDifficulty?> ComputeValueAsync(DifficultyCacheLookup lookup, CancellationToken cancellationToken = default)
         {
             return Task.Factory.StartNew(() =>
@@ -214,6 +272,16 @@ namespace osu.Game.Beatmaps
 
                 foreach (var b in trackedBindables)
                 {
+                    // Cancelled bindables belong to consumers that have moved on (e.g. pooled carousel panels now showing another beatmap).
+                    if (!b.CancellationToken.IsCancellationRequested)
+                    {
+                        double seed = getEffectiveStarRating(b.BeatmapInfo);
+
+                        // Only seed when the star rating actually changes, so non-difficulty mod changes (e.g. NF) don't drop the attributes.
+                        if (seed != b.Value.Stars)
+                            b.Value = new StarDifficulty(seed, b.Value.MaxCombo);
+                    }
+
                     var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(trackedUpdateCancellationSource.Token, b.CancellationToken);
                     linkedCancellationSources.Add(linkedSource);
 
@@ -259,9 +327,12 @@ namespace osu.Game.Beatmaps
         /// <param name="computationDelay">In the case a cached lookup was not possible, a value in milliseconds of to wait until performing potentially intensive lookup.</param>
         private void updateBindable(BindableStarDifficulty bindable, IRulesetInfo? rulesetInfo, IEnumerable<Mod>? mods, CancellationTokenSource linkedCancellationTokenSource, int computationDelay = 0)
         {
+            // The bindable's beatmap may be replaced by Invalidate() before this completes, so report the beatmap this computation was for.
+            var beatmapInfo = bindable.BeatmapInfo;
+
             // GetDifficultyAsync will fall back to existing data from IBeatmapInfo if not locally available
             // (contrary to GetAsync)
-            GetDifficultyAsync(bindable.BeatmapInfo, rulesetInfo, mods, linkedCancellationTokenSource.Token, computationDelay)
+            GetDifficultyAsync(beatmapInfo, rulesetInfo, mods, linkedCancellationTokenSource.Token, computationDelay)
                 .ContinueWith(task =>
                     {
                         // We're on a threadpool thread, but we should exit back to the update thread so consumers can safely handle value-changed events.
@@ -272,7 +343,10 @@ namespace osu.Game.Beatmaps
                                 StarDifficulty? starDifficulty = task.GetResultSafely();
 
                                 if (starDifficulty != null)
+                                {
                                     bindable.Value = starDifficulty.Value;
+                                    TrackedDifficultyUpdated?.Invoke(beatmapInfo, starDifficulty.Value);
+                                }
                             }
 
                             // Once the linked cancellation token source is of no remaining use to anybody, clean it up.
@@ -375,12 +449,32 @@ namespace osu.Game.Beatmaps
             public readonly Mod[] OrderedMods;
 
             public DifficultyCacheLookup(BeatmapInfo beatmapInfo, RulesetInfo? ruleset, IEnumerable<Mod>? mods)
+                : this(beatmapInfo, ruleset, OrderMods(mods))
+            {
+            }
+
+            /// <param name="beatmapInfo">The beatmap.</param>
+            /// <param name="ruleset">The ruleset.</param>
+            /// <param name="orderedMods">Mods returned by <see cref="OrderMods"/>. Used as-is, without ordering or copying.</param>
+            private DifficultyCacheLookup(BeatmapInfo beatmapInfo, RulesetInfo? ruleset, Mod[] orderedMods)
             {
                 BeatmapInfo = beatmapInfo;
                 // In the case that the user hasn't given us a ruleset, use the beatmap's default ruleset.
                 Ruleset = ruleset ?? BeatmapInfo.Ruleset;
-                OrderedMods = mods?.OrderBy(m => m.Acronym).Select(mod => mod.DeepClone()).ToArray() ?? Array.Empty<Mod>();
+                OrderedMods = orderedMods;
             }
+
+            /// <summary>
+            /// Creates a lookup from mods which were already prepared by <see cref="OrderMods"/>, so many lookups can share one array.
+            /// </summary>
+            internal static DifficultyCacheLookup FromOrderedMods(BeatmapInfo beatmapInfo, RulesetInfo? ruleset, Mod[] orderedMods)
+                => new DifficultyCacheLookup(beatmapInfo, ruleset, orderedMods);
+
+            /// <summary>
+            /// Orders and copies mods into the form stored in <see cref="OrderedMods"/>.
+            /// </summary>
+            internal static Mod[] OrderMods(IEnumerable<Mod>? mods)
+                => mods?.OrderBy(m => m.Acronym).Select(mod => mod.DeepClone()).ToArray() ?? Array.Empty<Mod>();
 
             public bool Equals(DifficultyCacheLookup other)
                 => BeatmapInfo.Equals(other.BeatmapInfo)
@@ -398,6 +492,54 @@ namespace osu.Game.Beatmaps
                     hashCode.Add(mod);
 
                 return hashCode.ToHashCode();
+            }
+        }
+
+        /// <summary>
+        /// Returns the same values as <see cref="GetEffectiveStarRating"/> for a fixed ruleset and set of mods.
+        /// </summary>
+        internal sealed class EffectiveStarRatingLookup
+        {
+            private readonly BeatmapDifficultyCache cache;
+            private readonly IRulesetInfo? rulesetInfo;
+            private readonly Mod[] orderedMods;
+            private readonly Mod[] flattenedMods;
+            private readonly double rate;
+            private readonly bool modsAffectDifficulty;
+
+            public EffectiveStarRatingLookup(BeatmapDifficultyCache cache, IRulesetInfo? rulesetInfo, IEnumerable<Mod>? mods)
+            {
+                this.cache = cache;
+                this.rulesetInfo = rulesetInfo;
+
+                if (mods != null)
+                {
+                    flattenedMods = ModUtils.FlattenMods(mods).ToArray();
+                    modsAffectDifficulty = flattenedMods.Any(StarRatingApproximator.ModAffectsDifficulty);
+                    rate = ModUtils.CalculateRateWithMods(mods);
+                }
+                else
+                {
+                    flattenedMods = Array.Empty<Mod>();
+                    modsAffectDifficulty = false;
+                    rate = 1.0;
+                }
+
+                orderedMods = modsAffectDifficulty ? DifficultyCacheLookup.OrderMods(mods) : Array.Empty<Mod>();
+            }
+
+            public double GetEffectiveStarRating(BeatmapInfo beatmapInfo)
+            {
+                if (!modsAffectDifficulty)
+                    return beatmapInfo.StarRating;
+
+                // same as GetExistingDifficulty, but sharing one ordered copy of the mods across all lookups
+                if ((rulesetInfo ?? beatmapInfo.Ruleset) is RulesetInfo localRulesetInfo
+                    && cache.CheckExists(DifficultyCacheLookup.FromOrderedMods(beatmapInfo, localRulesetInfo, orderedMods), out var existing)
+                    && existing != null)
+                    return existing.Value.Stars;
+
+                return StarRatingApproximator.Approximate(beatmapInfo, rulesetInfo, rate, flattenedMods);
             }
         }
 

@@ -39,21 +39,23 @@ namespace osu.Game.Configuration
                     return Math.Max(1, cores / 2);
 
                 case ToriiDifficultyRecalcMode.MaxCores:
-                    return Math.Max(1, cores <= 4 ? cores - 1 : (cores <= 8 ? cores - 2 : cores - 4));
+                    return Math.Max(1, cores - 1);
 
                 default:
-                    return Math.Max(1, Math.Min(4, cores <= 4 ? 1 : cores / 4));
+                    return 1;
             }
         }
 
         /// <summary>
         /// ETA muy aproximado en segundos para recalcular <paramref name="count"/> mapas con
-        /// <paramref name="threads"/> threads. Con batches de base de datos y cache bypass,
-        /// la paralelización escala de manera eficiente entre núcleos.
+        /// <paramref name="threads"/> threads. base ~22 mapas/seg single-thread (medido); escala sublineal
+        /// por disco + realm, asi que cada thread extra rinde ~0.3 (medido: ~3.2x a 8 cores). es un numero
+        /// orientativo para el popup, no exacto: depende mucho de la CPU/disco de cada maquina.
         /// </summary>
         public static int EstimateSeconds(int count, int threads)
         {
-            double rate = Math.Max(5.0, 8.0 + (Math.Max(1, threads) - 1) * 3.5);
+            const double base_rate = 22.0;
+            double rate = base_rate * (1 + (Math.Max(1, threads) - 1) * 0.3);
             return (int)Math.Ceiling(count / rate);
         }
 

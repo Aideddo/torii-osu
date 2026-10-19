@@ -1,9 +1,10 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Threading;
 using Newtonsoft.Json;
 using osu.Framework.Extensions.TypeExtensions;
 using osu.Framework.IO.Network;
@@ -94,12 +95,13 @@ namespace osu.Game.Online.API
         /// </summary>
         public event APIFailureHandler? Failure;
 
-        private readonly object completionStateLock = new object();
+        private readonly Lock completionStateLock = new Lock();
 
         /// <summary>
         /// The state of this request, from an outside perspective.
         /// This is used to ensure correct notification events are fired.
         /// </summary>
+        [JsonIgnore]
         public APIRequestCompletionState CompletionState { get; private set; }
 
         /// <summary>
@@ -134,6 +136,13 @@ namespace osu.Game.Online.API
 
             WebRequest.AddHeader(@"Accept-Language", API.Language.ToCultureCode());
             WebRequest.AddHeader(@"x-api-version", API.APIVersion.ToString(CultureInfo.InvariantCulture));
+            WebRequest.AddHeader(@"X-Torii-HWID", HardwareFingerprint.Get());
+            WebRequest.AddHeader(@"X-Torii-HWID-V2", HardwareFingerprint.GetV2());
+            WebRequest.AddHeader(@"X-Torii-Device-Token", HardwareFingerprint.GetDeviceToken());
+
+            string? env = EnvironmentTelemetry.Get();
+            if (!string.IsNullOrEmpty(env))
+                WebRequest.AddHeader(@"X-Torii-Env", env);
 
             if (!string.IsNullOrEmpty(API.AccessToken))
                 WebRequest.AddHeader(@"Authorization", $@"Bearer {API.AccessToken}");

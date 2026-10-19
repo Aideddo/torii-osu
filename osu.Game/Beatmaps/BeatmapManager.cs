@@ -175,7 +175,7 @@ namespace osu.Game.Beatmaps
                 newBeatmap.ControlPointInfo.Add(clonedEffectPoint.Time, clonedEffectPoint);
             }
 
-            return addDifficultyToSet(targetBeatmapSet, newBeatmap, referenceWorkingBeatmap.Skin);
+            return addDifficultyToSet(targetBeatmapSet, newBeatmap, referenceWorkingBeatmap.Skin, referenceWorkingBeatmap.Storyboard);
         }
 
         /// <summary>
@@ -206,10 +206,10 @@ namespace osu.Game.Beatmaps
             // clear online properties.
             newBeatmapInfo.ResetOnlineInfo();
 
-            return addDifficultyToSet(targetBeatmapSet, newBeatmap, referenceWorkingBeatmap.Skin);
+            return addDifficultyToSet(targetBeatmapSet, newBeatmap, referenceWorkingBeatmap.Skin, referenceWorkingBeatmap.Storyboard);
         }
 
-        private WorkingBeatmap addDifficultyToSet(BeatmapSetInfo targetBeatmapSet, IBeatmap newBeatmap, ISkin beatmapSkin)
+        private WorkingBeatmap addDifficultyToSet(BeatmapSetInfo targetBeatmapSet, IBeatmap newBeatmap, ISkin beatmapSkin, Storyboard storyboard)
         {
             // populate circular beatmap set info <-> beatmap info references manually.
             // several places like `Save()` or `GetWorkingBeatmap()`
@@ -217,7 +217,7 @@ namespace osu.Game.Beatmaps
             targetBeatmapSet.Beatmaps.Add(newBeatmap.BeatmapInfo);
             newBeatmap.BeatmapInfo.BeatmapSet = targetBeatmapSet;
 
-            save(newBeatmap.BeatmapInfo, newBeatmap, beatmapSkin, new Storyboard(), transferCollections: false);
+            save(newBeatmap.BeatmapInfo, newBeatmap, beatmapSkin, storyboard, transferCollections: false);
 
             workingBeatmapCache.Invalidate(targetBeatmapSet);
             return GetWorkingBeatmap(newBeatmap.BeatmapInfo);
@@ -671,19 +671,7 @@ namespace osu.Game.Beatmaps
             return workingBeatmapCache.GetWorkingBeatmap(beatmapInfo);
         }
 
-        /// <summary>
-        /// Creates a standalone <see cref="WorkingBeatmap"/> instance correlating to the provided <see cref="BeatmapInfo"/> without storing it in the cache.
-        /// </summary>
-        public WorkingBeatmap CreateWorkingBeatmap(BeatmapInfo? beatmapInfo, bool verifyHash = false)
-        {
-            if (beatmapInfo != null && beatmapInfo.IsManaged)
-                beatmapInfo = beatmapInfo.Detach();
-
-            return workingBeatmapCache.CreateWorkingBeatmap(beatmapInfo, verifyHash);
-        }
-
         WorkingBeatmap IWorkingBeatmapCache.GetWorkingBeatmap(BeatmapInfo beatmapInfo) => GetWorkingBeatmap(beatmapInfo);
-        WorkingBeatmap IWorkingBeatmapCache.CreateWorkingBeatmap(BeatmapInfo beatmapInfo, bool verifyHash) => CreateWorkingBeatmap(beatmapInfo, verifyHash);
         void IWorkingBeatmapCache.Invalidate(BeatmapSetInfo beatmapSetInfo) => workingBeatmapCache.Invalidate(beatmapSetInfo);
         void IWorkingBeatmapCache.Invalidate(BeatmapInfo beatmapInfo) => workingBeatmapCache.Invalidate(beatmapInfo);
 
@@ -693,7 +681,10 @@ namespace osu.Game.Beatmaps
             remove => workingBeatmapCache.OnInvalidated -= value;
         }
 
-        public override bool IsAvailableLocally(BeatmapSetInfo model) => Realm.Run(realm => realm.All<BeatmapSetInfo>().Any(s => s.OnlineID == model.OnlineID && !s.DeletePending));
+        public override bool IsAvailableLocally(BeatmapSetInfo model)
+        {
+            throw new InvalidOperationException($"Use overload with {nameof(IBeatmapInfo)} parameter instead.");
+        }
 
         public bool IsAvailableLocally(IBeatmapInfo model)
         {

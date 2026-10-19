@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using Humanizer;
 using Humanizer.Localisation;
 using osu.Framework.Allocation;
 using osu.Framework.Threading;

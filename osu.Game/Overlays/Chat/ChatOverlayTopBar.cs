@@ -7,7 +7,6 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
-using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Events;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
@@ -23,7 +22,7 @@ namespace osu.Game.Overlays.Chat
         private Box background = null!;
 
         [BackgroundDependencyLoader]
-        private void load(OverlayColourProvider colourProvider, TextureStore textures)
+        private void load(OverlayColourProvider colourProvider)
         {
             this.colourProvider = colourProvider;
 

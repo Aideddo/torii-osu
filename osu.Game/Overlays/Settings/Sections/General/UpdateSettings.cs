@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Threading.Tasks;
@@ -57,6 +57,7 @@ namespace osu.Game.Overlays.Settings.Sections.General
                 })
                 {
                     Keywords = new[] { @"version" },
+                    Note = { BindTarget = releaseStreamDropdownNote },
                     ShowRevertToDefaultButton = updateManager!.FixedReleaseStream == null
                 });
 
@@ -65,7 +66,17 @@ namespace osu.Game.Overlays.Settings.Sections.General
                     configReleaseStream.Value = updateManager.FixedReleaseStream.Value;
 
                     releaseStreamDropdown.Items = [updateManager.FixedReleaseStream.Value];
-                    releaseStreamDropdownNote.Value = new SettingsNote.Data(GeneralSettingsStrings.ChangeReleaseStreamPackageManagerWarning, SettingsNote.Type.Warning);
+                    releaseStreamDropdownNote.Value = new SettingsNote.Data(GeneralSettingsStrings.ChangeReleaseStreamPackageManagerWarning, SettingsNote.Type.Informational);
+                    releaseStreamDropdown.Current.Disabled = true;
+                }
+                else
+                {
+                    configReleaseStream.BindValueChanged(s =>
+                    {
+                        releaseStreamDropdownNote.Value = s.NewValue != ReleaseStream.Torii
+                            ? new SettingsNote.Data(GeneralSettingsStrings.ReleaseStreamNonStableUpgradeInformation, SettingsNote.Type.Informational)
+                            : null;
+                    }, true);
                 }
 
                 releaseStreamDropdown.Current.BindValueChanged(releaseStreamChanged);

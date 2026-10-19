@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -27,11 +27,13 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Input;
 using osu.Game.Localisation;
+using osu.Game.Online.API;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Notifications;
 using osu.Game.Overlays.Volume;
 using osu.Game.Performance;
+using osu.Game.Resources.Localisation.Web;
 using osu.Game.Screens.Footer;
 using osu.Game.Screens.Menu;
 using osu.Game.Screens.Play.HUD;
@@ -42,6 +44,7 @@ using osu.Game.Users;
 using osu.Game.Utils;
 using osuTK;
 using osuTK.Graphics;
+using NotificationsStrings = osu.Game.Localisation.NotificationsStrings;
 
 namespace osu.Game.Screens.Play
 {
@@ -202,7 +205,7 @@ namespace osu.Game.Screens.Play
         }
 
         [BackgroundDependencyLoader]
-        private void load(SessionStatics sessionStatics, OsuConfigManager config)
+        private void load(SessionStatics sessionStatics, OsuConfigManager config, IAPIProvider api)
         {
             muteWarningShownOnce = sessionStatics.GetBindable<bool>(Static.MutedAudioNotificationShownOnce);
             batteryWarningShownOnce = sessionStatics.GetBindable<bool>(Static.LowBatteryNotificationShownOnce);
@@ -212,7 +215,7 @@ namespace osu.Game.Screens.Play
 
             InternalChildren = new Drawable[]
             {
-                new GlobalScrollAdjustsVolume(),
+                new ScrollAdjustsVolume(),
                 (content = new LogoTrackingContainer
                 {
                     Anchor = Anchor.Centre,
@@ -315,6 +318,18 @@ namespace osu.Game.Screens.Play
                 disclaimers.Add(epilepsyWarning = new PlayerLoaderDisclaimer(PlayerLoaderStrings.EpilepsyWarningTitle, PlayerLoaderStrings.EpilepsyWarningContent));
             }
 
+            if (!string.IsNullOrEmpty(api.ScoreProcessingNoticeUrl))
+            {
+                disclaimers.Add(new PlayerLoaderDisclaimer(
+                    UsersStrings.ShowScoreProcessingTitle(UsersStrings.ShowScoreProcessingTitleLink),
+                    UsersStrings.ShowScoreProcessingMessage
+                )
+                {
+                    Action = () => (Game as OsuGame)?.OpenUrlExternally(api.ScoreProcessingNoticeUrl),
+                    IsImportant = true,
+                });
+            }
+
             switch (Beatmap.Value.BeatmapInfo.Status)
             {
                 case BeatmapOnlineStatus.Loved:
@@ -323,6 +338,10 @@ namespace osu.Game.Screens.Play
 
                 case BeatmapOnlineStatus.Qualified:
                     disclaimers.Add(new PlayerLoaderDisclaimer(PlayerLoaderStrings.QualifiedBeatmapDisclaimerTitle, PlayerLoaderStrings.QualifiedBeatmapDisclaimerContent));
+                    break;
+
+                case BeatmapOnlineStatus.Blacklisted:
+                    disclaimers.Add(new PlayerLoaderDisclaimer("Blacklisted Beatmap", "This beatmap is blacklisted and will not award any Performance Points (PP)."));
                     break;
             }
         }
@@ -597,7 +616,8 @@ namespace osu.Game.Screens.Play
 
             if (QuickRestart)
             {
-                BackButtonVisibility.Value = false;
+                var originalFooterContent = FooterContent.Value;
+                FooterContent.Value = ScreenFooterContent.None;
 
                 // A quick restart starts by triggering a fade to black
                 AddInternal(quickRestartBlackLayer = new Box
@@ -619,7 +639,7 @@ namespace osu.Game.Screens.Play
                     .FadeInFromZero(500, Easing.OutQuint);
 
                 quickRestartBackButtonRestore?.Cancel();
-                quickRestartBackButtonRestore = Scheduler.AddDelayed(() => BackButtonVisibility.Value = true, quick_restart_initial_delay);
+                quickRestartBackButtonRestore = Scheduler.AddDelayed(() => FooterContent.Value = originalFooterContent, quick_restart_initial_delay);
             }
             else
             {

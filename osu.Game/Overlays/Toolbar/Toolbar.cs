@@ -302,7 +302,7 @@ namespace osu.Game.Overlays.Toolbar
                                             new Container { RelativeSizeAxes = Axes.Y, Width = 4 },
                                             new ToolbarPointsButton(),
                                             new Container { RelativeSizeAxes = Axes.Y, Width = 4 },
-                                            new ToriiServerPulseButton(),
+                                            pulseButton = new ToriiServerPulseButton(),
                                             new Container { RelativeSizeAxes = Axes.Y, Width = 4 },
                                             rankedButton = new ToolbarRankedPlayButton(),
                                             new Container { RelativeSizeAxes = Axes.Y, Width = 4 },

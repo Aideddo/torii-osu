@@ -22,7 +22,7 @@ namespace osu.Game.Beatmaps
 
         private readonly BeatmapUpdaterMetadataLookup metadataLookup;
 
-        private static readonly int update_queue_request_concurrency = System.Math.Max(4, System.Environment.ProcessorCount - 2);
+        private const int update_queue_request_concurrency = 4;
 
         private readonly ThreadedTaskScheduler updateScheduler = new ThreadedTaskScheduler(update_queue_request_concurrency, nameof(BeatmapUpdaterMetadataLookup));
 
@@ -43,22 +43,6 @@ namespace osu.Game.Beatmaps
 
         public void Process(BeatmapSetInfo beatmapSet, MetadataLookupScope lookupScope = MetadataLookupScope.LocalCacheFirst)
         {
-            var calculatedRatings = new System.Collections.Generic.List<(BeatmapInfo beatmap, double starRating, IBeatmap loadedBeatmap)>();
-
-            // Calculate difficulty and stats outside Realm.Write to avoid holding the global write lock during CPU-heavy tasks
-            foreach (BeatmapInfo beatmap in beatmapSet.Beatmaps)
-            {
-                var working = workingBeatmapCache.GetWorkingBeatmap(beatmap);
-
-                difficultyCache.Invalidate(beatmap, working.BeatmapInfo);
-
-                var ruleset = working.BeatmapInfo.Ruleset.CreateInstance();
-                var calculator = ruleset.CreateDifficultyCalculator(working);
-
-                double starRating = calculator.Calculate().StarRating;
-                calculatedRatings.Add((beatmap, starRating, working.Beatmap));
-            }
-
             beatmapSet.Realm!.Write(_ =>
             {
                 // Before we use below, we want to invalidate.
@@ -67,10 +51,17 @@ namespace osu.Game.Beatmaps
                 if (lookupScope != MetadataLookupScope.None)
                     metadataLookup.Update(beatmapSet, lookupScope == MetadataLookupScope.OnlineFirst);
 
-                foreach (var (beatmap, starRating, loadedBeatmap) in calculatedRatings)
+                foreach (BeatmapInfo beatmap in beatmapSet.Beatmaps)
                 {
-                    beatmap.StarRating = starRating;
-                    beatmap.UpdateStatisticsFromBeatmap(loadedBeatmap);
+                    var working = workingBeatmapCache.GetWorkingBeatmap(beatmap);
+
+                    difficultyCache.Invalidate(beatmap, working.BeatmapInfo);
+
+                    var ruleset = working.BeatmapInfo.Ruleset.CreateInstance();
+                    var calculator = ruleset.CreateDifficultyCalculator(working);
+
+                    beatmap.StarRating = calculator.Calculate().StarRating;
+                    beatmap.UpdateStatisticsFromBeatmap(working.Beatmap);
                 }
 
                 // And invalidate again afterwards as re-fetching the most up-to-date database metadata will be required.

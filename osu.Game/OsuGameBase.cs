@@ -211,7 +211,9 @@ namespace osu.Game
         public readonly Bindable<Dictionary<ModType, IReadOnlyList<Mod>>> AvailableMods = new Bindable<Dictionary<ModType, IReadOnlyList<Mod>>>(new Dictionary<ModType, IReadOnlyList<Mod>>());
 
         private BeatmapDifficultyCache difficultyCache;
+
         private IBeatmapUpdater beatmapUpdater;
+        private OnlineAssetCachingStore onlineAssetStore;
 
         private UserLookupCache userCache;
         private BeatmapLookupCache beatmapCache;
@@ -241,7 +243,7 @@ namespace osu.Game
 
         private Container content;
 
-        private DependencyContainer dependencies;
+        protected DependencyContainer dependencies;
 
         private readonly BindableNumber<double> globalTrackVolumeAdjust = new BindableNumber<double>(global_track_volume_adjust);
 
@@ -305,7 +307,7 @@ namespace osu.Game
             largeStore.AddTextureSource(Host.CreateTextureLoaderStore(CreateOnlineStore()));
             dependencies.Cache(largeStore);
 
-            dependencies.Cache(new OnlineAssetCachingStore(Host, realm));
+            dependencies.Cache(onlineAssetStore = new OnlineAssetCachingStore(Host, realm));
 
             dependencies.CacheAs(LocalConfig);
             dependencies.CacheAs<IGameplaySettings>(LocalConfig);
@@ -430,6 +432,58 @@ namespace osu.Game
                     API.RefreshLocalUser();
             };
 
+            // Torii environment telemetry provider: supplies tablet model, active area,
+            // monitor refresh rate and audio offset for server anti-cheat correlation.
+            EnvironmentTelemetry.Provider = () =>
+            {
+                try
+                {
+                    var sb = new System.Text.StringBuilder();
+                    var tablet = Host?.AvailableInputHandlers.OfType<ITabletHandler>().FirstOrDefault(t => t.Enabled.Value);
+                    if (tablet != null && tablet.Tablet.Value != null)
+                    {
+                        string name = tablet.Tablet.Value.Name;
+                        var size = tablet.AreaSize.Value;
+                        var offset = tablet.AreaOffset.Value;
+                        sb.Append($"tablet={Uri.EscapeDataString(name)};area={size.X:F1}x{size.Y:F1};off={offset.X:F1}x{offset.Y:F1}|");
+                    }
+
+                    var window = Host?.Window;
+                    if (window != null)
+                    {
+                        var mode = window.CurrentDisplayMode.Value;
+                        if (mode.Size.Width > 0)
+                        {
+                            sb.Append($"disp={mode.Size.Width}x{mode.Size.Height}@{mode.RefreshRate:F0}|");
+                        }
+                    }
+
+                    double audioOffset = LocalConfig?.Get<double>(OsuSetting.AudioOffset) ?? 0;
+                    if (audioOffset != 0)
+                    {
+                        sb.Append($"audio={audioOffset:F0}|");
+                    }
+
+                    string? otdPlugins = EnvironmentTelemetry.GetDetectedTabletPlugins();
+                    if (!string.IsNullOrEmpty(otdPlugins))
+                    {
+                        sb.Append($"otd={otdPlugins}|");
+                    }
+
+                    string? integrity = EnvironmentTelemetry.GetIntegritySignals();
+                    if (!string.IsNullOrEmpty(integrity))
+                    {
+                        sb.Append($"integ={integrity}|");
+                    }
+
+                    return sb.Length > 0 ? sb.ToString().TrimEnd('|') : null;
+                }
+                catch
+                {
+                    return null;
+                }
+            };
+
             base.Content.Add(new BeatmapOnlineChangeIngest(beatmapUpdater, realm, metadataClient));
 
             BeatmapManager.ProcessBeatmap = (beatmapSet, scope) => beatmapUpdater.Process(beatmapSet, scope);
@@ -524,6 +578,27 @@ namespace osu.Game
                 Logger.Log($"Torii: first-launch input/audio Hz auto-tuned to {(int)tunedHz} ({Environment.ProcessorCount} cores).");
                 LocalConfig.SetValue(OsuSetting.ToriiInputAudioHz, tunedHz);
                 LocalConfig.SetValue(OsuSetting.ToriiInputAudioHzAutoTuned, true);
+                LocalConfig.SetValue(OsuSetting.ToriiInputAudioHzRetunedWeakQuad, true);
+            }
+
+            // torii: rescate de los que el tuner viejo (o el default pelado, antes de que
+            // el tuner existiera) dejo en 2000 con una cpu de pocos cores: un i3 de 2011
+            // con ht y 12 GB de ram quedaba corriendo input/audio/update al doble del
+            // lazer oficial y perdia un tercio de los fps. Solo se toca si el valor es
+            // EXACTAMENTE el 2000 heredado; el que eligio otra cosa en el dropdown no se
+            // entera de que esto existe, y el dropdown sigue mandando despues.
+            if (!LocalConfig.Get<bool>(OsuSetting.ToriiInputAudioHzRetunedWeakQuad))
+            {
+                var retuned = ToriiInputAudioHzDefaults.ForThisMachine();
+
+                if (retuned != ToriiInputAudioHzMode.Hz2000
+                    && LocalConfig.Get<ToriiInputAudioHzMode>(OsuSetting.ToriiInputAudioHz) == ToriiInputAudioHzMode.Hz2000)
+                {
+                    Logger.Log($"Torii: input/audio Hz re-tuned 2000 -> {(int)retuned} ({Environment.ProcessorCount} cores).");
+                    LocalConfig.SetValue(OsuSetting.ToriiInputAudioHz, retuned);
+                }
+
+                LocalConfig.SetValue(OsuSetting.ToriiInputAudioHzRetunedWeakQuad, true);
             }
 
             toriiInputAudioHz = LocalConfig.GetBindable<ToriiInputAudioHzMode>(OsuSetting.ToriiInputAudioHz);
@@ -1046,6 +1121,8 @@ namespace osu.Game
             LocalConfig?.Dispose();
 
             beatmapUpdater?.Dispose();
+
+            onlineAssetStore?.Dispose();
 
             realm?.Dispose();
 

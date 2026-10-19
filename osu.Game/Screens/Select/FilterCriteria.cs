@@ -1,19 +1,18 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using osu.Game.Beatmaps;
 using osu.Game.Collections;
-using osu.Game.Database;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Filter;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Select.Filter;
+using osu.Game.Utils;
 
 namespace osu.Game.Screens.Select
 {
@@ -113,24 +112,10 @@ namespace osu.Game.Screens.Select
             }
         }
 
-        private ImmutableHashSet<string>? collectionBeatmapMD5Hashes;
-        private Live<BeatmapCollection>? collection;
-
         /// <summary>
         /// Hashes from the <see cref="BeatmapCollection"/> to filter to.
         /// </summary>
-        public IEnumerable<string>? CollectionBeatmapMD5Hashes =>
-            collectionBeatmapMD5Hashes ??= Collection?.PerformRead(c => c.BeatmapMD5Hashes.ToImmutableHashSet());
-
-        public Live<BeatmapCollection>? Collection
-        {
-            get => collection;
-            set
-            {
-                collection = value;
-                collectionBeatmapMD5Hashes = null;
-            }
-        }
+        public IEnumerable<string>? CollectionBeatmapMD5Hashes { get; set; }
 
         public IRulesetFilterCriteria? RulesetCriteria { get; set; }
 
@@ -283,6 +268,45 @@ namespace osu.Game.Screens.Select
             }
 
             public bool Equals(OptionalTextFilter other) => SearchTerm == other.SearchTerm;
+        }
+
+        /// <summary>
+        /// Returns the star rating of a beatmap adjusted for <see cref="Mods"/>.
+        /// </summary>
+        /// <param name="beatmap">The beatmap.</param>
+        /// <param name="difficultyCache">Used to look up exact cached difficulties. When <c>null</c>, an approximation is used for difficulty-altering mods.</param>
+        public double GetEffectiveStarRating(BeatmapInfo beatmap, BeatmapDifficultyCache? difficultyCache)
+        {
+            if (difficultyCache != null)
+                return difficultyCache.GetEffectiveStarRating(beatmap, Ruleset, Mods);
+
+            if (Mods != null)
+                return StarRatingApproximator.Approximate(beatmap, Ruleset, Mods);
+
+            return beatmap.StarRating;
+        }
+
+        /// <summary>
+        /// Creates a function which returns the same values as <see cref="GetEffectiveStarRating"/>, for use across all beatmaps in one filter run.
+        /// Work which only depends on <see cref="Ruleset"/> and <see cref="Mods"/> is done once, so neither may change while the function is in use.
+        /// </summary>
+        /// <param name="difficultyCache">Used to look up exact cached difficulties. When <c>null</c>, an approximation is used for difficulty-altering mods.</param>
+        internal Func<BeatmapInfo, double> CreateEffectiveStarRatingLookup(BeatmapDifficultyCache? difficultyCache)
+        {
+            if (difficultyCache != null)
+                return difficultyCache.CreateEffectiveStarRatingLookup(Ruleset, Mods).GetEffectiveStarRating;
+
+            var ruleset = Ruleset;
+            var mods = Mods;
+
+            if (mods != null)
+            {
+                double rate = ModUtils.CalculateRateWithMods(mods);
+                var flattenedMods = ModUtils.FlattenMods(mods).ToArray();
+                return beatmap => StarRatingApproximator.Approximate(beatmap, ruleset, rate, flattenedMods);
+            }
+
+            return beatmap => beatmap.StarRating;
         }
 
         /// <summary>

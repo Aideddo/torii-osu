@@ -23,13 +23,5 @@ namespace osu.Game.Beatmaps
         /// </summary>
         /// <param name="beatmapInfo">The beatmap info to invalidate any cached entries for.</param>
         void Invalidate(BeatmapInfo beatmapInfo);
-
-        /// <summary>
-        /// Creates a standalone <see cref="WorkingBeatmap"/> instance for the provided <see cref="BeatmapInfo"/> without storing it in the cache.
-        /// </summary>
-        /// <param name="beatmapInfo">The beatmap to create a working beatmap for.</param>
-        /// <param name="verifyHash">Whether to verify the file's MD5 and SHA256 hashes against stored database metadata.</param>
-        /// <returns>A standalone <see cref="WorkingBeatmap"/> instance.</returns>
-        WorkingBeatmap CreateWorkingBeatmap(BeatmapInfo beatmapInfo, bool verifyHash = false);
     }
 }

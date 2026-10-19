@@ -26,7 +26,7 @@ namespace osu.Game.Graphics.UserEffects.Presets
     /// inset + slow gold-rim shimmer), with whisper-light particle
     /// density. The aura's silence around the crests is the point.
     /// </summary>
-    public class FounderCrestOfHonorPreset : AuraPreset
+    public partial class FounderCrestOfHonorPreset : AuraPreset
     {
         public const string ID = "founder-variant-crest-of-honor";
 

@@ -51,7 +51,7 @@ namespace osu.Game.Beatmaps.Drawables.Cards
         }
 
         [BackgroundDependencyLoader(true)]
-        private void load(BeatmapSetOverlay? beatmapSetOverlay)
+        private void load()
         {
             Width = WIDTH;
             Height = height;
@@ -275,6 +275,16 @@ namespace osu.Game.Beatmaps.Drawables.Cards
             if (ToriiExclusiveBeatmapBadge.ShouldShowFor(BeatmapSet))
             {
                 titleBadgeArea.Add(new ToriiExclusiveBeatmapBadge
+                {
+                    Anchor = Anchor.BottomRight,
+                    Origin = Anchor.BottomRight,
+                    Margin = new MarginPadding { Left = 4 }
+                });
+            }
+
+            if (BlacklistedBeatmapBadge.ShouldShowFor(BeatmapSet))
+            {
+                titleBadgeArea.Add(new BlacklistedBeatmapBadge
                 {
                     Anchor = Anchor.BottomRight,
                     Origin = Anchor.BottomRight,

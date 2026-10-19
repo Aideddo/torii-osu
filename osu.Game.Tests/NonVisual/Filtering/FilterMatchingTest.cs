@@ -4,20 +4,24 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using NUnit.Framework.Legacy;
 using osu.Framework.Bindables;
 using osu.Game.Beatmaps;
+using osu.Game.Graphics.Carousel;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Filter;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Screens.Select;
 using osu.Game.Screens.Select.Filter;
 
 namespace osu.Game.Tests.NonVisual.Filtering
 {
     [TestFixture]
-    public class FilterMatchingTest
+    public partial class FilterMatchingTest
     {
         private BeatmapInfo getExampleBeatmap() => new BeatmapInfo
         {
@@ -626,6 +630,99 @@ namespace osu.Game.Tests.NonVisual.Filtering
                                     .Select(b => carouselBeatmaps.IndexOf(b)).ToArray();
 
             Assert.That(visibleBeatmaps, Is.EqualTo(expectedBeatmapIndexes));
+        }
+
+        [Test]
+        public void TestModAdjustedDifficultyMatching()
+        {
+            var exampleBeatmapInfo = getExampleBeatmap();
+
+            // Nomod: 4.0 does not match stars>=5.
+            var carouselItem = new CarouselBeatmap(exampleBeatmapInfo);
+            carouselItem.Filter(new FilterCriteria { StarDifficulty = new FilterCriteria.OptionalRange<double> { Min = 5.0 } });
+            ClassicAssert.True(carouselItem.Filtered.Value);
+
+            // Non-difficulty mods leave the base rating unchanged.
+            carouselItem.Filter(new FilterCriteria
+            {
+                StarDifficulty = new FilterCriteria.OptionalRange<double> { Min = 5.0 },
+                Mods = new Mod[] { new OsuModNoFail() }
+            });
+            ClassicAssert.True(carouselItem.Filtered.Value);
+
+            // Double Time: 4.0 ≈ 5.34, which matches stars>=5.
+            carouselItem.Filter(new FilterCriteria
+            {
+                StarDifficulty = new FilterCriteria.OptionalRange<double> { Min = 5.0 },
+                Mods = new Mod[] { new OsuModDoubleTime() }
+            });
+            ClassicAssert.False(carouselItem.Filtered.Value);
+
+            // Half Time: 4.0 ≈ 3.27, which no longer matches stars>=3.5 (nomod does).
+            carouselItem.Filter(new FilterCriteria { StarDifficulty = new FilterCriteria.OptionalRange<double> { Min = 3.5 } });
+            ClassicAssert.False(carouselItem.Filtered.Value);
+
+            carouselItem.Filter(new FilterCriteria
+            {
+                StarDifficulty = new FilterCriteria.OptionalRange<double> { Min = 3.5 },
+                Mods = new Mod[] { new OsuModHalfTime() }
+            });
+            ClassicAssert.True(carouselItem.Filtered.Value);
+        }
+
+        [Test]
+        public void TestModAdjustedUserStarDifficultyMatching()
+        {
+            var exampleBeatmapInfo = getExampleBeatmap();
+            var carouselItem = new CarouselBeatmap(exampleBeatmapInfo);
+
+            // Nomod: 4.0 is not in [5, 6].
+            var criteria = new FilterCriteria();
+            criteria.UserStarDifficulty.Min = 5.0;
+            criteria.UserStarDifficulty.Max = 6.0;
+            carouselItem.Filter(criteria);
+            ClassicAssert.True(carouselItem.Filtered.Value);
+
+            // Double Time: ≈ 5.34 is in [5, 6].
+            criteria.Mods = new Mod[] { new OsuModDoubleTime() };
+            carouselItem.Filter(criteria);
+            ClassicAssert.False(carouselItem.Filtered.Value);
+
+            // Upper bound: nomod 4.0 is within [0, 5], but Double Time (≈ 5.34) is not.
+            var upperCriteria = new FilterCriteria();
+            upperCriteria.UserStarDifficulty.Max = 5.0;
+            carouselItem.Filter(upperCriteria);
+            ClassicAssert.False(carouselItem.Filtered.Value);
+
+            upperCriteria.Mods = new Mod[] { new OsuModDoubleTime() };
+            carouselItem.Filter(upperCriteria);
+            ClassicAssert.True(carouselItem.Filtered.Value);
+        }
+
+        [Test]
+        public async Task TestModAdjustedStarDifficultyMatchingUsesCachedDifficulty()
+        {
+            var beatmap = getExampleBeatmap();
+            var mods = new Mod[] { new OsuModDoubleTime() };
+
+            var cache = new TestBeatmapDifficultyCache();
+            await cache.GetDifficultyAsync(beatmap, null, mods);
+
+            // Double Time is approximated at ≈ 5.34, so only the exact cached value of 7.2 is in [7, 8].
+            var criteria = new FilterCriteria { Mods = mods };
+            criteria.UserStarDifficulty.Min = 7.0;
+            criteria.UserStarDifficulty.Max = 8.0;
+
+            var matching = new BeatmapCarouselFilterMatching(() => criteria) { DifficultyCache = cache };
+            var results = await matching.Run(new[] { new CarouselItem(beatmap) }, CancellationToken.None);
+
+            Assert.That(results.Select(i => i.Model).ToArray(), Is.EqualTo(new[] { beatmap }));
+        }
+
+        private partial class TestBeatmapDifficultyCache : BeatmapDifficultyCache
+        {
+            protected override Task<StarDifficulty?> ComputeValueAsync(DifficultyCacheLookup lookup, CancellationToken token = default)
+                => Task.FromResult<StarDifficulty?>(new StarDifficulty(7.2, 0));
         }
 
         // This is a temporary class that emulates what these tests originally used from song select v1.

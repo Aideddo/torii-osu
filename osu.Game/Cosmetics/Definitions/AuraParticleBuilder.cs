@@ -26,7 +26,7 @@ namespace osu.Game.Cosmetics.Definitions
     /// la cadena de transforms según el modo de movimiento + la gramática de animación. Anchors bakeados
     /// y <c>.Expire()</c> garantizado por acá (nunca dependen del autor de la data).
     /// </summary>
-    public static class AuraParticleBuilder
+    public static partial class AuraParticleBuilder
     {
         /// <summary>
         /// Construye una partícula lista para agregar al emisor: posicionada en su spawn, con las

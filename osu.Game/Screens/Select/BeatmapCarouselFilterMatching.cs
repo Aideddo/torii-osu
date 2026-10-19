@@ -18,6 +18,11 @@ namespace osu.Game.Screens.Select
 
         public int BeatmapItemsCount { get; private set; }
 
+        /// <summary>
+        /// Used to match star rating filters against mod-adjusted star rating. When not set, an approximation is used for difficulty-altering mods.
+        /// </summary>
+        public BeatmapDifficultyCache? DifficultyCache { get; set; }
+
         public BeatmapCarouselFilterMatching(Func<FilterCriteria> getCriteria)
         {
             this.getCriteria = getCriteria;
@@ -34,6 +39,9 @@ namespace osu.Game.Screens.Select
         {
             int countMatching = 0;
 
+            // Created once per run, so the mods are prepared once rather than for every beatmap.
+            var getEffectiveStarRating = criteria.CreateEffectiveStarRatingLookup(DifficultyCache);
+
             foreach (var item in items)
             {
                 var beatmap = (BeatmapInfo)item.Model;
@@ -41,7 +49,7 @@ namespace osu.Game.Screens.Select
                 if (beatmap.Hidden)
                     continue;
 
-                if (!CheckCriteriaMatch(beatmap, criteria))
+                if (!checkCriteriaMatch(beatmap, criteria, getEffectiveStarRating))
                     continue;
 
                 countMatching++;
@@ -51,7 +59,10 @@ namespace osu.Game.Screens.Select
             BeatmapItemsCount = countMatching;
         }
 
-        public static bool CheckCriteriaMatch(BeatmapInfo beatmap, FilterCriteria criteria)
+        public static bool CheckCriteriaMatch(BeatmapInfo beatmap, FilterCriteria criteria, BeatmapDifficultyCache? difficultyCache = null)
+            => checkCriteriaMatch(beatmap, criteria, b => criteria.GetEffectiveStarRating(b, difficultyCache));
+
+        private static bool checkCriteriaMatch(BeatmapInfo beatmap, FilterCriteria criteria, Func<BeatmapInfo, double> getEffectiveStarRating)
         {
             bool match = criteria.Ruleset == null || beatmap.AllowGameplayWithRuleset(criteria.Ruleset!, criteria.AllowConvertedBeatmaps);
 
@@ -78,7 +89,12 @@ namespace osu.Game.Screens.Select
 
             if (!match) return false;
 
-            match &= !criteria.StarDifficulty.HasFilter || criteria.StarDifficulty.IsInRange(beatmap.StarRating.FloorToDecimalDigits(2));
+            // Star rating filters match against the star rating adjusted for the currently selected mods.
+            double starRating = criteria.StarDifficulty.HasFilter || criteria.UserStarDifficulty.HasFilter
+                ? getEffectiveStarRating(beatmap)
+                : beatmap.StarRating;
+
+            match &= !criteria.StarDifficulty.HasFilter || criteria.StarDifficulty.IsInRange(starRating.FloorToDecimalDigits(2));
             match &= !criteria.ApproachRate.HasFilter || criteria.ApproachRate.IsInRange(beatmap.Difficulty.ApproachRate);
             match &= !criteria.DrainRate.HasFilter || criteria.DrainRate.IsInRange(beatmap.Difficulty.DrainRate);
             match &= !criteria.CircleSize.HasFilter || criteria.CircleSize.IsInRange(beatmap.Difficulty.CircleSize);
@@ -140,7 +156,7 @@ namespace osu.Game.Screens.Select
                 }
             }
 
-            match &= !criteria.UserStarDifficulty.HasFilter || criteria.UserStarDifficulty.IsInRange(beatmap.StarRating);
+            match &= !criteria.UserStarDifficulty.HasFilter || criteria.UserStarDifficulty.IsInRange(starRating);
 
             if (!match) return false;
 

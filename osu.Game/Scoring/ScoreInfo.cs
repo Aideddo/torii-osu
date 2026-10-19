@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -96,6 +96,7 @@ namespace osu.Game.Scoring
         /// </summary>
         /// <remarks>
         /// Not populated if <see cref="IsLegacyScore"/> is <c>false</c>.
+        /// Always 0 on scores set in lazer.
         /// </remarks>
         public long? LegacyTotalScore { get; set; }
 
@@ -208,9 +209,16 @@ namespace osu.Game.Scoring
         [MapTo(nameof(Rank))]
         public int RankInt { get; set; }
 
+        #region IScoreInfo
+
         IRulesetInfo IScoreInfo.Ruleset => Ruleset;
         IBeatmapInfo? IScoreInfo.Beatmap => BeatmapInfo;
         IUser IScoreInfo.User => User;
+        IEnumerable<IConfiguredMod> IScoreInfo.Mods => APIMods;
+        IReadOnlyDictionary<HitResult, int> IScoreInfo.Statistics => Statistics;
+        IReadOnlyDictionary<HitResult, int> IScoreInfo.MaximumStatistics => MaximumStatistics;
+
+        #endregion
 
         #region Properties required to make things work with existing usages
 
@@ -375,6 +383,8 @@ namespace osu.Game.Scoring
                     case HitResult.SmallBonus:
                         if (MaximumStatistics.TryGetValue(r.result, out int count) && count > 0)
                             yield return new HitResultDisplayStatistic(r.result, value, count, r.displayName);
+                        else if (r.result.IsBonus() && value > 0)
+                            yield return new HitResultDisplayStatistic(r.result, value, null, r.displayName);
 
                         break;
 

@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -128,6 +128,7 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.SongSelectGroupMode, GroupMode.None);
             SetDefault(OsuSetting.SongSelectSortingMode, SortMode.Title);
+            SetDefault(OsuSetting.SongSelectCollectionFilter, string.Empty);
 
             SetDefault(OsuSetting.RandomSelectAlgorithm, RandomSelectAlgorithm.RandomPermutation);
             SetDefault(OsuSetting.ModSelectHotkeyStyle, ModSelectHotkeyStyle.Sequential);
@@ -184,6 +185,8 @@ namespace osu.Game.Configuration
             // Audio
             SetDefault(OsuSetting.VolumeInactive, 0.25, 0, 1, 0.01);
 
+            SetDefault(OsuSetting.HitsoundVolume, 0.6, 0, 1, 0.01);
+
             SetDefault(OsuSetting.MenuVoice, true);
             SetDefault(OsuSetting.MenuMusic, true);
             SetDefault(OsuSetting.MenuTips, true);
@@ -220,7 +223,10 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.CursorRotation, true);
 
+#pragma warning disable CS0612 // Type or member is obsolete (setting default value to avoid risk of any future crashes)
             SetDefault(OsuSetting.MenuParallax, true);
+#pragma warning restore CS0612 // Type or member is obsolete
+            SetDefault(OsuSetting.MenuParallaxScale, 1.0f, 0.0f, 2.0f, 0.1f);
 
             // See https://stackoverflow.com/a/63307411 for default sourcing.
             SetDefault(OsuSetting.Prefer24HourTime, !CultureInfoHelper.SystemCulture.DateTimeFormat.ShortTimePattern.Contains(@"tt"));
@@ -372,6 +378,9 @@ namespace osu.Game.Configuration
             // panel de stable, y se abre sola despues de jugar un mapa). OPT-IN igual que el
             // stable song select: arranca APAGADO asi el look default (glass) queda coherente.
             SetDefault(OsuSetting.ToriiStableResults, false);
+            SetDefault(OsuSetting.UseV2ResultsScreen, true);
+            SetDefault(OsuSetting.ToriiResultsNoticeSeen, false);
+            SetDefault(OsuSetting.ToriiStableDisclaimerSeen, false);
             // Torii: la UI legacy usa la fuente moderna de lazer por default; este toggle la
             // pasa a "Aller" (la fuente real de osu!stable) para un look 1:1 stable.
             SetDefault(OsuSetting.ToriiLegacyFont, false);
@@ -452,6 +461,8 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.DashboardSortMode, UserSortCriteria.LastVisit);
             SetDefault(OsuSetting.DashboardDisplayStyle, OverlayPanelDisplayStyle.Card);
+
+            SetDefault(OsuSetting.PMFriendsOnly, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -579,7 +590,11 @@ namespace osu.Game.Configuration
         MenuVoice,
         MenuTips,
         CursorRotation,
-        MenuParallax,
+
+        [Obsolete]
+        MenuParallax, // todo: can be removed 20270101
+
+        MenuParallaxScale,
         Prefer24HourTime,
         BeatmapDetailTab,
         BeatmapLeaderboardSortMode,
@@ -593,6 +608,7 @@ namespace osu.Game.Configuration
         DisplayStarsMaximum,
         SongSelectGroupMode,
         SongSelectSortingMode,
+        SongSelectCollectionFilter,
         RandomSelectAlgorithm,
         ModSelectHotkeyStyle,
         ShowFpsDisplay,
@@ -692,6 +708,12 @@ namespace osu.Game.Configuration
         DashboardSortMode,
         DashboardDisplayStyle,
 
+        /// <summary>
+        /// Blocks private messages, multiplayer room invites, and duel requests from people not on the user's friends list.
+        /// </summary>
+        PMFriendsOnly,
+        HitsoundVolume,
+
         // Torii
         ForceSDL3,
         ToriiServerPulseEnabled,
@@ -750,6 +772,9 @@ namespace osu.Game.Configuration
         ToriiStableOptInMigrated,
         ToriiLegacySongSelectFooter,
         ToriiStableResults,
+        UseV2ResultsScreen,
+        ToriiResultsNoticeSeen,
+        ToriiStableDisclaimerSeen,
         ToriiLegacyFont,
         ToriiDifficultyRecalcMode,
         ToriiAppliedDifficultyVersions,

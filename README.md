@@ -40,6 +40,8 @@
 
 A buildable client + a small private server. The client is forked from osu! lazer with extra UI surfaces, a few new gameplay-adjacent systems, and performance work. The server is a separate project (`g0v0-server`) that hosts scores, leaderboards, multiplayer rooms, chat, and presence for users who choose to play there.
 
+**You do not need to use the Torii server to use the Torii client.** You can sign in against the official osu! server at any time — the client lets you switch via Settings → Torii → Server.
+
 ## What it is **not**
 
 - It is not "modded osu!" or "cheat osu!". No anti-cheat relaxation, no rank-skipping, no PP injection. Submitting scores to the official osu! server while running this client is unsupported and explicitly discouraged by both us and upstream — the official server's anti-cheat will detect modified clients and restrict you.
@@ -92,6 +94,14 @@ A small gradient torii-gate icon shown next to online users in the Friends / Onl
 ### Torii Briefing
 
 A daily portal overlay greeting users on first login of the day. Shows server status, what's new since last login, friend activity, and quick-jump entries. Designed so the home screen of a Torii session has more "warmth" than an empty Lazer main menu.
+
+### Results screen styles (Modern V2 & Stable)
+
+Torii gives players choice over their results screen presentation via **Settings → User Interface → Results Screen**:
+
+- **Modern V2 (g0v0)**: A sleek, modern results screen design conceptualized and created by **g0v0** ([GooGuTeam](https://github.com/GooGuTeam)). Features vector rank emblems, detailed hit-distribution statistics, score metric visualizers, local PP and if-FC estimates, and expandable leaderboard / score details drawers.
+- **Torii (Stable)**: A faithful rendition of the osu!stable results screen for players who prefer the classic layout.
+- **Lazer Classic**: Upstream's standard results screen.
 
 ### Performance work
 
@@ -282,7 +292,7 @@ The Torii client source is licensed under the [MIT License](LICENCE), inheriting
 
 - [ppy](https://github.com/ppy) and the osu! lazer team — without their work, none of this would exist. Please support [osu!](https://osu.ppy.sh) and consider becoming a [supporter](https://osu.ppy.sh/home/support).
 - [shigetiro](https://github.com/shigetiro) — earlier fork work that Torii builds on.
-- [GooGuTeam](https://github.com/GooGuTeam) — `g0v0-server` upstream + ongoing collaboration on the server side.
+- [GooGuTeam](https://github.com/GooGuTeam) / **g0v0** — original **Modern V2 (g0v0)** results screen design and concept, `g0v0-server` upstream, and ongoing collaboration.
 - The Torii community — for bug reports, ideas, and putting up with experimental builds on the Nova stream.
 
 ---

@@ -133,6 +133,11 @@ namespace osu.Game.Graphics.Carousel
 
             protected override bool IsDragging => base.IsDragging || AbsoluteScrolling;
 
+            /// <summary>
+            /// Whether the user is currently dragging the scroll position, including via absolute scrolling.
+            /// </summary>
+            public bool IsUserDragging => IsDragging;
+
             protected override bool OnKeyDown(KeyDownEvent e)
             {
                 switch (e.Key)

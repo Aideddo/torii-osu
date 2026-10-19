@@ -1,10 +1,9 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
 
 using System;
-using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
@@ -24,9 +23,6 @@ namespace osu.Game.Beatmaps.Drawables
             this.set = set;
             this.type = type;
         }
-
-        [Resolved(canBeNull: true)]
-        private BeatmapManager beatmaps { get; set; }
 
         [BackgroundDependencyLoader]
         private void load(LargeTextureStore textures)
@@ -50,23 +46,6 @@ namespace osu.Game.Beatmaps.Drawables
 
             if (resource != null)
                 Texture = textures.Get(resource);
-
-            if (Texture == null && beatmaps != null)
-            {
-                int onlineId = (set as IBeatmapSetInfo)?.OnlineID ?? 0;
-                var localSet = onlineId > 0
-                    ? beatmaps.QueryBeatmapSet(s => s.OnlineID == onlineId && !s.DeletePending)
-                    : null;
-
-                Texture = localSet?.PerformRead(s =>
-                {
-                    var first = s.Beatmaps.FirstOrDefault();
-                    if (first == null) return null;
-
-                    var working = beatmaps.GetWorkingBeatmap(first);
-                    return working.GetPanelBackground() ?? working.GetBackground();
-                });
-            }
         }
     }
 

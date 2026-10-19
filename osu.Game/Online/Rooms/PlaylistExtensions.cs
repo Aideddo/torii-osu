@@ -6,6 +6,7 @@ using System.Linq;
 using Humanizer;
 using Humanizer.Localisation;
 using osu.Game.Rulesets;
+using osu.Game.Scoring;
 using osu.Game.Utils;
 
 namespace osu.Game.Online.Rooms

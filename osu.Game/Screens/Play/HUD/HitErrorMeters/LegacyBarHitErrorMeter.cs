@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -36,7 +36,7 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
             hitWindows = HitWindows.GetAllAvailableWindows().Where(w => w.result.IsHit()).ToArray();
 
             AutoSizeAxes = Axes.X;
-            Height = (bar_height * 4) * LegacySkin.POSITION_SCALE_FACTOR;
+            Height = (bar_height * 4) * LegacySkin.STABLE_MAGIC_SCALE_FACTOR;
             InternalChildren = new Drawable[]
             {
                 new Box
@@ -48,7 +48,7 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
                 colourBarContainer = new Container
                 {
                     AutoSizeAxes = Axes.X,
-                    Height = bar_height * LegacySkin.POSITION_SCALE_FACTOR,
+                    Height = bar_height * LegacySkin.STABLE_MAGIC_SCALE_FACTOR,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                 },
@@ -56,7 +56,7 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Size = new Vector2(1.5f, bar_height * 4) * LegacySkin.POSITION_SCALE_FACTOR,
+                    Size = new Vector2(1.5f, bar_height * 4) * LegacySkin.STABLE_MAGIC_SCALE_FACTOR,
                 },
                 judgementLinePool = new DrawablePool<JudgementLine>(50),
                 judgementContainer = new Container
@@ -81,7 +81,7 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
 
                 colourBarContainer.Add(new Box
                 {
-                    Size = new Vector2((float)hitWindow.length, bar_height) * LegacySkin.POSITION_SCALE_FACTOR,
+                    Size = new Vector2((float)hitWindow.length, bar_height) * LegacySkin.STABLE_MAGIC_SCALE_FACTOR,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Colour = GetColourForHitResult(hitWindow.result),
@@ -102,6 +102,7 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
             judgementLinePool.Get(drawableJudgement =>
             {
                 drawableJudgement.X = relativePosition;
+                drawableJudgement.Width = 3 / Math.Abs(Scale.X);
                 drawableJudgement.Colour = GetColourForHitResult(judgement.Type);
 
                 judgementContainer.Add(drawableJudgement);

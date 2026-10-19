@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Development;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
@@ -27,7 +28,6 @@ using osu.Game.Rulesets;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
 using osu.Game.Screens.Play;
-using osu.Game.Screens.Select;
 using Realms;
 
 namespace osu.Game.Database
@@ -79,9 +79,14 @@ namespace osu.Game.Database
 
         protected virtual int TimeToSleepDuringGameplay => 30000;
 
+        protected virtual bool SkipProcessing => DebugUtils.IsNUnitRunning;
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            if (SkipProcessing)
+                return;
 
             localMetadataSource = new LocalCachedBeatmapMetadataSource(storage);
 
@@ -311,7 +316,10 @@ namespace osu.Game.Database
                     string? header = reader.ReadLine();
 
                     if (string.IsNullOrEmpty(header))
+                    {
+                        deleteRecalcJournal();
                         return;
+                    }
 
                     foreach (var kv in parseVersionMap(header))
                         journalTargets[kv.Key] = kv.Value;
@@ -323,6 +331,13 @@ namespace osu.Game.Database
                         if (Guid.TryParse(line, out var id))
                             journalRemaining.Add(id);
                     }
+                }
+
+                if (journalRemaining.Count == 0)
+                {
+                    deleteRecalcJournal();
+                    journalTargets.Clear();
+                    return;
                 }
 
                 Logger.Log($"[difficulty] journal encontrado: {journalRemaining.Count} mapas pendientes de una corrida anterior ({string.Join(", ", journalTargets.Keys)})");
@@ -440,7 +455,7 @@ namespace osu.Game.Database
             // torii: avisamos al popup de arranque cuantos mapas hay (0 = ninguno). el popup SOLO se
             // muestra cuando nuestra propia version cambio (bump); wipes ajenos, resumes y backfills de
             // imports corren en silencio con el modo de CPU ya guardado.
-            bool interactive = versionBumpRulesets.Count > 0 || (beatmapIds.Count > 1000 && config.Get<ToriiDifficultyRecalcMode>(OsuSetting.ToriiDifficultyRecalcMode) == ToriiDifficultyRecalcMode.LazerDefault);
+            bool interactive = versionBumpRulesets.Count > 0;
             ToriiDifficultyRecalcCoordinator.AnnouncePending(beatmapIds.Count, interactive);
 
             if (beatmapIds.Count == 0)
@@ -465,167 +480,86 @@ namespace osu.Game.Database
             if (useJournal)
                 writeRecalcJournal(journalTargetsToWrite, remaining!);
 
-            ToriiDifficultyRecalcMode recalcMode = resolveDifficultyRecalcMode(interactive);
+            ToriiDifficultyRecalcMode recalcMode = resolveDifficultyRecalcMode();
             int parallelism = ToriiDifficultyRecalc.ParallelismFor(recalcMode);
             Logger.Log($"Star rating recompute using {recalcMode} ({parallelism} thread(s)).");
 
-            const int batch_size = 250;
-
-            var idList = beatmapIds.ToList();
-            int totalCount = idList.Count;
-
-            var notification = showProgressNotification(totalCount, "Reprocessing star rating for beatmaps", "beatmaps' star ratings have been updated");
+            var notification = showProgressNotification(beatmapIds.Count, "Reprocessing star rating for beatmaps", "beatmaps' star ratings have been updated");
 
             int processedCount = 0;
             int failedCount = 0;
 
-            // el SR de cada mapa es CPU-bound e independiente, asi que paralelizamos.
-            // CreateWorkingBeatmap no lockea el cache global ni escribe logs innecesarios.
+            // el SR de cada mapa es CPU-bound e independiente, asi que paralelizamos. GetWorkingBeatmap
+            // lockea solo el lookup del cache; el decode pesado + el calculo van en paralelo de verdad.
             var rulesetCache = new ConcurrentDictionary<string, Ruleset>();
+
             Ruleset getRuleset(RulesetInfo rulesetInfo) => rulesetCache.GetOrAdd(rulesetInfo.ShortName, _ => rulesetInfo.CreateInstance());
 
-            for (int i = 0; i < totalCount; i += batch_size)
+            Parallel.ForEach(beatmapIds, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, (id, loopState) =>
             {
                 if (notification?.State == ProgressNotificationState.Cancelled)
-                    break;
+                {
+                    loopState.Stop();
+                    return;
+                }
 
                 // se duerme solo si hay gameplay / sesion high-perf activa (no traba el juego).
                 sleepIfRequired();
 
-                int currentBatchCount = Math.Min(batch_size, totalCount - i);
-                var batchSlice = idList.GetRange(i, currentBatchCount);
+                var beatmap = realmAccess.Run(r => r.Find<BeatmapInfo>(id)?.Detach());
 
-                // 1. Fetch & detach the batch in a single read transaction
-                var beatmaps = realmAccess.Run(r =>
+                if (beatmap == null)
+                    return;
+
+                try
                 {
-                    var list = new List<BeatmapInfo>(batchSlice.Count);
+                    var working = beatmapManager.GetWorkingBeatmap(beatmap);
+                    var ruleset = getRuleset(working.BeatmapInfo.Ruleset);
 
-                    foreach (var id in batchSlice)
+                    Debug.Assert(ruleset != null);
+
+                    var calculator = ruleset.CreateDifficultyCalculator(working);
+
+                    double starRating = calculator.Calculate().StarRating;
+                    realmAccess.Write(r =>
                     {
-                        var b = r.Find<BeatmapInfo>(id);
+                        if (r.Find<BeatmapInfo>(id) is BeatmapInfo liveBeatmapInfo)
+                            liveBeatmapInfo.StarRating = starRating;
+                    });
+                    ((IWorkingBeatmapCache)beatmapManager).Invalidate(beatmap);
 
-                        if (b != null)
-                            list.Add(b.Detach());
+                    int done = Interlocked.Increment(ref processedCount);
+                    if (done % 25 == 0 || done == beatmapIds.Count)
+                        updateNotificationProgress(notification, done, beatmapIds.Count);
+
+                    if (remaining != null)
+                    {
+                        int left;
+
+                        lock (remaining)
+                        {
+                            remaining.Remove(id);
+                            left = remaining.Count;
+                        }
+
+                        // snapshot periodico del journal, asi un corte pierde como mucho ~500 mapas.
+                        if (done % 500 == 0 && left > 0)
+                            writeRecalcJournal(journalTargetsToWrite, remaining);
                     }
-
-                    return list;
-                });
-
-                if (beatmaps.Count == 0)
+                }
+                catch (Exception e)
                 {
+                    Logger.Log($"Background processing failed on {beatmap}: {e}");
+                    Interlocked.Increment(ref failedCount);
+
+                    // un mapa corrupto no debe trabar el resume para siempre: lo damos por visto.
                     if (remaining != null)
                     {
                         lock (remaining)
-                        {
-                            foreach (var id in batchSlice)
-                                remaining.Remove(id);
-                        }
-                    }
-
-                    continue;
-                }
-
-                // 2. Parallel difficulty calculation across available CPU threads
-                var results = new ConcurrentBag<(Guid id, double starRating)>();
-                var failedIds = new ConcurrentBag<Guid>();
-
-                Parallel.ForEach(beatmaps, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, beatmap =>
-                {
-                    if (notification?.State == ProgressNotificationState.Cancelled)
-                        return;
-
-                    var thread = Thread.CurrentThread;
-                    var originalPriority = thread.Priority;
-
-                    try
-                    {
-                        thread.Priority = ThreadPriority.Lowest;
-
-                        // Pathological or corrupt aspire maps can take minutes/hours in slider path approximations.
-                        // Bound individual calculation to 5 seconds to prevent stalling the batch.
-                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                        var calcTask = Task.Run(() =>
-                        {
-                            var working = beatmapManager.CreateWorkingBeatmap(beatmap, verifyHash: false);
-                            var ruleset = getRuleset(working.BeatmapInfo.Ruleset);
-
-                            Debug.Assert(ruleset != null);
-
-                            var calculator = ruleset.CreateDifficultyCalculator(working);
-                            return calculator.Calculate(cts.Token).StarRating;
-                        }, cts.Token);
-
-                        if (calcTask.Wait(TimeSpan.FromSeconds(5)))
-                        {
-                            results.Add((beatmap.ID, calcTask.GetResultSafely()));
-                        }
-                        else
-                        {
-                            cts.Cancel();
-                            Logger.Log($"Background difficulty processing timed out on {beatmap} (>5s), skipping.");
-                            Interlocked.Increment(ref failedCount);
-                            failedIds.Add(beatmap.ID);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Log($"Background processing failed on {beatmap}: {e}");
-                        Interlocked.Increment(ref failedCount);
-                        failedIds.Add(beatmap.ID);
-                    }
-                    finally
-                    {
-                        thread.Priority = originalPriority;
-                    }
-                });
-
-                if (notification?.State == ProgressNotificationState.Cancelled)
-                    break;
-
-                // 3. Commit the batch to Realm in a single fast write transaction
-                if (!results.IsEmpty)
-                {
-                    realmAccess.Write(r =>
-                    {
-                        foreach (var (id, starRating) in results)
-                        {
-                            if (r.Find<BeatmapInfo>(id) is BeatmapInfo liveBeatmapInfo)
-                                liveBeatmapInfo.StarRating = starRating;
-                        }
-                    });
-                }
-
-                int done = Interlocked.Add(ref processedCount, results.Count + failedIds.Count);
-                updateNotificationProgress(notification, done, totalCount);
-
-                // 4. Update remaining and journal
-                if (remaining != null)
-                {
-                    int left;
-
-                    lock (remaining)
-                    {
-                        foreach (var (id, _) in results)
                             remaining.Remove(id);
-
-                        foreach (var id in failedIds)
-                            remaining.Remove(id);
-
-                        var foundIds = new HashSet<Guid>(beatmaps.Select(b => b.ID));
-
-                        foreach (var id in batchSlice)
-                        {
-                            if (!foundIds.Contains(id))
-                                remaining.Remove(id);
-                        }
-
-                        left = remaining.Count;
                     }
-
-                    if (done % 500 == 0 || left == 0 || done == totalCount)
-                        writeRecalcJournal(journalTargetsToWrite, remaining);
                 }
-            }
+            });
 
             completeNotification(notification, processedCount, beatmapIds.Count, failedCount);
 
@@ -644,15 +578,12 @@ namespace osu.Game.Database
             }
         }
 
-        private ToriiDifficultyRecalcMode resolveDifficultyRecalcMode(bool interactive)
+        private ToriiDifficultyRecalcMode resolveDifficultyRecalcMode()
         {
-            // esperamos que el popup de arranque resuelva si la sesion es interactiva.
-            // si no es interactiva (o en tests/headless), usamos el modo guardado sin esperar.
+            // esperamos que el popup de arranque resuelva (timeout largo por si el usuario tarda). si nunca
+            // aparece / se cierra, cae al modo guardado (default gentil de lazer). el popup en si decide si
+            // mostrarse (cantidad de mapas + una vez por sesion); aca solo esperamos su eleccion.
             var fallback = config.Get<ToriiDifficultyRecalcMode>(OsuSetting.ToriiDifficultyRecalcMode);
-
-            if (!interactive)
-                return fallback;
-
             return ToriiDifficultyRecalcCoordinator.WaitForChoice(TimeSpan.FromMinutes(3), fallback);
         }
 
@@ -1135,7 +1066,7 @@ namespace osu.Game.Database
         {
             if (!localMetadataSource.Available || !localMetadataSource.IsAtLeastVersion(3))
             {
-                Logger.Log(@"Local metadata cache has too low version to backpopulate user tags, attempting refetch...");
+                Logger.Log(@"Local metadata cache doesn't exist, or has too low version to backpopulate user tags, attempting refetch...");
                 localMetadataSource.FetchCache().WaitSafely();
 
                 if (!localMetadataSource.Available || !localMetadataSource.IsAtLeastVersion(3))
@@ -1304,25 +1235,12 @@ namespace osu.Game.Database
 
         private void sleepIfRequired()
         {
-            // Pause background processing if SongSelect is active (loading, browsing, playing, or in results),
-            // if the beatmap editor is active, or if active gameplay / high-performance mode is engaged.
-            // This ensures zero carousel invalidations, 100% CPU for game loading, and silky-smooth 180+ FPS.
-            if (SongSelect.IsSongSelectActive
-                || osu.Game.Screens.Edit.Editor.IsEditorActive
-                || localUserPlayInfo?.PlayingState.Value != LocalUserPlayingState.NotPlaying
-                || highPerformanceSessionManager?.IsSessionActive == true)
+            // Importantly, also sleep if high performance session is active.
+            // If we don't do this, memory usage can become runaway due to GC running in a more lenient mode.
+            while (localUserPlayInfo?.PlayingState.Value != LocalUserPlayingState.NotPlaying || highPerformanceSessionManager?.IsSessionActive == true)
             {
-                Logger.Log("Background processing paused (Song Select, Editor, or active gameplay)...");
-
-                while (SongSelect.IsSongSelectActive
-                       || osu.Game.Screens.Edit.Editor.IsEditorActive
-                       || localUserPlayInfo?.PlayingState.Value != LocalUserPlayingState.NotPlaying
-                       || highPerformanceSessionManager?.IsSessionActive == true)
-                {
-                    Thread.Sleep(500);
-                }
-
-                Logger.Log("Background processing resuming...");
+                Logger.Log("Background processing sleeping due to active gameplay...");
+                Thread.Sleep(TimeToSleepDuringGameplay);
             }
         }
     }

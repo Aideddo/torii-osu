@@ -325,10 +325,14 @@ namespace osu.Game.Screens.Play
             config.BindWith(OsuSetting.BeatmapColours, rulesetSkinProvider.BeatmapColours);
             config.BindWith(OsuSetting.BeatmapHitsounds, rulesetSkinProvider.BeatmapHitsounds);
 
-            // Torii: mid-map break-skip settings.
             skipBreaksEnabled = config.GetBindable<bool>(OsuSetting.ToriiSkipBreaksEnabled);
             skipBreaksSingleConfirmation = config.GetBindable<bool>(OsuSetting.ToriiSkipBreaksSingleConfirmation);
             skipBreaksBriefingSeen = config.GetBindable<bool>(OsuSetting.ToriiSkipBreaksBriefingSeen);
+            skipBreaksEnabled.BindValueChanged(enabled =>
+            {
+                if (!enabled.NewValue)
+                    skipBreakOverlay?.Hide();
+            });
 
             GameplayClockContainer.Add(new GameplayScrollWheelHandling());
 
@@ -586,7 +590,7 @@ namespace osu.Game.Screens.Play
                     },
                     // Torii: one-time mid-map skip briefing, created only alongside the skip overlay.
                     (skipBreakBriefingOverlay = skipBreakOverlay != null
-                        ? new SkipBreakBriefingOverlay(skipBreaksSingleConfirmation) { OnDismiss = onSkipBreakBriefingDismissed }
+                        ? new SkipBreakBriefingOverlay(skipBreaksSingleConfirmation, skipBreaksEnabled) { OnDismiss = onSkipBreakBriefingDismissed }
                         : null) ?? (Drawable)new Container(),
                 },
             };

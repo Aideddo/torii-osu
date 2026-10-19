@@ -8,9 +8,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using osu.Framework.Extensions.IEnumerableExtensions;
+using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Collections;
 using osu.Game.Graphics.Carousel;
+using osu.Game.Localisation;
+using osu.Game.Resources.Localisation.Web;
+using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens.Select;
 using osu.Game.Screens.Select.Filter;
@@ -77,7 +82,7 @@ namespace osu.Game.Tests.Visual.SongSelect
             assertGroup(results, 1, "A", aBeatmap.Beatmaps, ref total);
             assertGroup(results, 2, "F", fBeatmap.Beatmaps, ref total);
             assertGroup(results, 3, "Z", zBeatmap.Beatmaps, ref total);
-            assertGroup(results, 4, "Other", dashBeatmap.Beatmaps.Concat(underscoreBeatmap.Beatmaps), ref total);
+            assertGroup(results, 4, BeatmapCarouselFilterGroupingStrings.OtherSymbols, dashBeatmap.Beatmaps.Concat(underscoreBeatmap.Beatmaps), ref total);
             assertTotal(results, total);
         }
 
@@ -114,12 +119,12 @@ namespace osu.Game.Tests.Visual.SongSelect
             addBeatmapSet(s => s.DateAdded = DateTimeOffset.Now.AddMonths(-2).AddDays(-3), beatmapSets, out var twoMonthsAgoBeatmap);
 
             var results = await runGrouping(GroupMode.DateAdded, beatmapSets);
-            assertGroup(results, 0, "Today", todayBeatmap.Beatmaps, ref total);
-            assertGroup(results, 1, "Yesterday", yesterdayBeatmap.Beatmaps, ref total);
-            assertGroup(results, 2, "Last week", lastWeekBeatmap.Beatmaps, ref total);
-            assertGroup(results, 3, "Last month", lastMonthBeatmap.Beatmaps, ref total);
-            assertGroup(results, 4, "1 month ago", oneMonthAgoBeatmap.Beatmaps, ref total);
-            assertGroup(results, 5, "2 months ago", twoMonthsAgoBeatmap.Beatmaps, ref total);
+            assertGroup(results, 0, BeatmapCarouselFilterGroupingStrings.Today, todayBeatmap.Beatmaps, ref total);
+            assertGroup(results, 1, BeatmapCarouselFilterGroupingStrings.Yesterday, yesterdayBeatmap.Beatmaps, ref total);
+            assertGroup(results, 2, BeatmapCarouselFilterGroupingStrings.LastWeek, lastWeekBeatmap.Beatmaps, ref total);
+            assertGroup(results, 3, BeatmapCarouselFilterGroupingStrings.LastMonth, lastMonthBeatmap.Beatmaps, ref total);
+            assertGroup(results, 4, BeatmapCarouselFilterGroupingStrings.MonthsAgo(1), oneMonthAgoBeatmap.Beatmaps, ref total);
+            assertGroup(results, 5, BeatmapCarouselFilterGroupingStrings.MonthsAgo(2), twoMonthsAgoBeatmap.Beatmaps, ref total);
             assertTotal(results, total);
         }
 
@@ -138,13 +143,13 @@ namespace osu.Game.Tests.Visual.SongSelect
             addBeatmapSet(applyLastPlayed(null), beatmapSets, out var neverBeatmap);
 
             var results = await runGrouping(GroupMode.LastPlayed, beatmapSets);
-            assertGroup(results, 0, "Today", todayBeatmap.Beatmaps, ref total);
-            assertGroup(results, 1, "Yesterday", yesterdayBeatmap.Beatmaps, ref total);
-            assertGroup(results, 2, "Last week", lastWeekBeatmap.Beatmaps, ref total);
-            assertGroup(results, 3, "Last month", lastMonthBeatmap.Beatmaps, ref total);
-            assertGroup(results, 4, "1 month ago", oneMonthAgoBeatmap.Beatmaps, ref total);
-            assertGroup(results, 5, "2 months ago", twoMonthsBeatmap.Beatmaps, ref total);
-            assertGroup(results, 6, "Never", neverBeatmap.Beatmaps, ref total);
+            assertGroup(results, 0, BeatmapCarouselFilterGroupingStrings.Today, todayBeatmap.Beatmaps, ref total);
+            assertGroup(results, 1, BeatmapCarouselFilterGroupingStrings.Yesterday, yesterdayBeatmap.Beatmaps, ref total);
+            assertGroup(results, 2, BeatmapCarouselFilterGroupingStrings.LastWeek, lastWeekBeatmap.Beatmaps, ref total);
+            assertGroup(results, 3, BeatmapCarouselFilterGroupingStrings.LastMonth, lastMonthBeatmap.Beatmaps, ref total);
+            assertGroup(results, 4, BeatmapCarouselFilterGroupingStrings.MonthsAgo(1), oneMonthAgoBeatmap.Beatmaps, ref total);
+            assertGroup(results, 5, BeatmapCarouselFilterGroupingStrings.MonthsAgo(2), twoMonthsBeatmap.Beatmaps, ref total);
+            assertGroup(results, 6, BeatmapCarouselFilterGroupingStrings.NeverPlayed, neverBeatmap.Beatmaps, ref total);
             assertTotal(results, total);
         }
 
@@ -161,8 +166,8 @@ namespace osu.Game.Tests.Visual.SongSelect
             var results = await runGrouping(GroupMode.LastPlayed, beatmapSets);
             int total = 0;
 
-            assertGroup(results, 0, "Today", [set.Beatmaps[2]], ref total);
-            assertGroup(results, 1, "Never", [set.Beatmaps[0], set.Beatmaps[1]], ref total);
+            assertGroup(results, 0, BeatmapCarouselFilterGroupingStrings.Today, [set.Beatmaps[2]], ref total);
+            assertGroup(results, 1, BeatmapCarouselFilterGroupingStrings.NeverPlayed, [set.Beatmaps[0], set.Beatmaps[1]], ref total);
             assertTotal(results, total);
         }
 
@@ -176,8 +181,8 @@ namespace osu.Game.Tests.Visual.SongSelect
             var results = await runGrouping(GroupMode.LastPlayed, beatmapSets);
             int total = 0;
 
-            assertGroup(results, 0, "Over 5 months ago", overFiveMonthsBeatmap.Beatmaps, ref total);
-            assertGroup(results, 1, "Never", neverBeatmap.Beatmaps, ref total);
+            assertGroup(results, 0, BeatmapCarouselFilterGroupingStrings.OverMonthsAgo(5), overFiveMonthsBeatmap.Beatmaps, ref total);
+            assertGroup(results, 1, BeatmapCarouselFilterGroupingStrings.NeverPlayed, neverBeatmap.Beatmaps, ref total);
             assertTotal(results, total);
         }
 
@@ -207,14 +212,14 @@ namespace osu.Game.Tests.Visual.SongSelect
             addBeatmapSet(s => s.Status = BeatmapOnlineStatus.LocallyModified, beatmapSets, out var localBeatmap);
 
             var results = await runGrouping(GroupMode.RankedStatus, beatmapSets);
-            assertGroup(results, 0, "Ranked", rankedBeatmap.Beatmaps.Concat(approvedBeatmap.Beatmaps), ref total);
-            assertGroup(results, 1, "Qualified", qualifiedBeatmap.Beatmaps, ref total);
-            assertGroup(results, 2, "WIP", wipBeatmap.Beatmaps, ref total);
-            assertGroup(results, 3, "Pending", pendingBeatmap.Beatmaps, ref total);
-            assertGroup(results, 4, "Graveyard", graveyardBeatmap.Beatmaps, ref total);
-            assertGroup(results, 5, "Local", localBeatmap.Beatmaps, ref total);
-            assertGroup(results, 6, "Unknown", noneBeatmap.Beatmaps, ref total);
-            assertGroup(results, 7, "Loved", lovedBeatmap.Beatmaps, ref total);
+            assertGroup(results, 0, BeatmapsetsStrings.ShowStatusRanked, rankedBeatmap.Beatmaps.Concat(approvedBeatmap.Beatmaps), ref total);
+            assertGroup(results, 1, BeatmapsetsStrings.ShowStatusQualified, qualifiedBeatmap.Beatmaps, ref total);
+            assertGroup(results, 2, BeatmapsetsStrings.ShowStatusWip, wipBeatmap.Beatmaps, ref total);
+            assertGroup(results, 3, BeatmapsetsStrings.ShowStatusPending, pendingBeatmap.Beatmaps, ref total);
+            assertGroup(results, 4, BeatmapsetsStrings.ShowStatusGraveyard, graveyardBeatmap.Beatmaps, ref total);
+            assertGroup(results, 5, SongSelectStrings.LocallyModified, localBeatmap.Beatmaps, ref total);
+            assertGroup(results, 6, SongSelectStrings.StatusUnknown, noneBeatmap.Beatmaps, ref total);
+            assertGroup(results, 7, BeatmapsetsStrings.ShowStatusLoved, lovedBeatmap.Beatmaps, ref total);
             assertTotal(results, total);
         }
 
@@ -240,12 +245,12 @@ namespace osu.Game.Tests.Visual.SongSelect
             addBeatmapSet(applyBPM(330), beatmapSets, out var beatmap330);
 
             var results = await runGrouping(GroupMode.BPM, beatmapSets);
-            assertGroup(results, 0, "Under 60 BPM", beatmap30.Beatmaps, ref total);
-            assertGroup(results, 1, "60 - 70 BPM", (beatmap59.Beatmaps.Concat(beatmap60.Beatmaps)), ref total);
-            assertGroup(results, 2, "90 - 100 BPM", (beatmap90.Beatmaps.Concat(beatmap95.Beatmaps)), ref total);
-            assertGroup(results, 3, "270 - 280 BPM", (beatmap269.Beatmaps.Concat(beatmap270.Beatmaps)), ref total);
-            assertGroup(results, 4, "290 - 300 BPM", beatmap299.Beatmaps, ref total);
-            assertGroup(results, 5, "Over 300 BPM", (beatmap300.Beatmaps.Concat(beatmap330.Beatmaps)), ref total);
+            assertGroup(results, 0, BeatmapCarouselFilterGroupingStrings.UnderBPM(60), beatmap30.Beatmaps, ref total);
+            assertGroup(results, 1, BeatmapCarouselFilterGroupingStrings.RangeBPM(60, 70), (beatmap59.Beatmaps.Concat(beatmap60.Beatmaps)), ref total);
+            assertGroup(results, 2, BeatmapCarouselFilterGroupingStrings.RangeBPM(90, 100), (beatmap90.Beatmaps.Concat(beatmap95.Beatmaps)), ref total);
+            assertGroup(results, 3, BeatmapCarouselFilterGroupingStrings.RangeBPM(270, 280), (beatmap269.Beatmaps.Concat(beatmap270.Beatmaps)), ref total);
+            assertGroup(results, 4, BeatmapCarouselFilterGroupingStrings.RangeBPM(290, 300), beatmap299.Beatmaps, ref total);
+            assertGroup(results, 5, BeatmapCarouselFilterGroupingStrings.OverBPM(300), (beatmap300.Beatmaps.Concat(beatmap330.Beatmaps)), ref total);
             assertTotal(results, total);
         }
 
@@ -276,14 +281,61 @@ namespace osu.Game.Tests.Visual.SongSelect
             addBeatmapSet(applyStars(22), beatmapSets, out var beatmap22);
 
             var results = await runGrouping(GroupMode.Difficulty, beatmapSets);
-            assertGroup(results, 0, "Below 1 Star", beatmapBelow1.Beatmaps, ref total);
-            assertGroup(results, 1, "1 Star", (beatmapAbove1.Beatmaps.Concat(beatmapAlmost2.Beatmaps)), ref total);
-            assertGroup(results, 2, "2 Stars", (beatmap2.Beatmaps.Concat(beatmapAbove2.Beatmaps)), ref total);
-            assertGroup(results, 3, "7 Stars", beatmap7.Beatmaps, ref total);
-            assertGroup(results, 4, "13 Stars", beatmap13.Beatmaps, ref total);
-            assertGroup(results, 5, "14 Stars", beatmapAlmost15.Beatmaps, ref total);
-            assertGroup(results, 6, "Over 15 Stars", beatmap15.Beatmaps.Concat(beatmap22.Beatmaps), ref total);
+            assertGroup(results, 0, BeatmapCarouselFilterGroupingStrings.BelowStars(1), beatmapBelow1.Beatmaps, ref total);
+            assertGroup(results, 1, BeatmapCarouselFilterGroupingStrings.Stars(1), (beatmapAbove1.Beatmaps.Concat(beatmapAlmost2.Beatmaps)), ref total);
+            assertGroup(results, 2, BeatmapCarouselFilterGroupingStrings.Stars(2), (beatmap2.Beatmaps.Concat(beatmapAbove2.Beatmaps)), ref total);
+            assertGroup(results, 3, BeatmapCarouselFilterGroupingStrings.Stars(7), beatmap7.Beatmaps, ref total);
+            assertGroup(results, 4, BeatmapCarouselFilterGroupingStrings.Stars(13), beatmap13.Beatmaps, ref total);
+            assertGroup(results, 5, BeatmapCarouselFilterGroupingStrings.Stars(14), beatmapAlmost15.Beatmaps, ref total);
+            assertGroup(results, 6, BeatmapCarouselFilterGroupingStrings.OverStars(15), beatmap15.Beatmaps.Concat(beatmap22.Beatmaps), ref total);
             assertTotal(results, total);
+        }
+
+        [Test]
+        public async Task TestGroupingByDifficultyWithModAdjustment()
+        {
+            var beatmapSets = new List<BeatmapSetInfo>();
+            addBeatmapSet(applyStars(1.2), beatmapSets, out var beatmapLow);
+            addBeatmapSet(applyStars(4.0), beatmapSets, out var beatmapMid);
+            addBeatmapSet(applyStars(12.0), beatmapSets, out var beatmapHigh);
+
+            // Nomod: groups follow base star rating.
+            int total = 0;
+            var nomodResults = await runGrouping(GroupMode.Difficulty, beatmapSets);
+            assertGroup(nomodResults, 0, "1 Star", beatmapLow.Beatmaps, ref total);
+            assertGroup(nomodResults, 1, "4 Stars", beatmapMid.Beatmaps, ref total);
+            assertGroup(nomodResults, 2, "12 Stars", beatmapHigh.Beatmaps, ref total);
+            assertTotal(nomodResults, total);
+
+            // Double Time: 1.2 ≈ 1.45 (stays "1 Star"), 4.0 ≈ 5.34 ("5 Stars"), 12.0 ≈ 17.6 ("Over 15 Stars").
+            total = 0;
+            var dtResults = await runGrouping(GroupMode.Difficulty, beatmapSets, new[] { new OsuModDoubleTime() });
+            assertGroup(dtResults, 0, "1 Star", beatmapLow.Beatmaps, ref total);
+            assertGroup(dtResults, 1, "5 Stars", beatmapMid.Beatmaps, ref total);
+            assertGroup(dtResults, 2, "Over 15 Stars", beatmapHigh.Beatmaps, ref total);
+            assertTotal(dtResults, total);
+        }
+
+        [Test]
+        public async Task TestGroupingByDifficultyWithReductionMod()
+        {
+            // Half Time: 1.05 (nomod "1 Star") ≈ 0.89, which becomes "Below 1 Star".
+            var beatmapSetsHt = new List<BeatmapSetInfo>();
+            addBeatmapSet(applyStars(1.05), beatmapSetsHt, out var beatmapReducedBelow1);
+
+            int total = 0;
+            var resultsHt = await runGrouping(GroupMode.Difficulty, beatmapSetsHt, new[] { new OsuModHalfTime() });
+            assertGroup(resultsHt, 0, "Below 1 Star", beatmapReducedBelow1.Beatmaps, ref total);
+            assertTotal(resultsHt, total);
+
+            // Easy at the default AR of 5: 4.2 (nomod "4 Stars") × 0.85 ≈ 3.57, which becomes "3 Stars".
+            var beatmapSetsEz = new List<BeatmapSetInfo>();
+            addBeatmapSet(applyStars(4.2), beatmapSetsEz, out var beatmapReducedTo3);
+
+            total = 0;
+            var resultsEz = await runGrouping(GroupMode.Difficulty, beatmapSetsEz, new[] { new OsuModEasy() });
+            assertGroup(resultsEz, 0, "3 Stars", beatmapReducedTo3.Beatmaps, ref total);
+            assertTotal(resultsEz, total);
         }
 
         private Action<BeatmapSetInfo> applyStars(double stars)
@@ -311,11 +363,11 @@ namespace osu.Game.Tests.Visual.SongSelect
             addBeatmapSet(applyLength(630_000), beatmapSets, out var beatmap10Min30Sec);
 
             var results = await runGrouping(GroupMode.Length, beatmapSets);
-            assertGroup(results, 0, "1 minute or less", (beatmap30Sec.Beatmaps.Concat(beatmap1Min.Beatmaps)), ref total);
-            assertGroup(results, 1, "2 minutes or less", (beatmap1Min30Sec.Beatmaps.Concat(beatmap2Min.Beatmaps)), ref total);
-            assertGroup(results, 2, "5 minutes or less", beatmap5Min.Beatmaps, ref total);
-            assertGroup(results, 3, "10 minutes or less", (beatmap6Min.Beatmaps.Concat(beatmap10Min.Beatmaps)), ref total);
-            assertGroup(results, 4, "Over 10 minutes", beatmap10Min30Sec.Beatmaps, ref total);
+            assertGroup(results, 0, BeatmapCarouselFilterGroupingStrings.MinutesOrLess(1), (beatmap30Sec.Beatmaps.Concat(beatmap1Min.Beatmaps)), ref total);
+            assertGroup(results, 1, BeatmapCarouselFilterGroupingStrings.MinutesOrLess(2), (beatmap1Min30Sec.Beatmaps.Concat(beatmap2Min.Beatmaps)), ref total);
+            assertGroup(results, 2, BeatmapCarouselFilterGroupingStrings.MinutesOrLess(5), beatmap5Min.Beatmaps, ref total);
+            assertGroup(results, 3, BeatmapCarouselFilterGroupingStrings.MinutesOrLess(10), (beatmap6Min.Beatmaps.Concat(beatmap10Min.Beatmaps)), ref total);
+            assertGroup(results, 4, BeatmapCarouselFilterGroupingStrings.OverMinutes(10), beatmap10Min30Sec.Beatmaps, ref total);
             assertTotal(results, total);
         }
 
@@ -344,7 +396,7 @@ namespace osu.Game.Tests.Visual.SongSelect
             assertGroup(results, 0, "2025", beatmap2025.Beatmaps, ref total);
             assertGroup(results, 1, "2010", beatmap2010.Beatmaps, ref total);
             assertGroup(results, 2, "2007", (beatmapOct2007.Beatmaps.Concat(beatmapDec2007.Beatmaps)), ref total);
-            assertGroup(results, 3, "Unranked", beatmapUnranked.Beatmaps, ref total);
+            assertGroup(results, 3, BeatmapCarouselFilterGroupingStrings.Unranked, beatmapUnranked.Beatmaps, ref total);
             assertTotal(results, total);
         }
 
@@ -366,7 +418,7 @@ namespace osu.Game.Tests.Visual.SongSelect
             var results = await runGrouping(GroupMode.Source, beatmapSets);
             assertGroup(results, 0, "Cool Game", (beatmapCoolGame.Beatmaps.Concat(beatmapCoolGameB.Beatmaps)), ref total);
             assertGroup(results, 1, "Nice Movie", beatmapNiceMovie.Beatmaps, ref total);
-            assertGroup(results, 2, "Unsourced", beatmapUnsourced.Beatmaps, ref total);
+            assertGroup(results, 2, BeatmapCarouselFilterGroupingStrings.Unsourced, beatmapUnsourced.Beatmaps, ref total);
             assertTotal(results, total);
         }
 
@@ -389,7 +441,7 @@ namespace osu.Game.Tests.Visual.SongSelect
             favouriteBeatmapSets = [21, 54321];
 
             var results = await runGrouping(GroupMode.Favourites, beatmapSets);
-            assertGroup(results, 0, "Favourites", firstFavourite.Beatmaps.Concat(secondFavourite.Beatmaps), ref total);
+            assertGroup(results, 0, BeatmapCarouselFilterGroupingStrings.Favourites, firstFavourite.Beatmaps.Concat(secondFavourite.Beatmaps), ref total);
             assertTotal(results, total);
         }
 
@@ -397,11 +449,11 @@ namespace osu.Game.Tests.Visual.SongSelect
 
         private HashSet<int> favouriteBeatmapSets = [];
 
-        private async Task<List<CarouselItem>> runGrouping(GroupMode group, List<BeatmapSetInfo> beatmapSets)
+        private async Task<List<CarouselItem>> runGrouping(GroupMode group, List<BeatmapSetInfo> beatmapSets, IReadOnlyList<Mod>? mods = null)
         {
             var groupingFilter = new BeatmapCarouselFilterGrouping
             {
-                GetCriteria = () => new FilterCriteria { Group = group },
+                GetCriteria = () => new FilterCriteria { Group = group, Mods = mods },
                 GetCollections = () => new List<BeatmapCollection>(),
                 GetLocalUserTopRanks = _ => new Dictionary<Guid, ScoreRank>(),
                 GetFavouriteBeatmapSets = () => favouriteBeatmapSets,
@@ -410,7 +462,7 @@ namespace osu.Game.Tests.Visual.SongSelect
             return await groupingFilter.Run(beatmapSets.SelectMany(s => s.Beatmaps.Select(b => new CarouselItem(b))).ToList(), CancellationToken.None);
         }
 
-        private static void assertGroup(List<CarouselItem> items, int index, string expectedTitle, IEnumerable<BeatmapInfo> expectedBeatmaps, ref int totalItems)
+        private static void assertGroup(List<CarouselItem> items, int index, LocalisableString expectedTitle, IEnumerable<BeatmapInfo> expectedBeatmaps, ref int totalItems)
         {
             var groupItem = items.Where(i => i.Model is GroupDefinition).ElementAtOrDefault(index);
 
@@ -424,7 +476,7 @@ namespace osu.Game.Tests.Visual.SongSelect
 
             var groupModel = (GroupDefinition)groupItem.Model;
 
-            Assert.That(groupModel.Title.ToString(), Is.EqualTo(expectedTitle));
+            Assert.That(groupModel.Title, Is.EqualTo(expectedTitle));
             Assert.That(itemsInGroup.Select(i => i.Model).OfType<GroupedBeatmap>().Select(gb => gb.Beatmap), Is.EquivalentTo(expectedBeatmaps));
 
             totalItems += itemsInGroup.Count() + 1;

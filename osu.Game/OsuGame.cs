@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -35,6 +35,7 @@ using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
+using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Collections;
 using osu.Game.Configuration;
@@ -47,8 +48,11 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Input;
 using osu.Game.Input.Bindings;
 using osu.Game.IO;
+using osu.Game.IPC;
+using osu.Game.IPC.DataSources;
 using osu.Game.Localisation;
 using osu.Game.Online;
+using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Leaderboards;
@@ -62,6 +66,7 @@ using osu.Game.Overlays.Notifications;
 using osu.Game.Overlays.OSD;
 using osu.Game.Overlays.SkinEditor;
 using osu.Game.Overlays.Toolbar;
+using osu.Game.Overlays.Volume;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
@@ -163,6 +168,7 @@ namespace osu.Game
         private Bindable<bool> legacyStableDisclaimerWatcher;
         private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay autoHideHint;
         private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay stableSongSelectPromo;
+        private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay stableSongSelectDisclaimer;
         private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay newDefaultThemeHint;
         private bool newThemeHintScheduled;
 
@@ -183,6 +189,10 @@ namespace osu.Game
         private NewsOverlay news;
 
         private UserProfileOverlay userProfile;
+
+        private LoginOverlay loginOverlay;
+
+        private NowPlayingOverlay nowPlayingOverlay;
 
         private BeatmapSetOverlay beatmapSetOverlay;
 
@@ -435,10 +445,10 @@ namespace osu.Game
             return userInputManager;
         }
 
-        private DependencyContainer dependencies;
+        protected new DependencyContainer Dependencies { get; private set; }
 
         protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent) =>
-            dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+            Dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
 
         // Torii DARK GLASS: the scene capture buffer, non-null only while the glass theme is active.
         private BufferedContainer sceneCaptureBuffer;
@@ -565,9 +575,9 @@ namespace osu.Game
             migrateNovaRenderer();
 
             if (SeasonalUIConfig.ENABLED)
-                dependencies.CacheAs(osuLogo = new OsuLogoChristmas { Alpha = 0 });
+                Dependencies.CacheAs(osuLogo = new OsuLogoChristmas { Alpha = 0 });
             else
-                dependencies.CacheAs(osuLogo = new OsuLogo { Alpha = 0 });
+                Dependencies.CacheAs(osuLogo = new OsuLogo { Alpha = 0 });
 
             // bind config int to database RulesetInfo
             configRuleset = LocalConfig.GetBindable<string>(OsuSetting.Ruleset);
@@ -730,7 +740,7 @@ namespace osu.Game
 
         public void CopyToClipboard(string value) => waitForReady(() => onScreenDisplay, _ =>
         {
-            dependencies.Get<Clipboard>().SetText(value);
+            Dependencies.Get<Clipboard>().SetText(value);
             onScreenDisplay.Display(new CopiedToClipboardToast());
         });
 
@@ -1342,9 +1352,12 @@ namespace osu.Game
             MultiplayerClient.PostNotification = n => Notifications.Post(n);
             MultiplayerClient.PresentMatch = PresentMultiplayerMatch;
 
+            if (API is APIAccess api)
+                api.PostNotification = n => Notifications.Post(n);
+
             ScreenFooter.BackReceptor backReceptor;
 
-            dependencies.CacheAs(idleTracker = new GameIdleTracker(6000));
+            Dependencies.CacheAs(idleTracker = new GameIdleTracker(6000));
 
             var sessionIdleTracker = new GameIdleTracker(300000);
             sessionIdleTracker.IsIdle.BindValueChanged(idle =>
@@ -1417,10 +1430,14 @@ namespace osu.Game
                 },
                 topMostOverlayContent = new Container { RelativeSizeAxes = Axes.Both },
                 idleTracker,
-                new ConfineMouseTracker()
+                new ConfineMouseTracker(),
             });
 
-            dependencies.Cache(ScreenFooter);
+            // Load volume overlay before anything else, so users can adjust volume as soon as feasible after startup.
+            loadComponentSingleFile(volume = new VolumeOverlay(), leftFloatingOverlayContent.Add, true);
+            Add(new ScrollAdjustsVolume(requireAltPressed: true));
+
+            Dependencies.Cache(ScreenFooter);
 
             ScreenStack.ScreenPushed += screenPushed;
             ScreenStack.ScreenExited += screenExited;
@@ -1539,6 +1556,15 @@ namespace osu.Game
                 Toggle = LocalConfig.GetBindable<bool>(OsuSetting.ToriiLegacyFooterUseSkin),
             }, topMostOverlayContent.Add);
 
+            loadComponentSingleFile(stableSongSelectDisclaimer = new osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay
+            {
+                Title = "Stable song select is experimental",
+                ToggleCaption = "Stable song select",
+                ToggleHint = "Turn off any time if you experience visual bugs or prefer the default.",
+                Accent = osu.Game.Overlays.ToriiBriefing.BriefingTheme.AccentCyan,
+                Toggle = LocalConfig.GetBindable<bool>(OsuSetting.ToriiLegacyFooterUseSkin),
+            }, topMostOverlayContent.Add);
+
             // torii: aviso (una sola vez) de que glass es el nuevo theme default. sin toggle, solo informa;
             // el que quiera el look de antes tiene "Torii Legacy" en settings. lo prende la migracion de
             // OsuGameBase (flag pending) y sale cuando el menu esta listo (ver showNewDefaultThemeHint).
@@ -1564,9 +1590,6 @@ namespace osu.Game
 
             // torii: preview del tamano de cursor (lo dispara el hotkey de cursor size).
             loadComponentSingleFile(cursorSizePreview = new CursorSizePreviewOverlay(), topMostOverlayContent.Add, true);
-
-            loadComponentSingleFile(volume = new VolumeOverlay(), leftFloatingOverlayContent.Add, true);
-
             onScreenDisplay = new OnScreenDisplay();
 
             onScreenDisplay.BeginTracking(this, frameworkConfig);
@@ -1626,6 +1649,10 @@ namespace osu.Game
             // para que el polling del render sobreviva a salir de la pantalla (y cero riesgo de
             // async-after-disposal contra drawables de screen).
             loadComponentSingleFile(new osu.Game.Overlays.ReplayRender.ReplayRenderOverlay(), topMostOverlayContent.Add, true);
+            // torii: el porton del star rating de ranked play. Vive a nivel juego porque
+            // la cola se puede tirar desde el toolbar, o sea desde cualquier pantalla.
+            // Cerrado no cuesta nada: no usa AlwaysPresent y arma el picker al abrirse.
+            loadComponentSingleFile(new osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay.ComfortPickGateOverlay(), topMostOverlayContent.Add, true);
             // torii: notas de score. el store batchea los lookups de los iconitos del leaderboard
             // (una request por tanda) y cachea; el overlay es el panel de escribir la nota.
             loadComponentSingleFile(new osu.Game.Online.ScoreNotes.ScoreNoteStore(), Add, true);
@@ -1643,13 +1670,13 @@ namespace osu.Game
             loadComponentSingleFile(wikiOverlay = new WikiOverlay(), overlayContent.Add, true);
             loadComponentSingleFile(skinEditor = new SkinEditorOverlay(ScreenContainer), overlayContent.Add, true);
 
-            loadComponentSingleFile(new LoginOverlay
+            loadComponentSingleFile(loginOverlay = new LoginOverlay
             {
                 Anchor = Anchor.TopRight,
                 Origin = Anchor.TopRight,
             }, rightFloatingOverlayContent.Add, true);
 
-            loadComponentSingleFile(new NowPlayingOverlay
+            loadComponentSingleFile(nowPlayingOverlay = new NowPlayingOverlay
             {
                 Anchor = Anchor.TopRight,
                 Origin = Anchor.TopRight,
@@ -1673,7 +1700,7 @@ namespace osu.Game
             Add(new FriendPresenceNotifier());
 
             // side overlays which cancel each other.
-            var singleDisplaySideOverlays = new OverlayContainer[] { Settings, Notifications, FirstRunOverlay, toriiWelcomeOverlay };
+            var singleDisplaySideOverlays = new OverlayContainer[] { Settings, Notifications, FirstRunOverlay, loginOverlay, nowPlayingOverlay, toriiWelcomeOverlay };
 
             foreach (var overlay in singleDisplaySideOverlays)
             {
@@ -1733,6 +1760,16 @@ namespace osu.Game
             // this MUST happen after `applyConfigMigrations()` call, as it relies on comparing the previous version.
             // debug / local compilations will reset to a non-release string.
             LocalConfig.SetValue(OsuSetting.Version, version);
+
+            var webSocketProvider = Dependencies.Get<IWebSocketProvider>();
+
+            if (webSocketProvider != null)
+            {
+                AddRange([
+                    new UserActivityWebSocketDataSource(webSocketProvider),
+                    new BeatmapStateWebSocketDataSource(webSocketProvider)
+                ]);
+            }
         }
 
         /// <summary>
@@ -1788,7 +1825,17 @@ namespace osu.Game
 
                 Audio.UseExperimentalWasapi.Value = true;
 
+                // TODO: can be removed 20270101.
+                // leave the migration but just stop telling users about it. if they haven't been playing for this long they are more likely
+                // to setup offset again, or even have different hardware.
                 dialogOverlay.Push(new MigrateNewAudioDialog(wasAlreadyUsing));
+            }
+
+            if (combined < 20260728)
+            {
+#pragma warning disable CS0612 // Type or member is obsolete (MenuParallax exists solely to make this migration work, it should not be used anywhere else)
+                LocalConfig.SetValue<float>(OsuSetting.MenuParallaxScale, LocalConfig.Get<bool>(OsuSetting.MenuParallax) ? 1 : 0);
+#pragma warning restore CS0612 // Type or member is obsolete
             }
         }
 
@@ -1948,7 +1995,7 @@ namespace osu.Game
             where T : class
         {
             if (cache)
-                dependencies.CacheAs(component);
+                Dependencies.CacheAs(component);
 
             var drawableComponent = component as Drawable ?? throw new ArgumentException($"Component must be a {nameof(Drawable)}", nameof(component));
 
@@ -2159,18 +2206,7 @@ namespace osu.Game
             ScreenStack.BackgroundTopExtension = screenTopInset;
             overlayOffsetContainer.Padding = new MarginPadding { Top = toolbarOffset };
 
-            float horizontalOffset = 0f;
-
-            // Content.ToLocalSpace() is used instead of this.ToLocalSpace() to correctly calculate the offset with scaling modes active.
-            // Content is a child of a scaling container with ScalingMode.Everything set, while the game itself is never scaled.
-            // this avoids a visible jump in the positioning of the screen offset container.
-            if (Settings.IsLoaded && Settings.IsPresent)
-                horizontalOffset += Content.ToLocalSpace(Settings.ScreenSpaceDrawQuad.TopRight).X * SIDE_OVERLAY_OFFSET_RATIO;
-            if (Notifications.IsLoaded && Notifications.IsPresent)
-                horizontalOffset += (Content.ToLocalSpace(Notifications.ScreenSpaceDrawQuad.TopLeft).X - Content.DrawWidth) * SIDE_OVERLAY_OFFSET_RATIO;
-
-            ScreenOffsetContainer.X = horizontalOffset;
-            overlayContent.X = horizontalOffset * 1.2f;
+            adjustGlobalScreenOffset();
 
             GlobalCursorDisplay.ShowCursor = (ScreenStack.CurrentScreen as IOsuScreen)?.CursorVisible ?? false;
 
@@ -2329,13 +2365,45 @@ namespace osu.Game
             cursorSizePreview?.OnAdjusted();
         }
 
+        public void ShowStableSongSelectDisclaimer()
+        {
+            if (OverlayActivationMode.Value == OverlayActivation.Disabled)
+                return;
+
+            if (LocalConfig.Get<bool>(OsuSetting.ToriiStableDisclaimerSeen))
+                return;
+
+            LocalConfig.SetValue(OsuSetting.ToriiStableDisclaimerSeen, true);
+
+            stableSongSelectDisclaimer?.Present("Heads up: the stable song select is experimental. Some skins may look broken and there can be bugs. You can turn it off below or anytime in Settings.");
+        }
+
         private void postStableSongSelectDisclaimer()
         {
-            Notifications.Post(new SimpleNotification
-            {
-                Text = "Heads up: the stable song select is experimental. Some skins may look a bit broken and there can be bugs. You can turn it off anytime in Settings.",
-                Icon = FontAwesome.Solid.ToriiGate,
-            });
+            ShowStableSongSelectDisclaimer();
+        }
+
+        private float horizontalOffsetAdjust;
+
+        /// <summary>
+        /// When a screen-edge overlay is present, we push the game content slightly in its direction to create a sense of depth.
+        /// </summary>
+        private void adjustGlobalScreenOffset()
+        {
+            float adjust = 0f;
+
+            if (Settings.IsLoaded && Settings.State.Value == Visibility.Visible)
+                adjust += SettingsPanel.WIDTH * SIDE_OVERLAY_OFFSET_RATIO;
+            if (Notifications.IsLoaded && Notifications.State.Value == Visibility.Visible)
+                adjust -= NotificationOverlay.WIDTH * SIDE_OVERLAY_OFFSET_RATIO;
+
+            horizontalOffsetAdjust = (float)Interpolation.DampContinuously(horizontalOffsetAdjust, adjust, 100, Time.Elapsed);
+            // Avoid having everything on the screen moving by miniscule amounts (can create overhead on busy screens).
+            if (adjust == 0 && Math.Abs(horizontalOffsetAdjust) < 0.2f)
+                horizontalOffsetAdjust = 0;
+
+            ScreenOffsetContainer.X = horizontalOffsetAdjust;
+            overlayContent.X = horizontalOffsetAdjust * 1.2f;
         }
 
         protected virtual void ScreenChanged([CanBeNull] IOsuScreen current, [CanBeNull] IOsuScreen newScreen)

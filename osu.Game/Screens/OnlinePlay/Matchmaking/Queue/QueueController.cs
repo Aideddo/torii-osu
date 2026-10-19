@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
@@ -35,6 +37,11 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.Queue
     {
         public readonly Bindable<ScreenQueue.MatchmakingScreenState> CurrentState = new Bindable<ScreenQueue.MatchmakingScreenState>();
         public readonly Bindable<MatchmakingPool?> SelectedPool = new Bindable<MatchmakingPool?>();
+
+        /// <summary>
+        /// Timer since the queue was joined.
+        /// </summary>
+        public readonly Stopwatch QueueTimer = new Stopwatch();
 
         [Resolved]
         private MultiplayerClient client { get; set; } = null!;
@@ -72,8 +79,39 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.Queue
         {
             lastDuelUser = null;
             lastDuelPool = null;
+            QueueTimer.Restart();
 
-            client.MatchmakingJoinQueue(pool.Id).FireAndForget();
+            // torii: el rechazo del servidor se MUESTRA. Antes era FireAndForget pelado:
+            // si el server decia que no (por ejemplo "elegi tu star rating primero"), el
+            // motivo se perdia y el jugador se quedaba mirando un boton que no hacia
+            // nada. Un "no" sin motivo se lee como un bug.
+            // El estado no se toca: lo mueve a Queueing el evento MatchmakingQueueJoined,
+            // que con un rechazo nunca llega. Pisarlo aca seria arreglar algo que no se
+            // rompio, con el riesgo de sacar al jugador de un estado que si era valido.
+            client.MatchmakingJoinQueue(pool.Id).FireAndForget(onError: ex => Schedule(() =>
+                notifications?.Post(new SimpleErrorNotification
+                {
+                    Icon = FontAwesome.Solid.Star,
+                    Text = describirFallo(ex),
+                })));
+        }
+
+        /// <summary>
+        /// El motivo por el que no se pudo encolar, en un idioma que le sirva al jugador.
+        /// </summary>
+        /// <remarks>
+        /// Los rechazos del servidor ya vienen redactados ("You need to set your Star
+        /// Rating first") y se muestran tal cual. Lo que no se puede mostrar crudo es una
+        /// falla de conexion: "Cannot access a disposed object. Object name:
+        /// Microsoft.AspNetCore.SignalR.Client.HubConnection" no le dice NADA a nadie, y
+        /// es justo el caso en el que el jugador necesita entender que hacer.
+        /// </remarks>
+        private static string describirFallo(Exception ex)
+        {
+            if (ex is ObjectDisposedException || ex is InvalidOperationException)
+                return "Lost connection to the match server. Reconnecting — try again in a moment.";
+
+            return ex.Message;
         }
 
         /// <summary>
@@ -94,6 +132,7 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.Queue
 
             lastDuelUser = userId;
             lastDuelPool = pool;
+            QueueTimer.Restart();
 
             client.MatchmakingIssueDuel(new MatchmakingIssueDuelRequest
             {

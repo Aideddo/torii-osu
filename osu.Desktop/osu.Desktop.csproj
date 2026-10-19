@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Label="Project">
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <OutputType>WinExe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>Torii Nova, a community rhythm game client.</Description>
@@ -19,6 +19,13 @@
          oficial) resuelve eso mismo; y Server GC en maquinas de 2-4 nucleos crea
          heaps y threads de GC que compiten contra nuestros threads de juego. -->
   </PropertyGroup>
+
+  <!-- Required for deployment. -->
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <StartupHookSupport>false</StartupHookSupport>
+    <CETCompat>false</CETCompat>
+  </PropertyGroup>
+
   <PropertyGroup>
     <StartupObject>osu.Desktop.Program</StartupObject>
   </PropertyGroup>
@@ -31,7 +38,7 @@
     <ProjectReference Include="..\osu.Game.Rulesets.Taiko\osu.Game.Rulesets.Taiko.csproj" />
   </ItemGroup>
   <ItemGroup Label="Package References">
-    <PackageReference Include="System.IO.Packaging" Version="10.0.9" />
+    <PackageReference Include="System.IO.Packaging" Version="10.0.12" />
     <!-- Held back due to invite bug in newer versions. See https://github.com/Lachee/discord-rpc-csharp/issues/286 -->
     <PackageReference Include="DiscordRichPresence" Version="1.5.0.51" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
@@ -43,6 +50,11 @@
   </ItemGroup>
   <ItemGroup Label="Windows Icons">
     <Content Include="*.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Label="Nova Renderers">
+    <Content Include="runtimes\win-x64\dxvk\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="runtimes\win-x64\zink\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- config de macOS -->
