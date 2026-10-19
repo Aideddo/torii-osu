@@ -11,6 +11,10 @@ env:
   # the Setup .NET step (global.json pins 10.0.100 since the .NET 10
   # + CoreCLR Android migration).
   DOTNET_VERSION: '10.0.x'
+  FRAMEWORK_REPOSITORY: 'ShikkesoraSIM/torii-framework'
+  FRAMEWORK_REF: '25e68d530f7116437c4cfaf127169ac4d6619927'
+  RESOURCES_REPOSITORY: 'ShikkesoraSIM/torii-resources'
+  RESOURCES_REF: '2a516e45ba416dbd2cf8b821661909109f738b34'
 
 jobs:
   build-dev:
@@ -25,15 +29,17 @@ jobs:
     - name: Checkout framework dependency
       uses: actions/checkout@v4
       with:
-        repository: ShikkesoraSIM/torii-framework
+        repository: ${{ env.FRAMEWORK_REPOSITORY }}
         fetch-depth: 1
+        ref: ${{ env.FRAMEWORK_REF }}
         path: toriirefresh-framework
 
     - name: Checkout resources dependency
       uses: actions/checkout@v4
       with:
-        repository: ShikkesoraSIM/torii-resources
+        repository: ${{ env.RESOURCES_REPOSITORY }}
         fetch-depth: 1
+        ref: ${{ env.RESOURCES_REF }}
         path: toriirefresh-resources
 
     - name: Place dependencies in expected sibling paths
