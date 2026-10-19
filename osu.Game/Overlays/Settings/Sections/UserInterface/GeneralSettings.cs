@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
@@ -57,10 +57,12 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
                 {
                     Keywords = [@"cursor", @"gameplay", @"skin", @"torii"],
                 },
-                new SettingsItemV2(new FormCheckBox
+                new SettingsItemV2(new FormSliderBar<float>
                 {
                     Caption = UserInterfaceStrings.Parallax,
-                    Current = config.GetBindable<bool>(OsuSetting.MenuParallax)
+                    Current = config.GetBindable<float>(OsuSetting.MenuParallaxScale),
+                    DisplayAsPercentage = true,
+                    LabelFormat = v => v == 0 ? CommonStrings.Disabled : FormSliderBar<float>.DefaultLabelFormat(v, true),
                 }),
                 new SettingsItemV2(new FormSliderBar<double>
                 {

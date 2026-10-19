@@ -24,7 +24,7 @@ namespace osu.Game.Graphics
     /// as it both makes the caching ineffective <b>AND</b> trashes the cache with entries that will never be used again.
     /// </para>
     /// </summary>
-    public class OnlineAssetCachingStore
+    public class OnlineAssetCachingStore : IDisposable
     {
         // ReSharper disable NotAccessedField.Local
         private readonly RealmAccess realmAccess;

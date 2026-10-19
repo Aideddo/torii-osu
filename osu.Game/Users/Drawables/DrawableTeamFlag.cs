@@ -45,7 +45,7 @@ namespace osu.Game.Users.Drawables
         }
 
         [BackgroundDependencyLoader]
-        private void load(LargeTextureStore textures)
+        private void load(OnlineAssetCachingStore textures)
         {
             if (team?.FlagUrl != null)
                 sprite.Texture = textures.Get(team.FlagUrl);

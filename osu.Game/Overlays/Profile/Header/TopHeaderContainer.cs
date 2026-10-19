@@ -37,7 +37,7 @@ namespace osu.Game.Overlays.Profile.Header
         [Resolved]
         private RankingsOverlay? rankingsOverlay { get; set; }
 
-        private UserCoverBackground cover = null!;
+        private CoverBackground cover = null!;
         private SupporterIcon supporterTag = null!;
         private UpdateableAvatar avatar = null!;
         private GlowingFreeWidthSpriteText usernameText = null!;
@@ -253,7 +253,7 @@ namespace osu.Game.Overlays.Profile.Header
         {
             var user = data?.User;
 
-            cover.User = user;
+            cover.Model = user;
             avatar.User = user;
             usernameText.Text = user?.Username ?? string.Empty;
             // Torii: rebind the aura emitter to the (possibly different) user.
@@ -294,7 +294,7 @@ namespace osu.Game.Overlays.Profile.Header
             flow.TransformTo(nameof(flow.Spacing), new Vector2(expanded ? 20f : 10f), transition_duration, Easing.OutQuint);
         }
 
-        private partial class ProfileCoverBackground : UserCoverBackground
+        private partial class ProfileCoverBackground : CoverBackground
         {
             protected override double LoadDelay => 0;
 

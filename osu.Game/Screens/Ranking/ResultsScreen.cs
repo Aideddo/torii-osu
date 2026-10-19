@@ -160,7 +160,6 @@ namespace osu.Game.Screens.Ranking
                                     RelativeSizeAxes = Axes.Both,
                                     Children = new Drawable[]
                                     {
-                                        new GlobalScrollAdjustsVolume(),
                                         StatisticsPanel = new StatisticsPanel
                                         {
                                             RelativeSizeAxes = Axes.Both,
@@ -797,16 +796,6 @@ namespace osu.Game.Screens.Ranking
 
         public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
         {
-        }
-
-        protected override bool OnScroll(ScrollEvent e)
-        {
-            // Match stable behaviour of only alt-scroll adjusting volume.
-            // This is the same behaviour as the song selection screen.
-            if (!e.CurrentState.Keyboard.AltPressed)
-                return true;
-
-            return base.OnScroll(e);
         }
 
         protected partial class VerticalScrollContainer : OsuScrollContainer

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="sh.shikkesora.torii" android:installLocation="auto">
 	<uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
 	<application android:allowBackup="true"
@@ -6,7 +6,15 @@
 				 android:label="Torii Nova"
 				 android:icon="@mipmap/ic_launcher"
 				 android:roundIcon="@mipmap/ic_launcher"
-				 android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
+				 android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+        <provider android:name="androidx.core.content.FileProvider"
+                  android:authorities="sh.shikkesora.torii.fileprovider"
+                  android:grantUriPermissions="true"
+                  android:exported="false">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
+                       android:resource="@xml/filepaths" />
+        </provider>
+    </application>
 	<!-- for editor usage -->
 	<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 	<uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />

@@ -79,6 +79,11 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString CycleSkinsThroughFavoritesOnlyDescription => new TranslatableString(getKey(@"cycle_skins_through_favorites_only_description"), @"Restrict the next/previous skin keybinds to pinned skins only.");
 
+        /// <summary>
+        /// "Hitsound volume"
+        /// </summary>
+        public static LocalisableString HitsoundVolume => new TranslatableString(getKey(@"hitsound_volume"), @"Hitsound volume");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

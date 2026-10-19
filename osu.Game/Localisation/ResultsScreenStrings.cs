@@ -97,6 +97,10 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString RetryUnavailable => new TranslatableString(getKey(@"retry_unavailable"), @"Retry is available after playing this beatmap.");
 
+        /// "Performance"
+        /// </summary>
+        public static LocalisableString PerformancePointsHeader => new TranslatableString(getKey(@"performance_points_header"), "Performance");
+
         /// <summary>
         /// "Personal best"
         /// </summary>

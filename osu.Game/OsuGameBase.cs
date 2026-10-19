@@ -211,7 +211,9 @@ namespace osu.Game
         public readonly Bindable<Dictionary<ModType, IReadOnlyList<Mod>>> AvailableMods = new Bindable<Dictionary<ModType, IReadOnlyList<Mod>>>(new Dictionary<ModType, IReadOnlyList<Mod>>());
 
         private BeatmapDifficultyCache difficultyCache;
+
         private IBeatmapUpdater beatmapUpdater;
+        private OnlineAssetCachingStore onlineAssetStore;
 
         private UserLookupCache userCache;
         private BeatmapLookupCache beatmapCache;
@@ -241,7 +243,7 @@ namespace osu.Game
 
         private Container content;
 
-        private DependencyContainer dependencies;
+        protected DependencyContainer dependencies;
 
         private readonly BindableNumber<double> globalTrackVolumeAdjust = new BindableNumber<double>(global_track_volume_adjust);
 
@@ -305,7 +307,7 @@ namespace osu.Game
             largeStore.AddTextureSource(Host.CreateTextureLoaderStore(CreateOnlineStore()));
             dependencies.Cache(largeStore);
 
-            dependencies.Cache(new OnlineAssetCachingStore(Host, realm));
+            dependencies.Cache(onlineAssetStore = new OnlineAssetCachingStore(Host, realm));
 
             dependencies.CacheAs(LocalConfig);
             dependencies.CacheAs<IGameplaySettings>(LocalConfig);
@@ -1119,6 +1121,8 @@ namespace osu.Game
             LocalConfig?.Dispose();
 
             beatmapUpdater?.Dispose();
+
+            onlineAssetStore?.Dispose();
 
             realm?.Dispose();
 
