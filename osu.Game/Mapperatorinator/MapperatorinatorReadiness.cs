@@ -223,6 +223,7 @@ namespace osu.Game.Mapperatorinator
             var list = new List<Requirement>();
             var hardware = DetectHardware(runner);
             bool installed = runner.InstallLooksValid;
+            string? environmentProblem = installed ? runner.CheckEnvironment() : null;
 
             // hay gpu pero el pytorch instalado no la ve (la rueda de cpu de un install
             // anterior): no se dice "gpu ok" cuando va a correr en cpu.
@@ -287,13 +288,13 @@ namespace osu.Game.Mapperatorinator
             else
             {
 
-            string? python = MapperatorinatorRunner.FindPython310();
+            string? python = runner.VenvPython ?? MapperatorinatorRunner.FindPython310();
             list.Add(new Requirement
             {
                 Kind = RequirementKind.Python,
-                Title = @"Python 3.10",
+                Title = @"Python 3.10 (64-bit)",
                 State = python != null ? RequirementState.Ok : RequirementState.Missing,
-                Detail = python != null ? $"found ({python})" : @"not found. The model only runs on 3.10, not newer. (Just installed it? Press Check.)",
+                Detail = python != null ? $"found ({python})" : @"not found. Setup requires 64-bit Python 3.10, not a 32-bit or newer Python. (Just installed it? Press Check.)",
                 Instructions = pythonInstructions(),
                 DownloadUrl = PYTHON_DOWNLOAD_URL,
             });
@@ -358,17 +359,19 @@ namespace osu.Game.Mapperatorinator
             {
                 Kind = RequirementKind.Tool,
                 Title = @"Mapperatorinator",
-                State = !installed ? RequirementState.Missing : wrongTorch ? RequirementState.Warning : RequirementState.Ok,
-                Detail = !installed
+                State = !installed || environmentProblem != null ? RequirementState.Missing : wrongTorch ? RequirementState.Warning : RequirementState.Ok,
+                Detail = environmentProblem ?? (!installed
                     ? @"not installed yet. One click does it: the tool, the python packages and pytorch (about 8 GB; the model downloads on your first generation)."
                     : staleCuda
                         ? $"installed, but its pytorch has no kernels for the {hardware.GpuName}: generating would die with cudaErrorNoKernelImageForDevice. One press swaps it for the build that does."
                         : wrongTorch
                             ? $"installed, but its pytorch is the CPU build, so generation ignores the {hardware.GpuName} and runs on the CPU."
-                            : $"installed ({runner.Config.InstallPath})",
-                Instructions = wrongTorch ? torchFixInstructions(runner, hardware.Device) : string.Empty,
-                AutoInstallLabel = staleCuda ? @"Fix pytorch for this card" : wrongTorch ? @"Use the GPU" : @"Install automatically",
-                CanAutoInstall = true,
+                            : $"installed ({runner.Config.InstallPath})"),
+                Instructions = !string.IsNullOrEmpty(runner.Config.PythonPath)
+                    ? @"You selected your own Python. Install dependencies into that environment yourself, or clear 'Use my own python' to let Torii manage a separate environment."
+                    : wrongTorch ? torchFixInstructions(runner, hardware.Device) : string.Empty,
+                AutoInstallLabel = environmentProblem != null ? @"Repair installation" : staleCuda ? @"Fix pytorch for this card" : wrongTorch ? @"Use the GPU" : @"Install automatically",
+                CanAutoInstall = string.IsNullOrEmpty(runner.Config.PythonPath),
             });
 
             return list;

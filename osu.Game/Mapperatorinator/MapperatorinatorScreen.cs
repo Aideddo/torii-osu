@@ -823,43 +823,7 @@ namespace osu.Game.Mapperatorinator
             requirementsToggle.Alpha = showList ? 0 : 1;
         }
 
-        private void startFfmpegInstall()
-        {
-            if (installing) return;
-
-            installing = true;
-            generateButton.Enabled.Value = false;
-            logFlow.Clear();
-            logLines = 0;
-            logScroll.FadeIn(200);
-            installCancellation = new CancellationTokenSource();
-            var token = installCancellation.Token;
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    await runner.InstallFfmpegAsync(line => Schedule(() => appendLog(line)), token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    Schedule(() => appendLog(@"ffmpeg install cancelled."));
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"[mapperatorinator] ffmpeg install failed: {e}");
-                    Schedule(() => appendLog($"ffmpeg install failed: {e.Message}"));
-                }
-                finally
-                {
-                    Schedule(() =>
-                    {
-                        installing = false;
-                        runChecks();
-                    });
-                }
-            }, CancellationToken.None);
-        }
+        private void startFfmpegInstall() => runInstallTask(@"ffmpeg-install", runner.InstallFfmpegAsync);
 
         /// <summary>
         /// One requirement as a row: status icon, what it is, what was found, and the
@@ -1252,12 +1216,16 @@ namespace osu.Game.Mapperatorinator
             installCancellation = new CancellationTokenSource();
             var token = installCancellation.Token;
 
-            var collected = new List<string>();
+            var collected = new Queue<string>();
 
             void log(string line)
             {
                 lock (collected)
-                    collected.Add(line);
+                {
+                    if (collected.Count == 10000)
+                        collected.Dequeue();
+                    collected.Enqueue(line);
+                }
 
                 Schedule(() => appendLog(line));
             }
@@ -1274,7 +1242,7 @@ namespace osu.Game.Mapperatorinator
                 }
                 catch (Exception e)
                 {
-                    Logger.Log($"[mapperatorinator] gpu task failed: {e}");
+                    Logger.Log($"[mapperatorinator] {reportName} failed: {e}");
                     log($"failed: {e.Message}");
                 }
                 finally
@@ -1336,48 +1304,12 @@ namespace osu.Game.Mapperatorinator
             Schedule(() => notifications?.Post(new SimpleNotification { Text = @"Mapperatorinator now uses your GPU. The next generation should be a lot faster." }));
         });
 
-        private void startInstall()
+        private void startInstall() => runInstallTask(@"install", async (log, token) =>
         {
-            if (installing) return;
-
-            installing = true;
-            generateButton.Enabled.Value = false;
-            logFlow.Clear();
-            logLines = 0;
-            logScroll.FadeIn(200);
-            installCancellation = new CancellationTokenSource();
-            var token = installCancellation.Token;
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    await runner.InstallAsync(line => Schedule(() => appendLog(line)), token).ConfigureAwait(false);
-                    Schedule(() =>
-                    {
-                        appendLog(@"ready to generate!");
-                        notifications?.Post(new SimpleNotification { Text = @"Mapperatorinator installed! You can generate maps now." });
-                    });
-                }
-                catch (OperationCanceledException)
-                {
-                    Schedule(() => appendLog(@"install cancelled."));
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"[mapperatorinator] install failed: {e}");
-                    Schedule(() => appendLog($"install failed: {e.Message}"));
-                }
-                finally
-                {
-                    Schedule(() =>
-                    {
-                        installing = false;
-                        runChecks();
-                    });
-                }
-            }, CancellationToken.None);
-        }
+            await runner.InstallAsync(log, token).ConfigureAwait(false);
+            log(@"ready to generate!");
+            Schedule(() => notifications?.Post(new SimpleNotification { Text = @"Mapperatorinator installed! You can generate maps now." }));
+        });
 
         private Drawable heading(string text, int size) => new OsuSpriteText
         {

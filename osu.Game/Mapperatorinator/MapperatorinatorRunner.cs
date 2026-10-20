@@ -194,7 +194,18 @@ namespace osu.Game.Mapperatorinator
         /// </summary>
         public bool InstallLooksValid =>
             !string.IsNullOrEmpty(Config.InstallPath)
-            && File.Exists(Path.Combine(Config.InstallPath, @"inference.py"));
+            && File.Exists(Path.Combine(Config.InstallPath, @"inference.py"))
+            && !File.Exists(Path.Combine(Config.InstallPath, MapperatorinatorSetup.INCOMPLETE_MARKER));
+
+        public string? CheckEnvironment()
+        {
+            const string probe = "import importlib.util,sys; "
+                                 + "missing=[m for m in ('torch','torchaudio','hydra','slider','transformers','accelerate','numpy','scipy','pydub','omegaconf') if importlib.util.find_spec(m) is None]; "
+                                 + "print('Missing Python packages: '+', '.join(missing) if missing else ''); sys.exit(bool(missing))";
+            return TryRunProbe(PythonExecutable, new[] { @"-c", probe }, Config.InstallPath, out string output)
+                ? null
+                : string.IsNullOrWhiteSpace(output) ? @"The Python environment can't start. Run setup again, or check your custom Python path." : output.Trim();
+        }
 
         private const string torch_device_marker = @"torii-torch-device.txt";
 
@@ -257,12 +268,17 @@ namespace osu.Game.Mapperatorinator
                 if (string.IsNullOrEmpty(Config.InstallPath))
                     return null;
 
-                string windows = Path.Combine(Config.InstallPath, @".venv", @"Scripts", @"python.exe");
-                if (File.Exists(windows))
-                    return windows;
+                foreach (string environment in new[] { @"venv", @".venv" })
+                {
+                    foreach (string relative in new[] { Path.Combine(@"Scripts", @"python.exe"), Path.Combine(@"bin", @"python") })
+                    {
+                        string candidate = Path.Combine(Config.InstallPath, environment, relative);
+                        if (File.Exists(candidate))
+                            return candidate;
+                    }
+                }
 
-                string unix = Path.Combine(Config.InstallPath, @".venv", @"bin", @"python");
-                return File.Exists(unix) ? unix : null;
+                return null;
             }
         }
 
@@ -697,7 +713,7 @@ print('torii-gpu-probe ' + json.dumps(info))";
                 args.Add(@"https://pypi.org/simple");
             }
 
-            await runStep(venvPython, args.ToArray(), checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
+            await RunSetupStepAsync(venvPython, args.ToArray(), checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
 
             await File.WriteAllTextAsync(Path.Combine(checkout, torch_device_marker), @"rocm", cancellation).ConfigureAwait(false);
             Config.RocmIndex = wheel.Id;
@@ -809,7 +825,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
             // una vez con permisos de administrador. Ahi cambiar pytorch adentro no se
             // puede y no tiene sentido hacerla pelear con eso, asi que se instala de nuevo
             // donde si pueda escribir, que es un solo boton para ella igual.
-            if (!canWriteInside(checkout))
+            if (!MapperatorinatorSetup.CanWriteInside(checkout))
             {
                 onLogLine($"{checkout} isn't writable by this user, so pytorch can't be swapped in place. Installing fresh somewhere you own instead.");
                 await InstallAsync(onLogLine, cancellation).ConfigureAwait(false);
@@ -867,8 +883,12 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                 if (p == null)
                     return null;
 
-                string output = await p.StandardOutput.ReadToEndAsync(cancellation).ConfigureAwait(false);
-                await p.WaitForExitAsync(cancellation).ConfigureAwait(false);
+                Task<string> stdout = p.StandardOutput.ReadToEndAsync(cancellation);
+                Task<string> stderr = p.StandardError.ReadToEndAsync(cancellation);
+                using (cancellation.Register(() => { try { p.Kill(true); } catch { } }))
+                    await p.WaitForExitAsync(cancellation).ConfigureAwait(false);
+                string output = await stdout.ConfigureAwait(false);
+                await stderr.ConfigureAwait(false);
 
                 if (p.ExitCode != 0)
                     return null;
@@ -880,6 +900,10 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                 }
 
                 return null;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch
             {
@@ -938,7 +962,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                     ? $"pytorch in there is the {haveTag} build and this card needs {wantTag}: replacing it..."
                     : @"pytorch in there was installed for a different device: replacing it...");
 
-                await runStep(venvPython, new[] { "-m", "pip", "uninstall", "-y", "torch", "torchaudio" }, checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
+                await RunSetupStepAsync(venvPython, new[] { "-m", "pip", "uninstall", "-y", "torch", "torchaudio" }, checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
             }
 
             var torchArgs = new List<string> { "-m", "pip", "install", "torch", "torchaudio" };
@@ -949,7 +973,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                 torchArgs.Add(index);
             }
 
-            await runStep(venvPython, torchArgs.ToArray(), checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
+            await RunSetupStepAsync(venvPython, torchArgs.ToArray(), checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
             await File.WriteAllTextAsync(deviceMarker, installDevice, cancellation).ConfigureAwait(false);
 
             // de que indice salio: si mañana la placa necesita una rueda mas nueva (una
@@ -1117,18 +1141,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                 if (!string.IsNullOrEmpty(Config.PythonPath))
                     return Config.PythonPath;
 
-                if (!string.IsNullOrEmpty(Config.InstallPath))
-                {
-                    // the README's recommended setup is a venv inside the checkout.
-                    foreach (string candidate in new[] { @"venv\Scripts\python.exe", @".venv\Scripts\python.exe", @"venv/bin/python", @".venv/bin/python" })
-                    {
-                        string full = Path.Combine(Config.InstallPath, candidate);
-                        if (File.Exists(full))
-                            return full;
-                    }
-                }
-
-                return @"python";
+                return VenvPython ?? @"python";
             }
         }
 
@@ -1833,7 +1846,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                 string brew = FindBrew() ?? throw new InvalidOperationException(@"Homebrew isn't installed. Install it from brew.sh first, then press Install again.");
 
                 onLogLine($"$ {brew} install ffmpeg");
-                await runStep(brew, new[] { "install", "ffmpeg" }, Path.GetTempPath(), onLogLine, cancellation, new Dictionary<string, string>
+                await RunSetupStepAsync(brew, new[] { "install", "ffmpeg" }, Path.GetTempPath(), onLogLine, cancellation, new Dictionary<string, string>
                 {
                     [@"HOMEBREW_NO_AUTO_UPDATE"] = @"1",
                     [@"NONINTERACTIVE"] = @"1",
@@ -1847,25 +1860,22 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
             if (RuntimeInfo.OS != RuntimeInfo.Platform.Windows)
                 throw new InvalidOperationException(@"Install ffmpeg with your package manager: sudo apt install ffmpeg (Debian/Ubuntu), sudo dnf install ffmpeg (Fedora), sudo pacman -S ffmpeg (Arch). Then press Check.");
 
-            string home = ffmpegHome();
-            Directory.CreateDirectory(home);
+            string home = MapperatorinatorSetup.WritableRoot(ffmpegHome(),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Torii-Mapperatorinator", @"ffmpeg"), onLogLine);
 
             string zip = Path.Combine(home, @"ffmpeg.zip");
             onLogLine(@"downloading ffmpeg (about 150 MB)...");
 
-            using (var http = new System.Net.Http.HttpClient())
-            using (var resp = await http.GetAsync(@"https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip", cancellation).ConfigureAwait(false))
-            {
-                resp.EnsureSuccessStatusCode();
-                await using var f = File.Create(zip);
-                await resp.Content.CopyToAsync(f, cancellation).ConfigureAwait(false);
-            }
+            await MapperatorinatorSetup.DownloadAsync(new Uri(@"https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"), zip, cancellation).ConfigureAwait(false);
 
             onLogLine(@"extracting...");
             System.IO.Compression.ZipFile.ExtractToDirectory(zip, home, true);
             File.Delete(zip);
+            cancellation.ThrowIfCancellationRequested();
 
-            string? exe = findBundledFfmpeg() ?? throw new InvalidOperationException(@"The download didn't contain ffmpeg.exe.");
+            string exe = Directory.EnumerateFiles(home, @"ffmpeg.exe", SearchOption.AllDirectories).FirstOrDefault()
+                         ?? throw new InvalidOperationException(@"The download didn't contain ffmpeg.exe.");
+            await RunSetupStepAsync(exe, new[] { @"-version" }, home, onLogLine, cancellation).ConfigureAwait(false);
 
             Config.FfmpegPath = exe;
             Save();
@@ -2108,46 +2118,53 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
         /// </summary>
         public async Task InstallAsync(Action<string> onLogLine, CancellationToken cancellation)
         {
+            cancellation.ThrowIfCancellationRequested();
             string python = FindPython310() ?? throw new InvalidOperationException(
-                @"Python 3.10 is required and wasn't found. Install it from python.org (3.10.x) and try again.");
+                @"64-bit Python 3.10 is required and wasn't found. Install the 64-bit version from python.org for your user, then try again. Administrator rights aren't required.");
+
+            if (!string.IsNullOrEmpty(Config.PythonPath))
+                throw new InvalidOperationException(@"Automatic setup uses Torii's own Python environment. Clear 'Use my own python' first, or install the dependencies into your custom environment yourself.");
 
             onLogLine($"python 3.10: {python}");
 
-            string target = InstallRoot();
-            Directory.CreateDirectory(target);
-            target = writableInstallRoot(target, onLogLine);
+            string target = MapperatorinatorSetup.WritableRoot(InstallRoot(),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Torii-Mapperatorinator"),
+                onLogLine, @"Mapperatorinator-main");
             onLogLine($"installing to {target}");
+
+            long free = new DriveInfo(target).AvailableFreeSpace;
+            if (free < MapperatorinatorReadiness.REQUIRED_FREE_BYTES)
+                throw new IOException($"The install location {target} has {free / (1024.0 * 1024 * 1024):0.#} GB free; at least 15 GB is required. Free up space on that drive and retry.");
 
             // 1. bajar el repo (tarball, sin depender de git)
             string tarball = Path.Combine(target, @"src.tar.gz");
             onLogLine(@"downloading Mapperatorinator...");
 
-            using (var http = new System.Net.Http.HttpClient())
-            using (var resp = await http.GetAsync(@"https://github.com/OliBomby/Mapperatorinator/archive/refs/heads/main.tar.gz", cancellation).ConfigureAwait(false))
-            {
-                resp.EnsureSuccessStatusCode();
-                await using var f = File.Create(tarball);
-                await resp.Content.CopyToAsync(f, cancellation).ConfigureAwait(false);
-            }
-
-            await runStep(@"tar", new[] { "-xzf", tarball, "-C", target }, target, onLogLine, cancellation).ConfigureAwait(false);
-            File.Delete(tarball);
+            await MapperatorinatorSetup.DownloadAsync(new Uri(@"https://github.com/OliBomby/Mapperatorinator/archive/refs/heads/main.tar.gz"), tarball, cancellation).ConfigureAwait(false);
 
             string checkout = Path.Combine(target, @"Mapperatorinator-main");
-            if (!Directory.Exists(checkout))
-                throw new InvalidOperationException(@"Download extracted but the expected folder is missing.");
+            string incomplete = Path.Combine(checkout, MapperatorinatorSetup.INCOMPLETE_MARKER);
+            await File.WriteAllTextAsync(incomplete, @"Setup has not completed.", cancellation).ConfigureAwait(false);
+            await MapperatorinatorSetup.ExtractSourceAsync(tarball, target, cancellation).ConfigureAwait(false);
+            File.Delete(tarball);
+
+            if (!File.Exists(Path.Combine(checkout, @"inference.py")))
+                throw new InvalidOperationException(@"Download extracted but inference.py is missing.");
 
             // 2. venv + pip al dia
-            bool venvExisted = Directory.Exists(Path.Combine(checkout, @".venv"));
+            bool legacyEnvironment = File.Exists(Path.Combine(checkout, @"venv", @"Scripts", @"python.exe"))
+                                     || File.Exists(Path.Combine(checkout, @"venv", @"bin", @"python"));
+            string environmentName = legacyEnvironment ? @"venv" : @".venv";
+            bool venvExisted = Directory.Exists(Path.Combine(checkout, environmentName));
             onLogLine(@"creating python environment...");
-            await runStep(python, new[] { "-m", "venv", ".venv" }, checkout, onLogLine, cancellation).ConfigureAwait(false);
-            string venvPython = Path.Combine(checkout, @".venv", @"Scripts", @"python.exe");
+            await RunSetupStepAsync(python, new[] { "-m", "venv", environmentName }, checkout, onLogLine, cancellation).ConfigureAwait(false);
+            string venvPython = Path.Combine(checkout, environmentName, @"Scripts", @"python.exe");
             if (!File.Exists(venvPython))
-                venvPython = Path.Combine(checkout, @".venv", @"bin", @"python");
+                venvPython = Path.Combine(checkout, environmentName, @"bin", @"python");
 
             var pipEnv = pipEnvironment(target);
 
-            await runStep(venvPython, new[] { "-m", "pip", "install", "--upgrade", "pip", "--quiet" }, checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
+            await RunSetupStepAsync(venvPython, new[] { "-m", "pip", "install", "--upgrade", "pip", "--quiet" }, checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
 
             // 3. pytorch. Si ya hay uno instalado, NO se toca: puede ser uno que la persona
             //    puso a mano para que su placa ande (un build de cuda con una capa de
@@ -2168,7 +2185,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
 
             // 4. slider desde tarball + requirements sin su linea git
             onLogLine(@"installing dependencies...");
-            await runStep(venvPython, new[] { "-m", "pip", "install", "https://github.com/OliBomby/slider/archive/refs/heads/master.tar.gz" }, checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
+            await RunSetupStepAsync(venvPython, new[] { "-m", "pip", "install", "https://github.com/OliBomby/slider/archive/refs/heads/master.tar.gz" }, checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
 
             string reqs = Path.Combine(checkout, @"requirements.txt");
             string reqsLocal = Path.Combine(checkout, @"requirements.local.txt");
@@ -2179,7 +2196,20 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                     kept.Add(line);
             }
             await File.WriteAllLinesAsync(reqsLocal, kept, cancellation).ConfigureAwait(false);
-            await runStep(venvPython, new[] { "-m", "pip", "install", "-r", reqsLocal }, checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
+            await RunSetupStepAsync(venvPython, new[] { "-m", "pip", "install", "-r", reqsLocal }, checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
+
+            // validar imports sin generar mapas ni exponer la gpu a la comprobacion.
+            onLogLine(@"checking installed dependencies...");
+            await RunSetupStepAsync(venvPython, new[] { @"-m", @"pip", @"check" }, checkout, onLogLine, cancellation, pipEnv).ConfigureAwait(false);
+            var validationEnv = new Dictionary<string, string>(pipEnv)
+            {
+                [@"CUDA_VISIBLE_DEVICES"] = @"-1",
+                [@"HIP_VISIBLE_DEVICES"] = @"-1",
+                [@"ROCR_VISIBLE_DEVICES"] = string.Empty,
+            };
+            await RunSetupStepAsync(venvPython, new[] { @"inference.py", @"--help" }, checkout, onLogLine, cancellation, validationEnv).ConfigureAwait(false);
+            cancellation.ThrowIfCancellationRequested();
+            File.Delete(incomplete);
 
             // 5. listo: recordar y validar
             Config.InstallPath = checkout;
@@ -2208,13 +2238,14 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
 
         private static IEnumerable<(string exe, string[] args)> pythonCandidates()
         {
-            const string version = @"--version";
+            const string version = @"-c";
+            const string compatible = "import struct,sys; sys.exit(0 if sys.version_info[:2] == (3,10) and struct.calcsize('P') == 8 else 1)";
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
             switch (RuntimeInfo.OS)
             {
                 case RuntimeInfo.Platform.Windows:
-                    yield return (@"py -3.10", new[] { version });
+                    yield return (@"py -3.10", new[] { version, compatible });
 
                     foreach (string candidate in new[]
                              {
@@ -2224,7 +2255,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                              })
                     {
                         if (File.Exists(candidate))
-                            yield return (candidate, new[] { version });
+                            yield return (candidate, new[] { version, compatible });
                     }
 
                     break;
@@ -2240,28 +2271,30 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                              })
                     {
                         if (File.Exists(candidate))
-                            yield return (candidate, new[] { version });
+                            yield return (candidate, new[] { version, compatible });
                     }
 
                     foreach (string candidate in pyenvCandidates(home))
-                        yield return (candidate, new[] { version });
+                        yield return (candidate, new[] { version, compatible });
 
-                    yield return (@"python3.10", new[] { version });
+                    yield return (@"python3.10", new[] { version, compatible });
                     break;
 
                 default:
                     foreach (string candidate in new[] { @"/usr/bin/python3.10", @"/usr/local/bin/python3.10" })
                     {
                         if (File.Exists(candidate))
-                            yield return (candidate, new[] { version });
+                            yield return (candidate, new[] { version, compatible });
                     }
 
                     foreach (string candidate in pyenvCandidates(home))
-                        yield return (candidate, new[] { version });
+                        yield return (candidate, new[] { version, compatible });
 
-                    yield return (@"python3.10", new[] { version });
+                    yield return (@"python3.10", new[] { version, compatible });
                     break;
             }
+
+            yield return (@"python", new[] { version, compatible });
         }
 
         private static IEnumerable<string> pyenvCandidates(string home)
@@ -2279,21 +2312,34 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
             }
         }
 
-        private static bool probePython(string exe, string[] probeArgs)
+        private static bool probePython(string exe, string[] probeArgs) => TryRunProbe(exe, probeArgs, null, out _);
+
+        internal static bool TryRunProbe(string exe, string[] args, string? workDir, out string output, int timeoutMilliseconds = 15000)
         {
+            output = string.Empty;
             try
             {
                 string[] parts = splitLauncher(exe);
                 var psi = new ProcessStartInfo(parts[0]) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
+                if (workDir != null)
+                    psi.WorkingDirectory = workDir;
                 for (int i = 1; i < parts.Length; i++) psi.ArgumentList.Add(parts[i]);
-                foreach (string a in probeArgs) psi.ArgumentList.Add(a);
+                foreach (string a in args) psi.ArgumentList.Add(a);
 
                 using var p = Process.Start(psi);
                 if (p == null) return false;
 
-                string outp = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
-                p.WaitForExit(6000);
-                return p.ExitCode == 0 && outp.Contains(@"3.10");
+                Task<string> stdout = p.StandardOutput.ReadToEndAsync();
+                Task<string> stderr = p.StandardError.ReadToEndAsync();
+                if (!p.WaitForExit(timeoutMilliseconds))
+                {
+                    try { p.Kill(true); } catch { }
+                    output = @"Python did not respond in time. Check the Python path and retry setup.";
+                    return false;
+                }
+
+                output = stdout.GetAwaiter().GetResult() + stderr.GetAwaiter().GetResult();
+                return p.ExitCode == 0;
             }
             catch
             {
@@ -2370,58 +2416,6 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
             }
         }
 
-        /// <summary>
-        /// Probar a escribir de verdad, no solo que la carpeta exista. Windows deja crear
-        /// la carpeta y despues niega crear cosas adentro, asi que se hace lo mismo que
-        /// hace el venv: una carpeta adentro y un archivo adentro de esa.
-        /// </summary>
-        private static bool canWriteInside(string root)
-        {
-            string probe = Path.Combine(root, @".torii-write-test");
-
-            try
-            {
-                Directory.CreateDirectory(probe);
-                File.WriteAllText(Path.Combine(probe, @"probe"), @"ok");
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-            finally
-            {
-                try
-                {
-                    if (Directory.Exists(probe))
-                        Directory.Delete(probe, true);
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        /// <summary>
-        /// Un lugar donde de verdad se pueda escribir, o el perfil del usuario, que
-        /// siempre es suyo. Sin esto el install se cae a la mitad, despues de bajar el
-        /// repo, con un "acceso denegado" que solo se arregla abriendo el juego como
-        /// administrador, que no es algo que haya que pedirle a nadie.
-        /// </summary>
-        private static string writableInstallRoot(string target, Action<string> onLogLine)
-        {
-            if (canWriteInside(target))
-                return target;
-
-            string fallback = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Torii-Mapperatorinator");
-
-            if (string.Equals(fallback, target, StringComparison.OrdinalIgnoreCase) || !canWriteInside(fallback))
-                throw new InvalidOperationException($"Windows won't let Torii write to {target}, and neither to your user folder. Install Mapperatorinator yourself wherever you can write, then point the \"Advanced\" field above at its inference.py.");
-
-            onLogLine($"{target} needs administrator rights to write into, so the install goes to {fallback} instead.");
-            return fallback;
-        }
-
         private static string largestFreeWindowsDrive()
         {
             string best = Path.GetPathRoot(Path.GetTempPath()) ?? @"C:\";
@@ -2445,8 +2439,9 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
             return best;
         }
 
-        private async Task runStep(string exe, string[] stepArgs, string workDir, Action<string> onLogLine, CancellationToken cancellation, Dictionary<string, string>? env = null)
+        internal async Task RunSetupStepAsync(string exe, string[] stepArgs, string workDir, Action<string> onLogLine, CancellationToken cancellation, Dictionary<string, string>? env = null)
         {
+            cancellation.ThrowIfCancellationRequested();
             // "py -3.10" viaja como exe con argumento adentro; las rutas reales pueden tener espacios.
             string[] exeParts = splitLauncher(exe);
 
@@ -2458,8 +2453,8 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
-            if (exeParts.Length > 1)
-                psi.ArgumentList.Add(exeParts[1]);
+            for (int i = 1; i < exeParts.Length; i++)
+                psi.ArgumentList.Add(exeParts[i]);
             foreach (string a in stepArgs)
                 psi.ArgumentList.Add(a);
 
@@ -2475,7 +2470,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
 
             // lo que dijo el paso se guarda para poder explicar el error despues: un
             // "[WinError 5] Access is denied" pelado no le dice nada a nadie.
-            var said = new List<string>();
+            var said = new Queue<string>();
 
             void collect(string? line)
             {
@@ -2484,8 +2479,9 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
 
                 lock (said)
                 {
-                    if (said.Count < 200)
-                        said.Add(line);
+                    if (said.Count == 40)
+                        said.Dequeue();
+                    said.Enqueue(line);
                 }
 
                 onLogLine(line);
@@ -2525,13 +2521,10 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
 
             if (looksLikeDeniedAccess(joined))
             {
-                throw new InvalidOperationException(
-                    what + $" Windows denied access to {workDir}. That folder belongs to someone else than the user running Torii: it usually happens when it was created once by something with administrator rights. "
-                         + @"Close Torii, delete that folder, and press Install again: it goes to your user folder now, which never needs administrator rights. "
-                         + @"Opening Torii as administrator would get past this one time, but it leaves the folder owned by the administrator and you'd hit the same wall the next time you open it normally.");
+                throw new InvalidOperationException(what + $" Access was denied in {workDir}. Check folder permissions, antivirus protection and files in use. Don't delete an existing install or run the game as administrator; see the setup report for the failing file.");
             }
 
-            throw new InvalidOperationException(what);
+            throw new InvalidOperationException(what + Environment.NewLine + joined);
         }
 
         /// <summary>
