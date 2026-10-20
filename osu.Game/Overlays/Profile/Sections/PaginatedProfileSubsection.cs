@@ -112,18 +112,21 @@ namespace osu.Game.Overlays.Profile.Sections
             if (User.Value == null)
                 return;
 
-            loadCancellation = new CancellationTokenSource();
+            var cancellation = loadCancellation = new CancellationTokenSource();
 
             CurrentPage = CurrentPage?.TakeNext(ItemsPerPage) ?? new PaginationParameters(InitialItemsCount);
 
             retrievalRequest = CreateRequest(User.Value, new PaginationParameters(CurrentPage.Value.Offset, CurrentPage.Value.Limit + 1));
-            retrievalRequest.Success += items => UpdateItems(items, loadCancellation);
+            retrievalRequest.Success += items => UpdateItems(items, cancellation);
 
             api.Queue(retrievalRequest);
         }
 
         protected virtual void UpdateItems(List<TModel> items, CancellationTokenSource cancellationTokenSource) => Schedule(() =>
         {
+            if (cancellationTokenSource.IsCancellationRequested)
+                return;
+
             if (!items.Any() && CurrentPage?.Offset == 0)
             {
                 moreButton.Hide();
@@ -144,6 +147,9 @@ namespace osu.Game.Overlays.Profile.Sections
 
             LoadComponentsAsync(items.Select(CreateDrawableItem).Where(d => d != null).Cast<Drawable>(), drawables =>
             {
+                if (cancellationTokenSource.IsCancellationRequested)
+                    return;
+
                 missing.Hide();
 
                 moreButton.FadeTo(hasMore ? 1 : 0);

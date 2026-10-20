@@ -18,6 +18,7 @@ namespace osu.Game.Overlays.Profile.Sections.Ranks
     public partial class PaginatedScoreContainer : PaginatedProfileSubsection<SoloScoreInfo>
     {
         private readonly ScoreType type;
+        private readonly HashSet<ulong> displayedScoreIds = new HashSet<ulong>();
 
         public PaginatedScoreContainer(ScoreType type, Bindable<UserProfileData?> user, LocalisableString headerText)
             : base(user, headerText)
@@ -55,7 +56,13 @@ namespace osu.Game.Overlays.Profile.Sections.Ranks
         protected override void OnItemsReceived(List<SoloScoreInfo> items)
         {
             if (CurrentPage == null || CurrentPage?.Offset == 0)
+            {
                 drawableItemIndex = 0;
+                displayedScoreIds.Clear();
+            }
+
+            // Las paginas pueden solaparse si cambia el ranking entre pedidos.
+            items.RemoveAll(score => score.ID is > 0 && !displayedScoreIds.Add(score.ID.Value));
 
             base.OnItemsReceived(items);
         }
