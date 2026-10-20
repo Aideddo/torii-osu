@@ -20,7 +20,7 @@ namespace osu.Game.Overlays.Settings
     /// Changing it therefore prompts for a restart, mirroring the
     /// <see cref="UIThemeDropdownAndRestart"/> dropdown.
     /// </summary>
-    public partial class PotatoModeToggleAndRestart : CompositeDrawable
+    public partial class PotatoModeToggleAndRestart : Container
     {
         // Resolved optionally because the test-scene host doesn't register
         // OsuGame / IDialogOverlay. In that case the checkbox binds without
@@ -54,7 +54,7 @@ namespace osu.Game.Overlays.Settings
                 Current = potatoBindable,
             })
             {
-                Keywords = new[] { @"potato", @"performance", @"fps", @"low end", @"weak", @"lag", @"stutter", @"perf", @"quality", @"battery" },
+                Keywords = new[] { @"potato", @"extreme", @"mode", @"performance", @"fps", @"low end", @"weak", @"lag", @"stutter", @"perf", @"quality", @"battery" },
             };
 
             PotatoModeRestartCoordinator.EnsureRegistered(potatoBindable, game, dialogOverlay);
