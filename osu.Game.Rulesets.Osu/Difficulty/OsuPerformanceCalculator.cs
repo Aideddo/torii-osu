@@ -124,7 +124,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (score.Mods.Any(m => m is OsuModSpunOut) && totalHits > 0)
                 multiplier *= 1.0 - Math.Pow((double)osuAttributes.SpinnerCount / totalHits, 0.85);
 
-            // --- RELAX OD & MISS PENALTY REWORK BLOCK ---
+            // OD handling rework
             // Adjusts virtual miss weights for Ok/Meh hits under Relax mod.
             // Below OD 10: Gradually increases penalties to prevent low-OD exploit abuse.
             // Above OD 10: Rapidly scales down the penalty to protect high-OD maps (e.g., OD 11.1), smoothly reaching 0 at OD 13.33.
@@ -229,7 +229,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             }
 
             aimValue *= accuracy;
-
+            //OD based CS rework
             // Applies an additional accuracy-based aim nerf for high-CS maps under Relax mod, active exclusively at OD <= 10.
             if (score.Mods.Any(m => m is OsuModRelax))
             {
