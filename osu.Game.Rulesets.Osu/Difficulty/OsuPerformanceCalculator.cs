@@ -260,9 +260,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                     double odDeficit = 10.0 - safeOD;
                     double harshness = 2.5 + (odDeficit * 2.0);
                     double harshNerf = Math.Pow(baseNerf, harshness);
-                    double absoluteAnnihilation = Math.Pow(0.4, odDeficit);
+                    double odPenaltyFactor = Math.Pow(0.4, odDeficit);
 
-                    relaxNerfMultiplier *= Math.Max(0.000000001, harshNerf * absoluteAnnihilation);
+                    relaxNerfMultiplier *= Math.Max(0.000000001, harshNerf * odPenaltyFactor);
                 }
 
                 aimValue *= relaxNerfMultiplier;
