@@ -55,7 +55,7 @@ namespace osu.Game.Updater
                 var releases = new List<GitHubRelease>();
                 for (int page = 1; page <= 5; page++)
                 {
-                    var request = new OsuJsonWebRequest<GitHubRelease[]>($"https://api.github.com/repos/ShikkesoraSIM/torii-osu/releases?per_page=100&page={page}");
+                    var request = new OsuJsonWebRequest<GitHubRelease[]>($"https://api.github.com/repos/ShikkesoraSIM/torii/releases?per_page=100&page={page}");
                     await request.PerformAsync(cancellationToken).ConfigureAwait(false);
                     releases.AddRange(request.ResponseObject);
                     if (request.ResponseObject.Length < 100)

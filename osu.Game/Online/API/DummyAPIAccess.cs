@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -193,6 +193,10 @@ namespace osu.Game.Online.API
         public void RefreshLocalUser()
         {
             // No server to refresh against in tests / offline.
+        }
+
+        public void SwitchSubProfile(string accessToken, string? refreshToken = null, long expiresIn = 86400 * 30)
+        {
         }
 
         public void UpdateLocalFriends()

@@ -84,36 +84,48 @@ namespace osu.Game.Overlays.Profile.Header.Components
                 if (status.Value == FriendStatus.Self)
                     return;
 
-                ShowLoadingLayer();
+                FriendStatus prevStatus = status.Value;
+                int prevFollowerCount = followerCount;
+                bool isAdding = status.Value == FriendStatus.None;
 
-                APIRequest req = status.Value == FriendStatus.None ? new AddFriendRequest(User.Value.User.OnlineID) : new DeleteFriendRequest(User.Value.User.OnlineID);
+                // Optimistic UI update: immediate visual feedback in 0ms without waiting for network roundtrip.
+                if (isAdding)
+                {
+                    followerCount++;
+                    SetValue(followerCount);
+                    status.Value = FriendStatus.NotMutual;
+                }
+                else
+                {
+                    followerCount = Math.Max(0, followerCount - 1);
+                    SetValue(followerCount);
+                    status.Value = FriendStatus.None;
+                }
+
+                APIRequest req = isAdding ? new AddFriendRequest(User.Value.User.OnlineID) : new DeleteFriendRequest(User.Value.User.OnlineID);
 
                 req.Success += () =>
                 {
                     if (req is AddFriendRequest addedRequest)
                     {
-                        SetValue(++followerCount);
                         status.Value = addedRequest.Response?.UserRelation.Mutual == true ? FriendStatus.Mutual : FriendStatus.NotMutual;
-                    }
-                    else
-                    {
-                        SetValue(--followerCount);
-                        status.Value = FriendStatus.None;
                     }
 
                     api.LocalUserState.UpdateFriends();
-                    HideLoadingLayer();
                 };
 
                 req.Failure += e =>
                 {
+                    // Revert optimistic state on failure
+                    status.Value = prevStatus;
+                    followerCount = prevFollowerCount;
+                    SetValue(followerCount);
+
                     notifications?.Post(new SimpleNotification
                     {
                         Text = e.Message,
                         Icon = FontAwesome.Solid.Times,
                     });
-
-                    HideLoadingLayer();
                 };
 
                 api.Queue(req);

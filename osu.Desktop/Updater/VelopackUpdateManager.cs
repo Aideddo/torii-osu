@@ -146,11 +146,11 @@ namespace osu.Desktop.Updater
                 switch (ReleaseStream.Value)
                 {
                     case Game.Configuration.ReleaseStream.Nova:
-                        updateSource = new ToriiUpdateSource(@"https://github.com/ShikkesoraSIM/torii-osu", prerelease: true, requiredTagSuffix: "nova");
+                        updateSource = new ToriiUpdateSource(@"https://github.com/ShikkesoraSIM/torii", prerelease: true, requiredTagSuffix: "nova");
                         break;
 
                     case Game.Configuration.ReleaseStream.Vanilla:
-                        updateSource = new ToriiUpdateSource(@"https://github.com/ShikkesoraSIM/torii-osu", prerelease: true, requiredTagSuffix: "vanilla");
+                        updateSource = new ToriiUpdateSource(@"https://github.com/ShikkesoraSIM/torii", prerelease: true, requiredTagSuffix: "vanilla");
                         break;
 
                     default:
@@ -161,7 +161,7 @@ namespace osu.Desktop.Updater
                         // updates estables. el comportamiento es identico al GithubSource:
                         // includePrereleases=false deja afuera -nova/-vanilla y el sufijo null
                         // mantiene a la vista los builds -lazer estables viejos.
-                        updateSource = new ToriiUpdateSource(@"https://github.com/ShikkesoraSIM/torii-osu", prerelease: false, requiredTagSuffix: null);
+                        updateSource = new ToriiUpdateSource(@"https://github.com/ShikkesoraSIM/torii", prerelease: false, requiredTagSuffix: null);
                         break;
                 }
 
@@ -329,7 +329,7 @@ namespace osu.Desktop.Updater
             using var client = new System.Net.Http.HttpClient();
             client.DefaultRequestHeaders.UserAgent.ParseAdd("torii-updater");
 
-            string json = await client.GetStringAsync("https://api.github.com/repos/ShikkesoraSIM/torii-osu/releases?per_page=50").ConfigureAwait(false);
+            string json = await client.GetStringAsync("https://api.github.com/repos/ShikkesoraSIM/torii/releases?per_page=50").ConfigureAwait(false);
 
             using var doc = System.Text.Json.JsonDocument.Parse(json);
 
