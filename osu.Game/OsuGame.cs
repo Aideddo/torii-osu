@@ -1567,7 +1567,7 @@ namespace osu.Game
             loadComponentSingleFile(stableSongSelectPromo = new osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay
             {
                 Title = "The stable song select has been upgraded!",
-                ActionLabel = "Try Stable UI",
+                ActionLabel = "Try Torii Classic (Stable)",
                 DismissLabel = "Not now",
                 Credit = "Original UI and assets by telecomadm1145. Integrated into Torii with permission.",
                 Action = () => osu.Game.Overlays.Settings.UIThemeRestartCoordinator.ApplyStableUI(LocalConfig, this, dialogOverlay),
@@ -2345,7 +2345,7 @@ namespace osu.Game
 
             LocalConfig.SetValue(OsuSetting.ToriiStableV2PromoShown, true);
 
-            stableSongSelectPromo.Present("The classic interface now includes a retro carousel, results screen and mod selector. Try the full Stable UI theme or choose its components in Settings > Torii > Stable UI.");
+            stableSongSelectPromo.Present("The classic interface now includes a retro carousel, results screen and mod selector. Try Torii Classic (Stable) or choose its components in Settings > Torii > Torii Classic (Stable).");
         }
 
         /// <summary>
@@ -2392,7 +2392,7 @@ namespace osu.Game
 
             LocalConfig.SetValue(OsuSetting.ToriiStableDisclaimerSeen, true);
 
-            stableSongSelectDisclaimer?.Present("Heads up: the stable song select is experimental. Some skins may look broken and there can be bugs. You can change its components in Settings, Torii, Stable UI, then apply and restart.");
+            stableSongSelectDisclaimer?.Present("Heads up: the stable song select is experimental. Some skins may look broken and there can be bugs. You can change its components in Settings > Torii > Torii Classic (Stable), then apply and restart.");
         }
 
         private void postStableSongSelectDisclaimer()

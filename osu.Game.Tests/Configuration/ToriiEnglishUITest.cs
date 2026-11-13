@@ -66,7 +66,7 @@ namespace osu.Game.Tests.Configuration
         {
             using var dialog = new StableUIRestartDialog(null);
             Assert.That(dialog.HeaderText.ToString(), Is.EqualTo("Restart to apply changes"));
-            Assert.That(dialog.BodyText.ToString(), Is.EqualTo("Your Stable UI settings have been saved. Restart the game to apply the new interface."));
+            Assert.That(dialog.BodyText.ToString(), Is.EqualTo("Your Torii Classic (Stable) settings have been saved. Restart the game to apply the new interface."));
         }
 
         [TestCase(HttpStatusCode.Conflict, "You have already chosen your star rating for this season.")]

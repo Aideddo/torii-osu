@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.IO;
+using System.Reflection;
 using NUnit.Framework;
 using osu.Framework.Testing;
 using osu.Game.Configuration;
@@ -11,6 +12,15 @@ namespace osu.Game.Tests.Configuration
     [TestFixture]
     public class ToriiStableUITest
     {
+        [Test]
+        public void TestThemeDisplayNamePreservesSavedIdentifier()
+        {
+            var theme = UIThemeOption.StableUI;
+            var description = typeof(UIThemeOption).GetField(theme.ToString())!.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>();
+            Assert.That(description!.Description, Is.EqualTo("Torii Classic (Stable)"));
+            Assert.That(theme.ToString(), Is.EqualTo("StableUI"));
+        }
+
         [Test]
         public void TestSavedChangesOnlyApplyAfterRestart()
         {

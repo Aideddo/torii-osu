@@ -104,7 +104,7 @@ namespace osu.Game.Configuration
         [Description("Midnight (Cerulean)")]
         MidnightCerulean,
 
-        [Description("Stable UI")]
+        [Description("Torii Classic (Stable)")]
         StableUI,
     }
 

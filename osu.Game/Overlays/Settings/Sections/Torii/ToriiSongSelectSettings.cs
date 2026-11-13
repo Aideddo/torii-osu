@@ -17,7 +17,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
 {
     public partial class ToriiSongSelectSettings : SettingsSubsection
     {
-        protected override LocalisableString Header => "Stable UI";
+        protected override LocalisableString Header => "Torii Classic (Stable)";
 
         private readonly Dictionary<OsuSetting, BindableBool> staged = new Dictionary<OsuSetting, BindableBool>();
         private readonly Dictionary<OsuSetting, Bindable<bool>> persisted = new Dictionary<OsuSetting, Bindable<bool>>();
@@ -38,7 +38,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
             this.config = config;
             Children = new Drawable[]
             {
-                checkbox(OsuSetting.ToriiStableUISongSelect, "Stable Song Select & Carousel"),
+                checkbox(OsuSetting.ToriiStableUISongSelect, "Classic Song Select, Carousel & Leaderboard"),
                 checkbox(OsuSetting.ToriiStableUIResults, "Stable Results Screen"),
                 checkbox(OsuSetting.ToriiStableUIMods, "Stable Mod Select Screen"),
                 checkbox(OsuSetting.ToriiStableUIFooter, "Stable Footer & Buttons"),
@@ -84,7 +84,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
             bool hasPendingChanges = staged.Any(pair => pair.Value.Value != config.Get<bool>(pair.Key));
             applyButton.Enabled.Value = hasPendingChanges;
             hint.Text = config.Get<UIThemeOption>(OsuSetting.UITheme) != UIThemeOption.StableUI
-                ? "These settings apply when you select Stable UI in the theme settings."
+                ? "These settings apply when you select Torii Classic (Stable) in the theme settings."
                 : "Changes take effect after restarting the game.";
         }
 
