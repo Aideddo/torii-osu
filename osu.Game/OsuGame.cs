@@ -33,6 +33,7 @@ using osu.Framework.Input.Handlers.Tablet;
 using osu.Framework.Localisation;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Platform.OpenXR;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Framework.Utils;
@@ -87,6 +88,7 @@ using osu.Game.Skinning;
 using osu.Game.Updater;
 using osu.Game.Users;
 using osu.Game.Utils;
+using osu.Game.VR;
 using osuTK;
 using osuTK.Graphics;
 using Sentry;
@@ -461,7 +463,8 @@ namespace osu.Game
         /// </summary>
         private Drawable wrapSceneCaptureIfGlass(Drawable sceneContent)
         {
-            if (!OsuColour.IsGlassTheme || Performance.PotatoMode.Active)
+            // Torii: in VR the scene is split across compositor layers, which an off-screen scene capture would swallow.
+            if (!OsuColour.IsGlassTheme || Performance.PotatoMode.Active || VR.VRRuntime.IsVR)
                 return sceneContent;
 
             sceneCaptureBuffer = new BufferedContainer(cachedFrameBuffer: false)
@@ -1436,6 +1439,12 @@ namespace osu.Game
             // Load volume overlay before anything else, so users can adjust volume as soon as feasible after startup.
             loadComponentSingleFile(volume = new VolumeOverlay(), leftFloatingOverlayContent.Add, true);
             Add(new ScrollAdjustsVolume(requireAltPressed: true));
+
+            // Torii: VR settings, panel layout and music data for an OpenXR host.
+            if (Host is IOpenXRHost xrHost)
+            {
+                Add(new OpenXRHostIntegration(xrHost.OpenXR));
+            }
 
             Dependencies.Cache(ScreenFooter);
 

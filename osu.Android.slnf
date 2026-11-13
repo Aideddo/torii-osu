@@ -2,6 +2,7 @@
   "solution": {
     "path": "osu.sln",
     "projects": [
+      "osu.Android.Quest\\osu.Android.Quest.csproj",
       "osu.Android\\osu.Android.csproj",
       "osu.Game.Rulesets.Catch.Tests.Android\\osu.Game.Rulesets.Catch.Tests.Android.csproj",
       "osu.Game.Rulesets.Catch\\osu.Game.Rulesets.Catch.csproj",

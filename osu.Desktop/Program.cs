@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using osu.Desktop.LegacyIpc;
@@ -14,6 +15,7 @@ using osu.Framework.Platform;
 using osu.Game;
 using osu.Game.IPC;
 using osu.Game.Tournament;
+using osu.Game.VR;
 using SDL;
 using Velopack;
 
@@ -418,6 +420,16 @@ namespace osu.Desktop
             string gameName = base_game_name;
             bool tournamentClient = false;
 
+            // Torii: --vr presents through an OpenXR runtime (e.g. Monado, which simulates a headset) instead of the window.
+            bool vr = args.Contains("--vr");
+
+            if (vr)
+            {
+                // Must happen before the game is constructed, as config defaults read it.
+                VRRuntime.EnableVR();
+                Environment.SetEnvironmentVariable("OSU_SDL3", "1");
+            }
+
             foreach (string arg in args)
             {
                 string[] split = arg.Split('=');
@@ -427,6 +439,9 @@ namespace osu.Desktop
 
                 switch (key)
                 {
+                    case "--vr":
+                        break;
+
                     case "--tournament":
                         tournamentClient = true;
                         break;
@@ -458,7 +473,9 @@ namespace osu.Desktop
                         configuredRenderer = arg["--renderer=".Length..].Trim();
                 }
 
-                NovaRendererBootstrap.PrepareRenderer(configuredRenderer);
+                // Torii: in VR on Windows the headset's runtime shares images with the graphics driver's own OpenGL, not with a
+                // translation layer (Zink / DXVK) swapped in for it.
+                NovaRendererBootstrap.PrepareRenderer(vr && OperatingSystem.IsWindows() ? null : configuredRenderer);
             }
 
             var hostOptions = new HostOptions
@@ -469,7 +486,9 @@ namespace osu.Desktop
 
             try
             {
-                using (DesktopGameHost host = Host.GetSuitableDesktopHost(gameName, hostOptions))
+                using (DesktopGameHost host = vr
+                           ? Host.GetOpenXRDesktopHost(gameName, hostOptions, debugDirectory: Path.Combine(storageFolder, "vr-debug"))
+                           : Host.GetSuitableDesktopHost(gameName, hostOptions))
                 {
                     if (!host.IsPrimaryInstance)
                     {
@@ -502,7 +521,7 @@ namespace osu.Desktop
                         host.Run(new TournamentGame());
                     else
                     {
-                        host.Run(new OsuGameDesktop(args)
+                        host.Run(new OsuGameDesktop(args.Where(a => a != "--vr").ToArray())
                         {
                             IsFirstRun = isFirstRun,
                             EnableWebSocketServer = Environment.GetEnvironmentVariable("OSU_WEBSOCKET_SERVER") == "1",

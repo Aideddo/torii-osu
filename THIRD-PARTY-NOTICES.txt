@@ -127,6 +127,30 @@ correctly licensed, contact the Torii maintainer and it will be removed
 promptly.
 
 ================================================================================
+8. "Graphic tablet" 3D model (VR pen)
+================================================================================
+
+"Graphic tablet" by RoughnessPub (https://sketchfab.com/RoughnessPub)
+Source: https://sketchfab.com/3d-models/graphic-tablet-6b30ea789a0e4a36a8a300e020aece2c
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0)
+Licence text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Modified by Torii: only the pen is used. It was separated from the tablet,
+re-centred on its tip, simplified (fewer triangles), and its base colour
+texture was reduced to 512x512; the other texture maps were removed. Used as
+the optional pen model held in place of the controllers in VR.
+
+================================================================================
+9. OpenXR loader (VR on Windows)
+================================================================================
+
+OpenXR loader by The Khronos Group Inc.
+Source: https://github.com/KhronosGroup/OpenXR-SDK-Source (release 1.1.65)
+Licence: Apache License 2.0 (text shipped alongside the library)
+
+Distributed unmodified as runtimes/win-x64/openxr/openxr_loader.dll.
+
+================================================================================
 
 Questions about this notice, or a request to correct it, can be sent to the
 Torii maintainer. Corrections will be made promptly.

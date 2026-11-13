@@ -57,6 +57,11 @@
     <Content Include="runtimes\win-x64\zink\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Torii: the Khronos OpenXR loader for VR on Windows (which has no system-wide one; Linux uses the distribution's). -->
+  <ItemGroup Label="OpenXR Loader">
+    <Content Include="runtimes\win-x64\openxr\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- config de macOS -->
   <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
     <CFBundleName>Torii Nova</CFBundleName>

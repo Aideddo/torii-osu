@@ -15,6 +15,7 @@ using osu.Framework.Platform;
 using osu.Game.Configuration;
 using osu.Game.Localisation;
 using osu.Game.Online.API;
+using osu.Game.VR;
 
 namespace osu.Game.Updater
 {
@@ -24,6 +25,11 @@ namespace osu.Game.Updater
     /// </summary>
     public partial class MobileUpdateNotifier : UpdateManager
     {
+        /// <summary>
+        /// Torii: release assets for the Quest (VR) build must end with this suffix to be offered as updates to VR installs.
+        /// </summary>
+        public const string QUEST_APK_SUFFIX = "-quest.apk";
+
         public override ReleaseStream? FixedReleaseStream => stream;
 
         private string version = null!;
@@ -45,6 +51,8 @@ namespace osu.Game.Updater
             {
                 string? assetExtension = RuntimeInfo.OS switch
                 {
+                    // Torii: the Quest build is a separate APK (different application ID), so never offer the phone APK to it.
+                    RuntimeInfo.Platform.Android when VRRuntime.IsVR => QUEST_APK_SUFFIX,
                     RuntimeInfo.Platform.Android => ".apk",
                     RuntimeInfo.Platform.iOS => ".ipa",
                     _ => null,
@@ -130,7 +138,9 @@ namespace osu.Game.Updater
                     break;
 
                 case RuntimeInfo.Platform.Android:
-                    if (release.Assets?.Exists(f => f.Name.EndsWith(".apk", StringComparison.Ordinal)) == true)
+                    string apkSuffix = VRRuntime.IsVR ? QUEST_APK_SUFFIX : ".apk";
+
+                    if (release.Assets?.Exists(f => f.Name.EndsWith(apkSuffix, StringComparison.Ordinal)) == true)
                         // on our testing device using the .apk URL causes the download to magically disappear.
                         url = release.HtmlUrl;
 

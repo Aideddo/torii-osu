@@ -82,6 +82,10 @@ namespace osu.Game.Overlays
                 new GameplaySection()
             };
 
+            // Torii: VR builds get their own section right after General, so VR options are easy to find.
+            if (VR.VRRuntime.IsVR)
+                sections.Insert(1, new VRSection());
+
             foreach (Ruleset ruleset in rulesets.AvailableRulesets.Select(info => info.CreateInstance()))
             {
                 try

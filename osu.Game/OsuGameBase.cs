@@ -33,6 +33,7 @@ using osu.Framework.IO.Stores;
 using osu.Framework.Localisation;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Platform.OpenXR;
 using osu.Framework.Timing;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
@@ -65,6 +66,7 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Skinning;
 using osu.Game.Utils;
+using osu.Game.VR;
 using RuntimeInfo = osu.Framework.RuntimeInfo;
 
 namespace osu.Game
@@ -297,6 +299,10 @@ namespace osu.Game
             Decoder.RegisterDependencies(RulesetStore);
 
             dependencies.CacheAs(Storage);
+
+            // Torii: VR controllers, for gameplay to map each trigger to its own key.
+            if (Host is IOpenXRHost xrHost)
+                dependencies.CacheAs<IVRControllers>(new OpenXRHostIntegration.Controllers(xrHost.OpenXR.ControllerInput));
 
             // Torii: tracks which in-game "NEW" feature badges have been seen/dismissed
             // (sidecar JSON under the torii/ storage dir). Cached after Storage so its
@@ -702,6 +708,16 @@ namespace osu.Game
         /// Default 0 (let Oboe pick); overridden in OsuGameAndroid.
         /// </summary>
         protected virtual int GetAndroidNativeOutputSampleRate() => 0;
+
+        /// <summary>
+        /// Whether the user can currently interact with the game, for pausing time-sensitive activity such as gameplay.
+        /// </summary>
+        /// <remarks>
+        /// Same as <see cref="Framework.Game.IsActive"/> by default. Torii: in VR the game stays active (and keeps rendering at full
+        /// rate) while a system overlay such as the keyboard or the system menu has input focus, so this follows the OpenXR host's
+        /// input focus instead.
+        /// </remarks>
+        public virtual IBindable<bool> GameplayFocus => (Host as IOpenXRHost)?.OpenXR.HasInputFocus ?? IsActive;
 
         /// <summary>
         /// Boot/tear down the Android Oboe low-latency audio path from OsuSetting.EnableOboeAudio.
