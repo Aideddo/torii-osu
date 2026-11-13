@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 60
     defaults:
       run:
-        shell: powershell
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}
         working-directory: client
     steps:
       - uses: actions/checkout@v4
@@ -36,11 +36,21 @@ jobs:
           ref: 052c77623424f3f1a571d8bcbac0d608d458f8f8
           path: toriirefresh-resources
           persist-credentials: false
-      - uses: actions/setup-dotnet@v4
+      - name: Select installed SDK
         env:
-          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
-        with:
-          global-json-file: client/global.json
+          TORII_LOCAL_DOTNET11: ${{ vars.TORII_LOCAL_DOTNET11 }}
+        run: |
+          $sdk = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+          $dotnet = (Get-Command dotnet -ErrorAction Stop).Source
+          if ($sdk.StartsWith('11.')) {
+            $dotnet = Join-Path $env:TORII_LOCAL_DOTNET11 'dotnet.exe'
+          }
+          if (!(Test-Path -LiteralPath $dotnet)) { throw 'Required local SDK is not installed' }
+          $directory = Split-Path -Parent $dotnet
+          $directory | Out-File $env:GITHUB_PATH -Append -Encoding utf8
+          "DOTNET_ROOT=$directory" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          & $dotnet --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build candidate source without starting the game
         run: |
           dotnet build osu.Desktop/osu.Desktop.csproj -c Release -v minimal
