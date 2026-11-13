@@ -14,6 +14,7 @@ using osu.Game.Localisation.Osu;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
 using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Rulesets.UI;
+using osu.Game.VR;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu
@@ -56,10 +57,20 @@ namespace osu.Game.Rulesets.Osu
         {
         }
 
+        [Resolved]
+        private IVRControllers? vrControllers { get; set; }
+
         [BackgroundDependencyLoader]
         private void load()
         {
             Add(new OsuTouchInputMapper(this) { RelativeSizeAxes = Axes.Both });
+
+            // Torii: VR builds map each controller trigger to its own gameplay key.
+            if (vrControllers != null)
+            {
+                Add(new OsuVRInputMapper(this));
+                Add(new OsuVRHaptics());
+            }
         }
 
         protected override bool Handle(UIEvent e)
