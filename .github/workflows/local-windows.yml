@@ -15,8 +15,6 @@ jobs:
     if: github.repository == 'ShikkesoraSIM/torii-hiding' && github.actor == 'ShikkesoraSIM'
     runs-on: [self-hosted, Windows, X64, torii-windows-local]
     timeout-minutes: 60
-    env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
     defaults:
       run:
         shell: powershell
@@ -39,6 +37,8 @@ jobs:
           path: toriirefresh-resources
           persist-credentials: false
       - uses: actions/setup-dotnet@v4
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
         with:
           global-json-file: client/global.json
       - name: Build candidate source without starting the game
