@@ -15,6 +15,15 @@ namespace osu.Game.Tests.Configuration
     public class ToriiStableUITest
     {
         [Test]
+        public void TestWithdrawnReleaseNoticeDoesNotHideClassicAnnouncement()
+        {
+            using var storage = new TemporaryNativeStorage("classic-announcement");
+            using var config = new OsuConfigManager(storage);
+            config.SetValue(OsuSetting.ToriiStableV2PromoShown, true);
+            Assert.That(config.Get<bool>(OsuSetting.ToriiClassicThemePromoShown), Is.False);
+        }
+
+        [Test]
         public void TestClassicThemeIsSecondWithoutChangingEnumValues()
         {
             var themes = UIThemeDropdownAndRestart.ThemeOrder;

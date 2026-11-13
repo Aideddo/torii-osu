@@ -1566,7 +1566,7 @@ namespace osu.Game
 
             loadComponentSingleFile(stableSongSelectPromo = new osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay
             {
-                Title = "The stable song select has been upgraded!",
+                Title = "Torii Classic (Stable) is here",
                 ActionLabel = "Try Torii Classic (Stable)",
                 DismissLabel = "Not now",
                 Credit = "Original UI and assets by telecomadm1145. Integrated into Torii with permission.",
@@ -2337,15 +2337,15 @@ namespace osu.Game
             if (OverlayActivationMode.Value == OverlayActivation.Disabled)
                 return;
 
-            if (LocalConfig.Get<bool>(OsuSetting.ToriiStableV2PromoShown))
+            if (LocalConfig.Get<bool>(OsuSetting.ToriiClassicThemePromoShown))
                 return;
 
             if (stableSongSelectPromo == null || !stableSongSelectPromo.IsLoaded)
                 return;
 
-            LocalConfig.SetValue(OsuSetting.ToriiStableV2PromoShown, true);
+            LocalConfig.SetValue(OsuSetting.ToriiClassicThemePromoShown, true);
 
-            stableSongSelectPromo.Present("The classic interface now includes a retro carousel, results screen and mod selector. Try Torii Classic (Stable) or choose its components in Settings > Torii > Torii Classic (Stable).");
+            stableSongSelectPromo.Present("A classic song select, mod menu and results screen. Enable Torii Classic (Stable), or choose its components in Settings > Torii > Torii Classic (Stable). Restart to apply.");
         }
 
         /// <summary>
@@ -2458,7 +2458,7 @@ namespace osu.Game
                 case MainMenu menu:
                     menuScreen = menu;
                     devBuildBanner?.Show();
-                    if (!stableV2PromoScheduled && !LocalConfig.Get<bool>(OsuSetting.ToriiStableV2PromoShown))
+                    if (!stableV2PromoScheduled && !LocalConfig.Get<bool>(OsuSetting.ToriiClassicThemePromoShown))
                     {
                         stableV2PromoScheduled = true;
                         Scheduler.AddDelayed(() =>

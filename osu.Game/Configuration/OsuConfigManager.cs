@@ -411,6 +411,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.ToriiStableUIFonts, true);
             SetDefault(OsuSetting.ToriiStableV2Migrated, false);
             SetDefault(OsuSetting.ToriiStableV2PromoShown, false);
+            SetDefault(OsuSetting.ToriiClassicThemePromoShown, false);
 
             SetDefault(OsuSetting.ShowFirstRunSetup, true);
             // torii: el wizard propio de torii corre DESPUES del first-run (o despues del reinicio por
@@ -814,5 +815,6 @@ namespace osu.Game.Configuration
         ToriiDifficultyRecalcMode,
         ToriiAppliedDifficultyVersions,
         ToriiSeenRealmDifficultyVersions,
+        ToriiClassicThemePromoShown,
     }
 }
