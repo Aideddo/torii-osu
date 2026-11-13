@@ -190,9 +190,12 @@ jobs:
     - name: Place dependencies in expected sibling paths
       shell: bash
       run: |
-        rm -rf ../toriirefresh-framework ../toriirefresh-resources
-        mv toriirefresh-framework ../toriirefresh-framework
-        mv toriirefresh-resources ../toriirefresh-resources
+        rm -rf ../toriirefresh-framework ../toriirefresh-resources ../torii-framework ../torii-resources
+        cp -r toriirefresh-framework ../toriirefresh-framework
+        cp -r toriirefresh-framework ../torii-framework
+        cp -r toriirefresh-resources ../toriirefresh-resources
+        cp -r toriirefresh-resources ../torii-resources
+        rm -rf toriirefresh-framework toriirefresh-resources
 
     - name: Setup .NET
       # Install both .NET 10 (required by global.json + net10.0-android
@@ -1065,9 +1068,12 @@ jobs:
     - name: Place dependencies in expected sibling paths
       shell: bash
       run: |
-        rm -rf ../toriirefresh-framework ../toriirefresh-resources
-        mv toriirefresh-framework ../toriirefresh-framework
-        mv toriirefresh-resources ../toriirefresh-resources
+        rm -rf ../toriirefresh-framework ../toriirefresh-resources ../torii-framework ../torii-resources
+        cp -r toriirefresh-framework ../toriirefresh-framework
+        cp -r toriirefresh-framework ../torii-framework
+        cp -r toriirefresh-resources ../toriirefresh-resources
+        cp -r toriirefresh-resources ../torii-resources
+        rm -rf toriirefresh-framework toriirefresh-resources
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:

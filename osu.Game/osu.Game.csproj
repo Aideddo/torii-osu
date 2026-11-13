@@ -42,7 +42,8 @@
     <!-- Torii: local framework checkout (clean ppy/osu-framework + the
          input/audio thread-rate "Hz" mod). Swapped from the NuGet package so the
          in-game Hz dropdown can drive GameHost.ToriiInputAudioHz. -->
-    <ProjectReference Include="..\..\torii-framework\osu.Framework\osu.Framework.csproj" />
+    <ProjectReference Include="..\..\torii-framework\osu.Framework\osu.Framework.csproj" Condition="Exists('..\..\torii-framework\osu.Framework\osu.Framework.csproj')" />
+    <ProjectReference Include="..\..\toriirefresh-framework\osu.Framework\osu.Framework.csproj" Condition="!Exists('..\..\torii-framework\osu.Framework\osu.Framework.csproj')" />
     <!-- Torii: local osu-resources checkout (clean ppy/osu-resources + bundled
          legacy song-select panels songselect-top/bottom from stable, for the legacy UI).
          Swapped from the NuGet package so the default classic skin ships those textures. -->
