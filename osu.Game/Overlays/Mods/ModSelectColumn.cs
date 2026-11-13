@@ -157,17 +157,25 @@ namespace osu.Game.Overlays.Mods
                                             },
                                             new Drawable[]
                                             {
-                                                new OsuScrollContainer(Direction.Vertical)
+                                                // Torii: the panels are mostly static, and drawing them is expensive (each panel masks, which
+                                                // splits draw batches). Caching them in a frame buffer draws a column as a single quad until
+                                                // something in it changes (hover, selection, scrolling).
+                                                new BufferedContainer(cachedFrameBuffer: true)
                                                 {
                                                     RelativeSizeAxes = Axes.Both,
-                                                    ClampExtension = 100,
-                                                    ScrollbarOverlapsContent = false,
-                                                    Child = ItemsFlow = new ModSearchContainer
+                                                    TrackSubtreeChanges = true,
+                                                    Child = new OsuScrollContainer(Direction.Vertical)
                                                     {
-                                                        RelativeSizeAxes = Axes.X,
-                                                        AutoSizeAxes = Axes.Y,
-                                                        Spacing = new Vector2(0, 7),
-                                                        Padding = new MarginPadding(7)
+                                                        RelativeSizeAxes = Axes.Both,
+                                                        ClampExtension = 100,
+                                                        ScrollbarOverlapsContent = false,
+                                                        Child = ItemsFlow = new ModSearchContainer
+                                                        {
+                                                            RelativeSizeAxes = Axes.X,
+                                                            AutoSizeAxes = Axes.Y,
+                                                            Spacing = new Vector2(0, 7),
+                                                            Padding = new MarginPadding(7)
+                                                        }
                                                     }
                                                 }
                                             }
