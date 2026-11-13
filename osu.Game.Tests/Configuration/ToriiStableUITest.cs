@@ -2,16 +2,28 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using osu.Framework.Testing;
 using osu.Game.Configuration;
+using osu.Game.Overlays.Settings;
 
 namespace osu.Game.Tests.Configuration
 {
     [TestFixture]
     public class ToriiStableUITest
     {
+        [Test]
+        public void TestClassicThemeIsSecondWithoutChangingEnumValues()
+        {
+            var themes = UIThemeDropdownAndRestart.ThemeOrder;
+            Assert.That(themes.Take(2), Is.EqualTo(new[] { UIThemeOption.LiquidGlass, UIThemeOption.StableUI }));
+            Assert.That(themes.Distinct().Count(), Is.EqualTo(System.Enum.GetValues<UIThemeOption>().Length));
+            Assert.That((int)UIThemeOption.Torii, Is.EqualTo(1));
+            Assert.That((int)UIThemeOption.StableUI, Is.EqualTo(6));
+        }
+
         [Test]
         public void TestThemeDisplayNamePreservesSavedIdentifier()
         {

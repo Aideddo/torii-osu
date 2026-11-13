@@ -40,6 +40,10 @@ jobs:
         env:
           TORII_LOCAL_DOTNET11: ${{ vars.TORII_LOCAL_DOTNET11 }}
         run: |
+          $temp = Join-Path '${{ runner.temp }}' 'build-temp'
+          New-Item -ItemType Directory -Path $temp -Force | Out-Null
+          "TEMP=$temp" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "TMP=$temp" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           $sdk = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
           $dotnet = (Get-Command dotnet -ErrorAction Stop).Source
           if ($sdk.StartsWith('11.')) {

@@ -62,6 +62,14 @@ namespace osu.Game.Tests.Configuration
         }
 
         [Test]
+        public void TestClassicThemeRequirementIsExplicit()
+        {
+            using var dialog = new ClassicThemeRequiredDialog();
+            Assert.That(dialog.HeaderText.ToString(), Is.EqualTo("Torii Classic (Stable) required"));
+            Assert.That(dialog.BodyText.ToString(), Does.Contain("Enable Torii Classic (Stable)").And.Contain("restart"));
+        }
+
+        [Test]
         public void TestStableRestartDialogIsEnglish()
         {
             using var dialog = new StableUIRestartDialog(null);

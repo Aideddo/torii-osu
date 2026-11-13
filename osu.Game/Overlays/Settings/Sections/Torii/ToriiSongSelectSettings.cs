@@ -25,6 +25,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
         private SettingsButtonV2 applyButton = null!;
         private OsuTextFlowContainer hint = null!;
         private OsuConfigManager config = null!;
+        private bool requirementShown;
 
         [Resolved(CanBeNull = true)]
         private OsuGame? game { get; set; }
@@ -68,7 +69,15 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
         {
             var value = new BindableBool(config.Get<bool>(setting));
             staged.Add(setting, value);
-            value.BindValueChanged(_ => updatePendingState());
+            value.BindValueChanged(_ =>
+            {
+                updatePendingState();
+                if (theme.Value != UIThemeOption.StableUI && !requirementShown)
+                {
+                    requirementShown = true;
+                    dialogs?.Push(new ClassicThemeRequiredDialog());
+                }
+            });
             var saved = config.GetBindable<bool>(setting);
             persisted.Add(setting, saved);
             saved.BindValueChanged(_ => Schedule(updatePendingState));
@@ -82,9 +91,11 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
         private void updatePendingState()
         {
             bool hasPendingChanges = staged.Any(pair => pair.Value.Value != config.Get<bool>(pair.Key));
-            applyButton.Enabled.Value = hasPendingChanges;
-            hint.Text = config.Get<UIThemeOption>(OsuSetting.UITheme) != UIThemeOption.StableUI
-                ? "These settings apply when you select Torii Classic (Stable) in the theme settings."
+            bool needsTheme = config.Get<UIThemeOption>(OsuSetting.UITheme) != UIThemeOption.StableUI;
+            applyButton.Enabled.Value = hasPendingChanges || needsTheme;
+            applyButton.Text = needsTheme ? "Enable Torii Classic (Stable)" : "Apply Changes to Theme";
+            hint.Text = needsTheme
+                ? "These options require Torii Classic (Stable). Choose your components, then enable the theme below and restart."
                 : "Changes take effect after restarting the game.";
         }
 

@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -42,6 +44,10 @@ namespace osu.Game.Overlays.Settings
     /// </summary>
     public partial class UIThemeDropdownAndRestart : CompositeDrawable
     {
+        internal static UIThemeOption[] ThemeOrder => Enum.GetValues<UIThemeOption>()
+            .OrderBy(theme => theme == UIThemeOption.LiquidGlass ? 0 : theme == UIThemeOption.StableUI ? 1 : (int)theme + 2)
+            .ToArray();
+
         // Resolved optionally because the test-scene host doesn't
         // register OsuGame / IDialogOverlay. In that case we silently
         // bind the dropdown without the restart prompt — the test can
@@ -71,6 +77,7 @@ namespace osu.Game.Overlays.Settings
             InternalChild = new SettingsItemV2(new FormEnumDropdown<UIThemeOption>
             {
                 Caption = "UI theme",
+                Items = ThemeOrder,
                 HintText = "Cosmetic chrome palette. \"Grayscale by fsyori\" strips saturation from "
                            + "every UI accent for the monochrome look and mounts a stable-style "
                            + "user-stats panel in song select. The Midnight family keeps that "
@@ -79,7 +86,7 @@ namespace osu.Game.Overlays.Settings
                            + "Crimson (deep red), and Cerulean (deep cyan). For end-to-end skin "
                            + "matching (including gameplay), drop any stable-era .osk into your "
                            + "Skins folder and pick it from the skin dropdown above. Changing this "
-                           + "option requires a restart. Stable UI includes separately configurable classic screens under Torii > Stable UI.",
+                           + "option requires a restart. Torii Classic (Stable) includes configurable classic screens under Torii > Torii Classic (Stable).",
                 Current = themeBindable,
             })
             {

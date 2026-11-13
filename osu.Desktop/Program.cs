@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using osu.Desktop.LegacyIpc;
 using osu.Desktop.Windows;
@@ -301,49 +300,20 @@ namespace osu.Desktop
 
         private static bool isFirstRun;
 
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
-
-        private static void logFatalError(string context, Exception ex)
-        {
-            try
-            {
-                string text = $"[{DateTime.UtcNow:O}] {context}: {ex}\n";
-                string baseLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "torii-crash.txt");
-                File.AppendAllText(baseLog, text);
-
-                if (OperatingSystem.IsWindows())
-                {
-                    MessageBoxW(IntPtr.Zero, $"{context}:\n\n{ex.Message}\n\nCheck torii-crash.txt for full details.", "Torii - Fatal Error", 0x10);
-                }
-            }
-            catch
-            {
-            }
-        }
-
         [STAThread]
         public static void Main(string[] args)
         {
-            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-            {
-                if (e.ExceptionObject is Exception ex)
-                    logFatalError("Unhandled AppDomain Exception", ex);
-            };
-
+            // IMPORTANT DON'T IGNORE: For general sanity, velopack's setup needs to run before anything else.
+            // This has bitten us in the rear before (bricked updater), and although the underlying issue from
+            // last time has been fixed, let's not tempt fate.
             try
             {
-                // IMPORTANT DON'T IGNORE: For general sanity, velopack's setup needs to run before anything else.
-                // This has bitten us in the rear before (bricked updater), and although the underlying issue from
-                // last time has been fixed, let's not tempt fate.
-                try
-                {
-                    setupVelopack(args);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log($"[Torii] Velopack setup failed: {ex.Message}", LoggingTarget.Runtime, LogLevel.Important);
-                }
+                setupVelopack(args);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[Torii] Velopack setup failed: {ex.Message}", LoggingTarget.Runtime, LogLevel.Important);
+            }
 
             if (OperatingSystem.IsWindows())
             {
@@ -513,12 +483,6 @@ namespace osu.Desktop
             finally
             {
                 finishVulkanSessionIfNeeded(vulkanSessionMarker);
-            }
-            }
-            catch (Exception ex)
-            {
-                logFatalError("Fatal Startup Exception", ex);
-                throw;
             }
         }
 

@@ -79,7 +79,7 @@ namespace osu.Game.Screens.Footer
                 {
                     base.Action = () =>
                     {
-                        if (State.Value != Visibility.Hidden)
+                        if (Enabled.Value && State.Value != Visibility.Hidden)
                             value.Invoke();
                     };
                 }

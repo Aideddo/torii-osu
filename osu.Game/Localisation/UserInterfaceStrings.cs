@@ -85,9 +85,9 @@ namespace osu.Game.Localisation
         public static LocalisableString SeasonalBackgrounds => new TranslatableString(getKey(@"seasonal_backgrounds"), @"Seasonal backgrounds");
 
         /// <summary>
-        /// "Changes to this setting will only apply with an active osu!supporter tag."
+        /// "This setting requires an active supporter tag."
         /// </summary>
-        public static LocalisableString NotSupporterNote => new TranslatableString(getKey(@"not_supporter_note"), @"Changes to this setting will only apply with an active osu!supporter tag.");
+        public static LocalisableString NotSupporterNote => new TranslatableString(getKey(@"not_supporter_note"), @"This setting requires an active supporter tag.");
 
         /// <summary>
         /// "Song Select"

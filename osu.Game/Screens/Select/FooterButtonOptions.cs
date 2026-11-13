@@ -31,7 +31,7 @@ namespace osu.Game.Screens.Select
         [Resolved]
         private RealmAccess realm { get; set; } = null!;
 
-        private Live<BeatmapInfo> beatmap = null!;
+        private Live<BeatmapInfo>? beatmap;
 
         [BackgroundDependencyLoader]
         private void load(OsuColour colour)
@@ -59,12 +59,13 @@ namespace osu.Game.Screens.Select
         private void beatmapChanged()
         {
             this.HidePopover();
-            Enabled.Value = !workingBeatmap.IsDefault;
-            if (!workingBeatmap.IsDefault)
-                beatmap = realm.Run(r => r.Find<BeatmapInfo>(workingBeatmap.Value.BeatmapInfo.ID)!.ToLive(realm));
+            beatmap = workingBeatmap.IsDefault
+                ? null
+                : realm.Run(r => r.Find<BeatmapInfo>(workingBeatmap.Value.BeatmapInfo.ID)?.ToLive(realm));
+            Enabled.Value = beatmap != null;
         }
 
-        public Framework.Graphics.UserInterface.Popover GetPopover() => new Popover(this, beatmap.Value.Detach())
+        public Framework.Graphics.UserInterface.Popover? GetPopover() => !Enabled.Value || beatmap == null ? null : new Popover(this, beatmap.Value.Detach())
         {
             ColourProvider = colourProvider,
             SongSelect = songSelect
