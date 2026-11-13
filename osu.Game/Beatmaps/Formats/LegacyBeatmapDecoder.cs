@@ -173,9 +173,16 @@ namespace osu.Game.Beatmaps.Formats
                                                         ?? SampleControlPoint.DEFAULT;
                 hitObject.Samples = hitObject.Samples.Select(sampleControlPoint.ApplyTo).ToList();
 
+                double duration = hasRepeats.Duration;
+                if (beatmap.BeatmapInfo.Ruleset.OnlineID == 0 && hitObject is ConvertSlider slider)
+                    duration = getStandardSliderDuration(slider);
+
                 for (int i = 0; i < hasRepeats.NodeSamples.Count; i++)
                 {
-                    double time = hitObject.StartTime + i * hasRepeats.Duration / hasRepeats.SpanCount() + CONTROL_POINT_LENIENCY;
+                    double nodeOffset = beatmap.BeatmapInfo.Ruleset.OnlineID == 0
+                        ? i * (duration / hasRepeats.SpanCount())
+                        : i * duration / hasRepeats.SpanCount();
+                    double time = hitObject.StartTime + nodeOffset + CONTROL_POINT_LENIENCY;
                     var nodeSamplePoint = (beatmap.ControlPointInfo as LegacyControlPointInfo)?.SamplePointAt(time) ?? SampleControlPoint.DEFAULT;
 
                     hasRepeats.NodeSamples[i] = hasRepeats.NodeSamples[i].Select(nodeSamplePoint.ApplyTo).ToList();
@@ -187,6 +194,25 @@ namespace osu.Game.Beatmaps.Formats
                                                         ?? SampleControlPoint.DEFAULT;
                 hitObject.Samples = hitObject.Samples.Select(sampleControlPoint.ApplyTo).ToList();
             }
+        }
+
+        private double getStandardSliderDuration(ConvertSlider slider)
+        {
+            TimingControlPoint timingPoint = beatmap.ControlPointInfo.TimingPointAt(slider.StartTime);
+            double velocity = 100 * beatmap.Difficulty.SliderMultiplier / LegacyRulesetExtensions.GetPrecisionAdjustedBeatLength(slider, timingPoint, "osu");
+            SliderPath path = slider.Path;
+
+            // Standard optimises Catmull geometry during conversion; keep other conversions' source path intact.
+            if (!path.OptimiseCatmull && path.ControlPoints.Any(p => p.Type?.Type == SplineType.Catmull))
+            {
+                path = new SliderPath(path.ControlPoints.Select(p => new PathControlPoint(p.Position, p.Type)).ToArray(), path.ExpectedDistance.Value)
+                {
+                    OptimiseCatmull = true
+                };
+            }
+
+            double endTime = slider.StartTime + slider.SpanCount() * path.Distance / velocity;
+            return endTime - slider.StartTime;
         }
 
         /// <summary>
@@ -488,14 +514,12 @@ namespace osu.Game.Beatmaps.Formats
             double time = getOffsetTime(Parsing.ParseDouble(split[0].Trim()));
 
             // beatLength is allowed to be NaN to handle an edge case in which some beatmaps use NaN slider velocity to disable slider tick generation (see LegacyDifficultyControlPoint).
-            double beatLength = Parsing.ParseDouble(split[1].Trim(), allowNaN: true);
+            double beatLength = Parsing.ParseDouble(split[1].Trim(), double.MaxValue, allowNaN: true);
 
             // If beatLength is NaN, speedMultiplier should still be 1 because all comparisons against NaN are false.
-            double speedMultiplier = beatLength < 0 ? 100.0 / -beatLength : 1;
-
-            TimeSignature timeSignature = TimeSignature.SimpleQuadruple;
+            int timeSignature = 4;
             if (split.Length >= 3)
-                timeSignature = split[2][0] == '0' ? TimeSignature.SimpleQuadruple : new TimeSignature(Parsing.ParseInt(split[2]));
+                timeSignature = split[2][0] == '0' ? 4 : Parsing.ParseInt(split[2], int.MaxValue);
 
             LegacySampleBank sampleSet = defaultSampleBank;
             if (split.Length >= 4)
@@ -512,6 +536,9 @@ namespace osu.Game.Beatmaps.Formats
             bool timingChange = true;
             if (split.Length >= 7)
                 timingChange = split[6][0] == '1';
+
+            int onlineRulesetID = beatmap.BeatmapInfo.Ruleset.OnlineID;
+            double speedMultiplier = (!timingChange || onlineRulesetID != 0) && beatLength < 0 ? 100.0 / -beatLength : 1;
 
             bool kiaiMode = false;
             bool omitFirstBarSignature = false;
@@ -535,13 +562,15 @@ namespace osu.Game.Beatmaps.Formats
                 var controlPoint = CreateTimingControlPoint();
 
                 controlPoint.BeatLength = beatLength;
-                controlPoint.TimeSignature = timeSignature;
+                controlPoint.LegacyBeatLength = beatLength;
+                if (timeSignature > 0)
+                    controlPoint.TimeSignature = new TimeSignature(timeSignature);
+                else
+                    controlPoint.LegacyTimeSignature = timeSignature;
                 controlPoint.OmitFirstBarLine = omitFirstBarSignature;
 
                 addControlPoint(time, controlPoint, true);
             }
-
-            int onlineRulesetID = beatmap.BeatmapInfo.Ruleset.OnlineID;
 
             addControlPoint(time, new DifficultyControlPoint
             {

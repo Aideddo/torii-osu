@@ -33,6 +33,8 @@ namespace osu.Game.Rulesets.Osu.UI
         private readonly PlayfieldBorder playfieldBorder;
         private readonly ProxyContainer approachCircles;
         private readonly ProxyContainer spinnerProxies;
+        [Cached]
+        public OsuVisualOrdering VisualOrdering { get; } = new OsuVisualOrdering();
         private readonly JudgementContainer<DrawableOsuJudgement> judgementLayer;
 
         private readonly JudgementPooler<DrawableOsuJudgement> judgementPooler;
@@ -69,6 +71,7 @@ namespace osu.Game.Rulesets.Osu.UI
                 FollowPoints = new FollowPointRenderer { RelativeSizeAxes = Axes.Both },
                 judgementLayer = new JudgementContainer<DrawableOsuJudgement> { RelativeSizeAxes = Axes.Both },
                 HitObjectContainer,
+                VisualOrdering,
                 judgementAboveHitObjectLayer = new Container { RelativeSizeAxes = Axes.Both },
                 approachCircles = new ProxyContainer { RelativeSizeAxes = Axes.Both },
             };
@@ -121,7 +124,22 @@ namespace osu.Game.Rulesets.Osu.UI
                     break;
 
                 case DrawableHitCircle hitCircle:
-                    approachCircles.Add(hitCircle.ProxiedLayer.CreateProxy());
+                    if (VisualOrdering.IsActive)
+                    {
+                        if (hitCircle is not DrawableSliderHead)
+                            VisualOrdering.Register(hitCircle, hitCircle, OsuVisualKind.Object);
+
+                        VisualOrdering.Register(hitCircle.ProxiedLayer, hitCircle, OsuVisualKind.Approach,
+                            addFallback: approachCircles.Add, removeFallback: approachCircles.Remove,
+                            changeFallbackDepth: approachCircles.ChangeChildDepth);
+                    }
+                    else
+                        approachCircles.Add(hitCircle.ProxiedLayer.CreateProxy());
+                    break;
+
+                case DrawableSlider slider:
+                    if (VisualOrdering.IsActive)
+                        VisualOrdering.Register(slider, slider, OsuVisualKind.Object);
                     break;
             }
         }
@@ -178,12 +196,14 @@ namespace osu.Game.Rulesets.Osu.UI
         {
             base.OnHitObjectAdded(hitObject);
             FollowPoints.AddFollowPoints((OsuHitObject)hitObject);
+            VisualOrdering.RefreshBeatmap();
         }
 
         protected override void OnHitObjectRemoved(HitObject hitObject)
         {
             base.OnHitObjectRemoved(hitObject);
             FollowPoints.RemoveFollowPoints((OsuHitObject)hitObject);
+            VisualOrdering.RefreshBeatmap();
         }
 
         private void onNewResult(DrawableHitObject judgedObject, JudgementResult result)
@@ -220,6 +240,8 @@ namespace osu.Game.Rulesets.Osu.UI
         private partial class ProxyContainer : LifetimeManagementContainer
         {
             public void Add(Drawable proxy) => AddInternal(proxy);
+            public void Remove(Drawable proxy) => RemoveInternal(proxy, false);
+            public void ChangeChildDepth(Drawable proxy, float newDepth) => ChangeInternalChildDepth(proxy, newDepth);
         }
 
         private class OsuHitObjectLifetimeEntry : HitObjectLifetimeEntry

@@ -11,6 +11,7 @@ using osu.Framework.Input.Events;
 using osu.Game.Audio;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Graphics;
+using osu.Game.Screens.Select;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osuTK;
@@ -31,12 +32,12 @@ namespace osu.Game.Skinning.Select
         private OsuSpriteText text = null!;
         private Sprite rightLayer = null!;
 
-        private const float back_text_size = 15 * LegacySkin.POSITION_SCALE_FACTOR;
-        private const float vertical_offset = 22 * LegacySkin.POSITION_SCALE_FACTOR;
+        private const float back_text_size = 15 * LegacySkin.STABLE_MAGIC_SCALE_FACTOR;
+        private const float vertical_offset = 22 * LegacySkin.STABLE_MAGIC_SCALE_FACTOR;
 
         // 0.775x is an arbitrary adjustment to better match visually.
         // on testing with stable this factor is only relevant to fontawesome icon sizes.
-        private const float back_icon_size = 18 * LegacySkin.POSITION_SCALE_FACTOR * 0.775f;
+        private const float back_icon_size = 18 * LegacySkin.STABLE_MAGIC_SCALE_FACTOR * 0.775f;
 
         [BackgroundDependencyLoader]
         private void load(SkinManager skins)
@@ -49,7 +50,7 @@ namespace osu.Game.Skinning.Select
                 {
                     Anchor = Anchor.BottomLeft,
                     Origin = Anchor.BottomRight,
-                    Texture = skins.DefaultClassicSkin.GetTexture("back-button-layer"),
+                    Texture = skins.DefaultClassicSkin.GetStableTexture("back-button-layer"),
                     Colour = idle_colour,
                 },
                 text = new OsuSpriteText
@@ -57,7 +58,7 @@ namespace osu.Game.Skinning.Select
                     Anchor = Anchor.BottomLeft,
                     Origin = Anchor.Centre,
                     Text = @"back",
-                    Font = OsuFont.Default.With(size: back_text_size),
+                    Font = LegacyFonts.Get(back_text_size, FontWeight.Medium),
                     Y = -vertical_offset,
                     UseFullGlyphHeight = false,
                 },
@@ -65,7 +66,7 @@ namespace osu.Game.Skinning.Select
                 {
                     Anchor = Anchor.BottomLeft,
                     Origin = Anchor.BottomRight,
-                    Texture = skins.DefaultClassicSkin.GetTexture("back-button-layer"),
+                    Texture = skins.DefaultClassicSkin.GetStableTexture("back-button-layer"),
                     Colour = idle_colour,
                 },
                 icon = new SpriteIcon
@@ -120,11 +121,11 @@ namespace osu.Game.Skinning.Select
 
         private const float centre_offset = 2.4f;
 
-        private const float left_layer_idle = 22 * LegacySkin.POSITION_SCALE_FACTOR + 2; // +2 to better match stable
-        private const float left_layer_active = 40 * LegacySkin.POSITION_SCALE_FACTOR + 3; // +3 to better match stable
+        private const float left_layer_idle = 22 * LegacySkin.STABLE_MAGIC_SCALE_FACTOR + 2; // +2 to better match stable
+        private const float left_layer_active = 40 * LegacySkin.STABLE_MAGIC_SCALE_FACTOR + 3; // +3 to better match stable
 
-        private const float right_layer_idle = 60 * LegacySkin.POSITION_SCALE_FACTOR + 5; // +5 to better match stable
-        private const float right_layer_active = 86 * LegacySkin.POSITION_SCALE_FACTOR + 7; // +7 to better match stable
+        private const float right_layer_idle = 60 * LegacySkin.STABLE_MAGIC_SCALE_FACTOR + 5; // +5 to better match stable
+        private const float right_layer_active = 86 * LegacySkin.STABLE_MAGIC_SCALE_FACTOR + 7; // +7 to better match stable
 
         private const float back_text_width = 45; // determined via draw visualizer
 

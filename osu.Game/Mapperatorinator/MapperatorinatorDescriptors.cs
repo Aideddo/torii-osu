@@ -135,7 +135,7 @@ namespace osu.Game.Mapperatorinator
             new Descriptor("style/o2jam", "Map that mimics traditional mapping techniques usually found in O2jam charts.", 3),
             new Descriptor("style/quadstream", "Stream with a mix of 4-note sized chords", 3),
             new Descriptor("style/symmetrical", "Employs symmetry within the map design, often mirroring elements along the horizontal centreline.", 0),
-            new Descriptor("style/taikosu", "A map designed with both osu! and osu!taiko in mind.", 1),
+            new Descriptor("style/taikosu", "A map designed for both torii and torii drums.", 1),
             new Descriptor("style/tiebreaker", "Maps that contain most of the skill sets from different categories, and are usually longer than 5 minutes.", 3),
             new Descriptor("style/tnt", "A map that imitates the mapping style in Taiko No Tatsujin.", 1),
             new Descriptor("style/vocal", "Patterning that focuses mainly on vocals.", 1),

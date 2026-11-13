@@ -209,7 +209,7 @@ namespace osu.Game.Rulesets.Taiko
 
         public override ScoreMultiplierCalculator CreateScoreMultiplierCalculator(ScoreMultiplierContext context) => new TaikoScoreMultiplierCalculator(context);
 
-        public override string Description => "osu!taiko";
+        public override string Description => "torii drums";
 
         public override string ShortName => SHORT_NAME;
 

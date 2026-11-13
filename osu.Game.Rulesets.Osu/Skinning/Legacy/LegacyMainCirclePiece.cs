@@ -15,6 +15,7 @@ using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
+using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -39,6 +40,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         protected Container OverlayLayer { get; private set; } = null!;
 
         private SkinnableSpriteText hitCircleText = null!;
+        private Drawable flashingProxy = null!;
+        private bool overlayAboveNumber;
+
+        [Resolved(CanBeNull = true)]
+        private OsuVisualOrdering? visualOrdering { get; set; }
 
         private readonly Bindable<Color4> accentColour = new Bindable<Color4>();
         private readonly IBindable<int> indexInCurrentCombo = new Bindable<int>();
@@ -192,7 +198,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                         Origin = Anchor.Centre,
                     },
                 },
-                CircleSprite.FlashingDrawable.CreateProxy(),
+                flashingProxy = CircleSprite.FlashingDrawable.CreateProxy(),
             };
 
             if (hasNumber)
@@ -208,7 +214,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                 });
             }
 
-            bool overlayAboveNumber = skin.GetConfig<OsuSkinConfiguration, bool>(OsuSkinConfiguration.HitCircleOverlayAboveNumber)?.Value ?? true;
+            overlayAboveNumber = skin.GetConfig<OsuSkinConfiguration, bool>(OsuSkinConfiguration.HitCircleOverlayAboveNumber)?.Value ?? true;
 
             if (overlayAboveNumber)
                 OverlayLayer.ChangeChildDepth(OverlaySprite, float.MinValue);
@@ -402,6 +408,15 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         {
             base.LoadComplete();
 
+            if (visualOrdering?.IsActive == true && drawableObject is DrawableOsuHitObject owner)
+            {
+                visualOrdering.Register(CircleSprite, owner, OsuVisualKind.CircleBase);
+                visualOrdering.Register(OverlaySprite, owner, OsuVisualKind.Overlay, overlayAboveNumber: overlayAboveNumber);
+                visualOrdering.Register(flashingProxy, owner, OsuVisualKind.Flash);
+                if (hasNumber)
+                    visualOrdering.Register(hitCircleText, owner, OsuVisualKind.Number, overlayAboveNumber: overlayAboveNumber);
+            }
+
             accentColour.BindValueChanged(colour =>
             {
                 Color4 objectColour = colour.NewValue;
@@ -477,6 +492,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         protected override void Dispose(bool isDisposing)
         {
+            if (CircleSprite != null) visualOrdering?.Unregister(CircleSprite);
+            if (OverlaySprite != null) visualOrdering?.Unregister(OverlaySprite);
+            if (flashingProxy != null) visualOrdering?.Unregister(flashingProxy);
+            if (hitCircleText != null) visualOrdering?.Unregister(hitCircleText);
+
             base.Dispose(isDisposing);
 
             if (drawableObject != null)

@@ -17,6 +17,7 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
 
         private Bindable<bool> legacyResults = null!;
         private Bindable<bool> v2Results = null!;
+        private Bindable<UIThemeOption> theme = null!;
         private readonly Bindable<ResultsScreenStyle> style = new Bindable<ResultsScreenStyle>();
         private bool syncingStyle;
 
@@ -24,7 +25,8 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
         private void load(OsuConfigManager config)
         {
             // Retain the existing configuration keys so older preferences require no migration.
-            legacyResults = config.GetBindable<bool>(OsuSetting.ToriiStableResults);
+            theme = config.GetBindable<UIThemeOption>(OsuSetting.UITheme);
+            legacyResults = config.GetBindable<bool>(theme.Value == UIThemeOption.StableUI ? OsuSetting.ToriiStableUIResults : OsuSetting.ToriiStableResults);
             v2Results = config.GetBindable<bool>(OsuSetting.UseV2ResultsScreen);
 
             Children = new Drawable[]
@@ -32,7 +34,7 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
                 new SettingsItemV2(new FormEnumDropdown<ResultsScreenStyle>
                 {
                     Caption = UserInterfaceStrings.ResultsScreenStyle,
-                    HintText = UserInterfaceStrings.ResultsScreenStyleDescription,
+                    HintText = "Choose a results layout. Changes to the Stable UI layout take effect after restarting the game.",
                     Current = style,
                 })
                 {
@@ -41,6 +43,12 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
             };
 
             legacyResults.BindValueChanged(_ => syncStyle(), true);
+            theme.BindValueChanged(_ =>
+            {
+                legacyResults.UnbindAll();
+                legacyResults = config.GetBindable<bool>(theme.Value == UIThemeOption.StableUI ? OsuSetting.ToriiStableUIResults : OsuSetting.ToriiStableResults);
+                legacyResults.BindValueChanged(_ => syncStyle(), true);
+            });
             v2Results.BindValueChanged(_ => syncStyle());
             style.BindValueChanged(e =>
             {

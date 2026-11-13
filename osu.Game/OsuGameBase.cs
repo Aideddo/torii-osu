@@ -555,8 +555,7 @@ namespace osu.Game
             // Torii: la UI legacy (song select estilo stable) usa la fuente moderna de lazer por default;
             // este setting la pasa a Aller (fuente de osu!stable). Bindeado (no read-once) asi re-entrar al
             // song select ya toma la fuente nueva sin reiniciar; LegacyFonts.Get lo lee en construccion.
-            LocalConfig.BindWith(OsuSetting.ToriiLegacyFont, legacyFontSetting);
-            legacyFontSetting.BindValueChanged(e => Screens.Select.LegacyFonts.UseAllerFont = e.NewValue, true);
+            Screens.Select.LegacyFonts.UseAllerFont = ToriiStableUI.Fonts(LocalConfig);
 
             // Torii: Potato Mode read-once flag (heavy visuals check it at construction). Restart-gated.
             Performance.PotatoMode.SetFromConfig(LocalConfig.Get<bool>(OsuSetting.ToriiPotatoMode));

@@ -54,6 +54,16 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
 
         private readonly Bindable<bool> hitAnimations = new Bindable<bool>(true);
 
+        [Resolved(CanBeNull = true)]
+        private OsuVisualOrdering? visualOrdering { get; set; }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            if (visualOrdering?.IsActive == true)
+                visualOrdering.Register(CirclePiece, this, OsuVisualKind.CircleGroup, () => shakeContainer, localDepth: 1);
+        }
+
         [BackgroundDependencyLoader]
         private void load(OsuRulesetConfigManager? osuConfig)
         {

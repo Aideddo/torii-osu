@@ -13,6 +13,7 @@ using osu.Framework.Utils;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
+using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -32,6 +33,9 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         private Drawable arrow = null!;
 
         private bool shouldRotate;
+
+        [Resolved(CanBeNull = true)]
+        private OsuVisualOrdering? visualOrdering { get; set; }
 
         [BackgroundDependencyLoader]
         private void load(DrawableHitObject drawableObject, ISkinSource skinSource)
@@ -60,7 +64,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         {
             base.LoadComplete();
 
-            proxy = CreateProxy();
+            if (visualOrdering?.IsActive != true)
+                proxy = CreateProxy();
 
             drawableRepeat.HitObjectApplied += onHitObjectApplied;
             onHitObjectApplied(drawableRepeat);
@@ -74,10 +79,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         private void onHitObjectApplied(DrawableHitObject drawableObject)
         {
-            Debug.Assert(proxy.Parent == null);
+            Debug.Assert(proxy == null || proxy.Parent == null);
 
             // see logic in LegacySliderHeadHitCircle.
-            drawableRepeat.DrawableSlider.OverlayElementContainer.Add(proxy);
+            if (proxy != null)
+                drawableRepeat.DrawableSlider.OverlayElementContainer.Add(proxy);
         }
 
         protected override void Update()
@@ -87,7 +93,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             if (Time.Current >= drawableRepeat.HitStateUpdateTime && drawableRepeat.State.Value == ArmedState.Hit)
             {
                 double animDuration = Math.Min(300, drawableRepeat.HitObject.SpanDuration);
-                arrow.Scale = new Vector2(Interpolation.ValueAt(Time.Current, 1, 1.4f, drawableRepeat.HitStateUpdateTime, drawableRepeat.HitStateUpdateTime + animDuration, Easing.Out));
+                float progress = animDuration > 0 ? Math.Clamp((float)((Time.Current - drawableRepeat.HitStateUpdateTime) / animDuration), 0, 1) : 1;
+                arrow.Scale = new Vector2(Interpolation.ValueAt(progress, 1f, 1.4f, 0f, 1f, Easing.Out));
             }
             else
             {

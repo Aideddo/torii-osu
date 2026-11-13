@@ -310,7 +310,7 @@ namespace osu.Game.Rulesets.Mania
 
         public override ScoreMultiplierCalculator CreateScoreMultiplierCalculator(ScoreMultiplierContext context) => new ManiaScoreMultiplierCalculator(context);
 
-        public override string Description => "mania";
+        public override string Description => "torii keys";
 
         public override string ShortName => SHORT_NAME;
 

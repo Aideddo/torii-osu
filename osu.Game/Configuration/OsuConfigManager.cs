@@ -48,6 +48,25 @@ namespace osu.Game.Configuration
         public OsuConfigManager(Storage storage)
             : base(prepareMigratedStorage(storage))
         {
+            if (!Get<bool>(OsuSetting.ToriiStableV2Migrated))
+            {
+                // respetamos las combinaciones legacy que el usuario ya tenia.
+                if (Get<bool>(OsuSetting.ToriiLegacyFooterUseSkin)
+                    || Get<bool>(OsuSetting.ToriiStableResults)
+                    || Get<bool>(OsuSetting.ToriiLegacySongSelectFooter)
+                    || Get<bool>(OsuSetting.ToriiLegacyFont))
+                {
+                    SetValue(OsuSetting.ToriiStableUISongSelect, Get<bool>(OsuSetting.ToriiLegacyFooterUseSkin));
+                    SetValue(OsuSetting.ToriiStableUIResults, Get<bool>(OsuSetting.ToriiStableResults));
+                    SetValue(OsuSetting.ToriiStableUIFooter, Get<bool>(OsuSetting.ToriiLegacyFooterUseSkin) || Get<bool>(OsuSetting.ToriiLegacySongSelectFooter));
+                    SetValue(OsuSetting.ToriiStableUIFonts, Get<bool>(OsuSetting.ToriiLegacyFont));
+                    SetValue(OsuSetting.ToriiStableOptInMigrated, true);
+                }
+
+                SetValue(OsuSetting.ToriiStableV2Migrated, true);
+            }
+
+            ToriiStableUI.Capture(this);
         }
 
         /// <summary>
@@ -384,6 +403,14 @@ namespace osu.Game.Configuration
             // Torii: la UI legacy usa la fuente moderna de lazer por default; este toggle la
             // pasa a "Aller" (la fuente real de osu!stable) para un look 1:1 stable.
             SetDefault(OsuSetting.ToriiLegacyFont, false);
+            SetDefault(OsuSetting.ToriiStableModSelect, false);
+            SetDefault(OsuSetting.ToriiStableUISongSelect, true);
+            SetDefault(OsuSetting.ToriiStableUIResults, true);
+            SetDefault(OsuSetting.ToriiStableUIMods, true);
+            SetDefault(OsuSetting.ToriiStableUIFooter, true);
+            SetDefault(OsuSetting.ToriiStableUIFonts, true);
+            SetDefault(OsuSetting.ToriiStableV2Migrated, false);
+            SetDefault(OsuSetting.ToriiStableV2PromoShown, false);
 
             SetDefault(OsuSetting.ShowFirstRunSetup, true);
             // torii: el wizard propio de torii corre DESPUES del first-run (o despues del reinicio por
@@ -776,6 +803,14 @@ namespace osu.Game.Configuration
         ToriiResultsNoticeSeen,
         ToriiStableDisclaimerSeen,
         ToriiLegacyFont,
+        ToriiStableModSelect,
+        ToriiStableUISongSelect,
+        ToriiStableUIResults,
+        ToriiStableUIMods,
+        ToriiStableUIFooter,
+        ToriiStableUIFonts,
+        ToriiStableV2Migrated,
+        ToriiStableV2PromoShown,
         ToriiDifficultyRecalcMode,
         ToriiAppliedDifficultyVersions,
         ToriiSeenRealmDifficultyVersions,

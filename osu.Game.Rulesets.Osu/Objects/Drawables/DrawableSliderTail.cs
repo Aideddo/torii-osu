@@ -10,6 +10,7 @@ using osu.Framework.Utils;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Configuration;
+using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -33,6 +34,16 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
         public SkinnableDrawable? CirclePiece { get; private set; }
 
         private Container scaleContainer = null!;
+
+        [Resolved(CanBeNull = true)]
+        private OsuVisualOrdering? visualOrdering { get; set; }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            if (visualOrdering?.IsActive == true && CirclePiece != null)
+                visualOrdering.Register(CirclePiece, this, OsuVisualKind.CircleGroup);
+        }
 
         public DrawableSliderTail()
             : base(null)

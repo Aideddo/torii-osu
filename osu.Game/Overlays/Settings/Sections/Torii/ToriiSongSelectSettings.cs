@@ -1,133 +1,103 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
+using osu.Game.Graphics;
+using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterfaceV2;
-using osu.Game.Localisation;
+using osu.Game.Overlays.Dialog;
 
 namespace osu.Game.Overlays.Settings.Sections.Torii
 {
-    /// <summary>
-    /// torii: opciones que SOLO afectan el song select. el stable song select vive aca; el "strictly
-    /// vertical UI" tambien esta espejado en Settings -> User Interface -> Song Select (mismo bindable).
-    /// </summary>
     public partial class ToriiSongSelectSettings : SettingsSubsection
     {
-        protected override LocalisableString Header => "Song Select";
+        protected override LocalisableString Header => "Stable UI";
 
-        // el toggle stable (que ademas trae el footer legacy bundleado). cuando esta prendido, el footer
-        // legacy va si o si, asi que el toggle de abajo queda forzado prendido y deshabilitado.
-        // se asignan en load() con el bindable del config DIRECTO (no new + BindTo a un temporal): las
-        // bindings de osu!framework son weak-ref y un bound-copy temporal sin guardar se lo come el GC,
-        // y ahi el toggle dejaba de reaccionar (quedaba grisado aunque apagaras el stable).
-        private Bindable<bool> stableSongSelect = null!;
+        private readonly Dictionary<OsuSetting, BindableBool> staged = new Dictionary<OsuSetting, BindableBool>();
+        private readonly Dictionary<OsuSetting, Bindable<bool>> persisted = new Dictionary<OsuSetting, Bindable<bool>>();
+        private Bindable<UIThemeOption> theme = null!;
+        private SettingsButtonV2 applyButton = null!;
+        private OsuTextFlowContainer hint = null!;
+        private OsuConfigManager config = null!;
 
-        // la preferencia REAL del usuario para el footer legacy standalone (lo que se guarda en config).
-        private Bindable<bool> footerPref = null!;
+        [Resolved(CanBeNull = true)]
+        private OsuGame? game { get; set; }
 
-        // lo que ve el checkbox: refleja la pref cuando stable esta apagado, o queda checked+disabled
-        // cuando stable esta prendido. el writeback a footerPref solo persiste clicks REALES del usuario.
-        private readonly BindableBool footerDisplay = new BindableBool();
-
-        // suppress flag (mismo patron que PotatoModeToggleAndRestart / ToriiAuraSettings): cuando
-        // syncDisplay() escribe footerDisplay.Value programaticamente, el evento de cambio se dispara
-        // SINCRONO. sin esta bandera, el writeback de abajo correria con Disabled todavia en false
-        // (lo seteamos despues) y pisaria footerPref. con la bandera solo guardamos clicks del usuario.
-        private bool syncingDisplay;
+        [Resolved(CanBeNull = true)]
+        private IDialogOverlay? dialogs { get; set; }
 
         [BackgroundDependencyLoader]
-        private void load(OsuConfigManager config)
+        private void load(OsuConfigManager config, OsuColour colours)
         {
-            stableSongSelect = config.GetBindable<bool>(OsuSetting.ToriiLegacyFooterUseSkin);
-            footerPref = config.GetBindable<bool>(OsuSetting.ToriiLegacySongSelectFooter);
-
+            this.config = config;
             Children = new Drawable[]
             {
-                new SettingsItemV2(new FormCheckBox
+                checkbox(OsuSetting.ToriiStableUISongSelect, "Stable Song Select & Carousel"),
+                checkbox(OsuSetting.ToriiStableUIResults, "Stable Results Screen"),
+                checkbox(OsuSetting.ToriiStableUIMods, "Stable Mod Select Screen"),
+                checkbox(OsuSetting.ToriiStableUIFooter, "Stable Footer & Buttons"),
+                checkbox(OsuSetting.ToriiStableUIFonts, "Stable Classic Fonts"),
+                hint = new OsuTextFlowContainer(t => t.Font = OsuFont.Style.Caption1)
                 {
-                    Caption = "Legacy (stable-style) song select",
-                    Current = config.GetBindable<bool>(OsuSetting.ToriiLegacyFooterUseSkin),
-                    HintText = "Makes song select look like osu!stable: a skinnable legacy footer (back / mode / mods / random / options "
-                               + "+ your rank panel) and the modern filter/sort bar and info wedges hidden. Turn off for the standard lazer UI.",
-                    NewFeatureId = NewFeatureRegistry.LegacyFooterSkin,
-                })
-                {
-                    Keywords = new[] { @"footer", @"skin", @"song", @"select", @"legacy", @"bottom", @"buttons", @"torii", @"stable" },
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Padding = SettingsPanel.CONTENT_PADDING,
                 },
-                new SettingsItemV2(new FormCheckBox
+                applyButton = new SettingsButtonV2
                 {
-                    Caption = "Use stable font (Aller)",
-                    Current = config.GetBindable<bool>(OsuSetting.ToriiLegacyFont),
-                    HintText = "The legacy (stable-style) song select uses the modern lazer font by default. Turn this on to use osu!stable's own \"Aller\" font "
-                               + "across it for a 1:1 stable look. Applies next time you open song select.",
-                    NewFeatureId = NewFeatureRegistry.LegacyFont,
-                })
-                {
-                    Keywords = new[] { @"font", @"aller", @"typeface", @"stable", @"legacy", @"song", @"select", @"torii" },
-                },
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = "Legacy (stable-style) results screen",
-                    Current = config.GetBindable<bool>(OsuSetting.ToriiStableResults),
-                    HintText = "The score details view becomes osu!stable's ranking panel (skinnable score font, grade, hit counts, mods and full-combo banner), "
-                               + "shown automatically after playing a map. Scroll down for PP, the accuracy heatmap and map tags. Applies to results screens opened after changing this.",
-                    NewFeatureId = NewFeatureRegistry.StableResults,
-                })
-                {
-                    Keywords = new[] { @"results", @"ranking", @"panel", @"score", @"legacy", @"stable", @"torii" },
-                },
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = "Legacy footer",
-                    Current = footerDisplay,
-                    HintText = "Shows the stable-style song-select footer (back / mode / mods / random / options + your rank panel) "
-                               + "over the normal lazer UI. It is always on and included when \"Legacy (stable-style) song select\" is enabled, so this can only be changed while that option is off.",
-                    NewFeatureId = NewFeatureRegistry.LegacySongSelectFooter,
-                })
-                {
-                    Keywords = new[] { @"footer", @"legacy", @"stable", @"bottom", @"buttons", @"song", @"select", @"torii" },
-                },
-                // mirror del toggle de Settings -> User Interface -> Song Select (mismo bindable, en sync).
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = UserInterfaceStrings.UnslantedSongSelectUI,
-                    HintText = UserInterfaceStrings.UnslantedSongSelectUIDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.UnslantedSongSelectUI),
-                })
-                {
-                    Keywords = new[] { @"slant", @"unslant", @"vertical", @"straight", @"shear", @"song", @"select", @"torii" },
+                    Text = "Apply Changes to Theme",
+                    BackgroundColour = colours.Pink,
+                    Action = apply,
+                    Enabled = { Value = false },
+                    Keywords = new[] { "stable", "theme", "apply", "restart" },
                 },
             };
 
-            stableSongSelect.BindValueChanged(_ => syncDisplay(), true);
-            footerPref.BindValueChanged(_ => syncDisplay());
-
-            // writeback: solo persistimos cuando el cambio vino de un click real del usuario
-            // (no durante syncDisplay, y solo posible cuando el checkbox no esta disabled).
-            footerDisplay.BindValueChanged(e =>
-            {
-                if (!syncingDisplay)
-                    footerPref.Value = e.NewValue;
-            });
+            theme = config.GetBindable<UIThemeOption>(OsuSetting.UITheme);
+            theme.BindValueChanged(_ => Schedule(updatePendingState));
+            updatePendingState();
         }
 
-        private void syncDisplay()
+        private SettingsItemV2 checkbox(OsuSetting setting, string caption)
         {
-            syncingDisplay = true;
+            var value = new BindableBool(config.Get<bool>(setting));
+            staged.Add(setting, value);
+            value.BindValueChanged(_ => updatePendingState());
+            var saved = config.GetBindable<bool>(setting);
+            persisted.Add(setting, saved);
+            saved.BindValueChanged(_ => Schedule(updatePendingState));
+            return new SettingsItemV2(new FormCheckBox { Caption = caption, Current = value })
+            {
+                ShowRevertToDefaultButton = false,
+                Keywords = new[] { "stable", "legacy", "retro", "theme", caption },
+            };
+        }
 
-            bool stableOn = stableSongSelect.Value;
+        private void updatePendingState()
+        {
+            bool hasPendingChanges = staged.Any(pair => pair.Value.Value != config.Get<bool>(pair.Key));
+            applyButton.Enabled.Value = hasPendingChanges;
+            hint.Text = config.Get<UIThemeOption>(OsuSetting.UITheme) != UIThemeOption.StableUI
+                ? "These settings apply when you select Stable UI in the theme settings."
+                : "Changes take effect after restarting the game.";
+        }
 
-            // limpiamos Disabled antes de tocar Value asi nunca escribimos sobre un bindable bloqueado.
-            footerDisplay.Disabled = false;
-            footerDisplay.Value = stableOn || footerPref.Value;
-            // con stable prendido el footer va si o si: checked y bloqueado.
-            footerDisplay.Disabled = stableOn;
+        private void apply()
+        {
+            if (!applyButton.Enabled.Value)
+                return;
 
-            syncingDisplay = false;
+            foreach (var pair in staged)
+                config.SetValue(pair.Key, pair.Value.Value);
+
+            UIThemeRestartCoordinator.ApplyStableUI(config, game, dialogs);
+            updatePendingState();
         }
     }
 }

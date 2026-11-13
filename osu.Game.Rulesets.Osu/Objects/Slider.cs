@@ -4,6 +4,7 @@
 #nullable disable
 
 using osuTK;
+using System;
 using osu.Game.Rulesets.Objects.Types;
 using System.Collections.Generic;
 using osu.Game.Rulesets.Objects;
@@ -16,6 +17,7 @@ using osu.Framework.Caching;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Beatmaps.Formats;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Objects.Legacy;
 using osu.Game.Rulesets.Osu.Judgements;
@@ -162,7 +164,8 @@ namespace osu.Game.Rulesets.Osu.Objects
             Velocity = BASE_SCORING_DISTANCE * difficulty.SliderMultiplier / LegacyRulesetExtensions.GetPrecisionAdjustedBeatLength(this, timingPoint, OsuRuleset.SHORT_NAME);
             // WARNING: this is intentionally not computed as `BASE_SCORING_DISTANCE * difficulty.SliderMultiplier`
             // for backwards compatibility reasons (intentionally introducing floating point errors to match stable).
-            double scoringDistance = Velocity * timingPoint.BeatLength;
+            double beatLength = timingPoint.LegacyBeatLength ?? timingPoint.BeatLength;
+            double scoringDistance = Velocity * Math.Clamp(beatLength > 0 ? beatLength : TimingControlPoint.DEFAULT_BEAT_LENGTH, 1e-7, Parsing.MAX_PARSE_VALUE);
 
             TickDistance = GenerateTicks ? (scoringDistance / difficulty.SliderTickRate * TickDistanceMultiplier) : double.PositiveInfinity;
         }

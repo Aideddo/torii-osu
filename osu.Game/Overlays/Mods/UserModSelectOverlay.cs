@@ -54,6 +54,9 @@ namespace osu.Game.Overlays.Mods
         }
 
         protected override IReadOnlyList<Mod> ComputeNewModsFromSelection(IReadOnlyList<Mod> oldSelection, IReadOnlyList<Mod> newSelection)
+            => NormalizeSelection(oldSelection, newSelection);
+
+        public static IReadOnlyList<Mod> NormalizeSelection(IReadOnlyList<Mod> oldSelection, IReadOnlyList<Mod> newSelection)
         {
             var addedMods = newSelection.Except(oldSelection);
             var removedMods = oldSelection.Except(newSelection);
@@ -76,7 +79,7 @@ namespace osu.Game.Overlays.Mods
             if (finalMods.Any(isRatePitchAdjusting))
                 finalMods.RemoveAll(m => m is ModPitchAdjust);
 
-            return finalMods;
+            return finalMods.DistinctBy(m => m.GetType()).ToArray();
         }
 
         private void removePitchAdjustIfRatePitchIsOn()

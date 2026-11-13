@@ -24,6 +24,8 @@ namespace osu.Game.Skinning.Select
         /// <summary>de donde salen las texturas del boton. null = el skin actual.</summary>
         public ISkin? TextureSource { get; init; }
 
+        public Action? RightClickAction { get; init; }
+
         /// <summary>
         /// cuando el glyph base de este boton es en realidad la decoracion skinnable-top gigante del skin
         /// (tipico de selection-mode), no lo dibujamos como glyph del boton: clampeado al slot saldria una
@@ -61,13 +63,13 @@ namespace osu.Game.Skinning.Select
 
             Texture? texture(string name)
             {
-                var tex = source.GetTexture(name) ?? skins.DefaultClassicSkin.GetTexture(name);
+                var tex = source.GetStableTexture(name) ?? skins.DefaultClassicSkin.GetStableTexture(name);
 
                 // una textura tamaño-decoracion no sirve como glyph de boton (hay skins que meten
                 // el arte entero del footer en estos slots); caemos al glyph classic bundleado en
                 // vez de dibujarla gigante encima de todo.
                 if (tex != null && Math.Max(tex.DisplayWidth, tex.DisplayHeight) > max_glyph_dimension)
-                    tex = skins.DefaultClassicSkin.GetTexture(name);
+                    tex = skins.DefaultClassicSkin.GetStableTexture(name);
 
                 return tex;
             }
@@ -78,11 +80,12 @@ namespace osu.Game.Skinning.Select
             var overTex = texture($"selection-{kind}-over") ?? baseTex;
 
             // si este boton lleva en realidad la decoracion gigante (ej: selection-mode usado como
-            // skinnable-top), no la dibujamos como glyph ni como hover: la dibuja aparte LegacyFooter.
+            // skinnable-top), no la dibujamos como glyph: la dibuja aparte LegacyFooter. su "-over" si, porque stable lo
+            // dibuja aparte en el mismo lugar (selection-mode-over); sin uno no caemos a la decoracion.
             if (SuppressBaseGlyph)
             {
+                overTex = overTex == baseTex ? null : overTex;
                 baseTex = null;
-                overTex = null;
             }
 
             var overSize = overTex != null ? new Vector2(overTex.DisplayWidth, overTex.DisplayHeight) : Vector2.Zero;
@@ -107,9 +110,9 @@ namespace osu.Game.Skinning.Select
                     Texture = overTex,
                     BypassAutoSizeAxes = Axes.Both,
                     Size = sizeFor(overTex),
+                    // stable fades it from .01 to 1 over the base glyph, blended normally.
                     Alpha = 0,
                     AlwaysPresent = true,
-                    Blending = BlendingParameters.Additive,
                 },
                 hoverSound = new SkinnableSound(new SampleInfo("click-short")),
                 clickSound = new SkinnableSound(new SampleInfo("click-short-confirm")),
@@ -130,6 +133,17 @@ namespace osu.Game.Skinning.Select
         {
             hoverSprite.FadeOut(100);
             base.OnHoverLost(e);
+        }
+
+        protected override bool OnMouseDown(MouseDownEvent e)
+        {
+            if (e.Button == osuTK.Input.MouseButton.Right && RightClickAction != null)
+            {
+                RightClickAction.Invoke();
+                return true;
+            }
+
+            return base.OnMouseDown(e);
         }
 
         protected override bool OnClick(ClickEvent e)

@@ -136,7 +136,7 @@ namespace osu.Game.Screens.Ranking
         private void load(AudioManager audio, Configuration.OsuConfigManager config)
         {
             config.BindWith(Configuration.OsuSetting.UseV2ResultsScreen, useV2ResultsScreen);
-            config.BindWith(Configuration.OsuSetting.ToriiStableResults, useLegacyResults);
+            useLegacyResults.Value = Configuration.ToriiStableUI.Results(config);
             config.BindWith(Configuration.OsuSetting.ToriiResultsNoticeSeen, noticeSeen);
 
             popInSample = audio.Samples.Get(@"UI/overlay-pop-in");

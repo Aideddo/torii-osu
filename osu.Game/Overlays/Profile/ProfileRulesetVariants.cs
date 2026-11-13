@@ -21,9 +21,9 @@ namespace osu.Game.Overlays.Profile
         // shortname api -> (base, nombre visible, online id del server, label corto del tab)
         private static readonly (string shortName, string baseShortName, string name, int onlineId, string label)[] variants =
         {
-            (@"osurx", @"osu", @"standard (relax)", 4, @"relax"),
-            (@"osuap", @"osu", @"standard (autopilot)", 5, @"autopilot"),
-            (@"taikorx", @"taiko", @"taiko (relax)", 6, @"relax"),
+            (@"osurx", @"osu", @"torii (relax)", 4, @"relax"),
+            (@"osuap", @"osu", @"torii (autopilot)", 5, @"autopilot"),
+            (@"taikorx", @"taiko", @"torii drums (relax)", 6, @"relax"),
         };
 
         public static bool IsVariant(IRulesetInfo? ruleset)

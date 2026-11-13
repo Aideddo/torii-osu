@@ -3,6 +3,7 @@
 
 #nullable disable
 
+using System;
 using System.Collections.Generic;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
@@ -39,6 +40,10 @@ namespace osu.Game.Overlays.ToriiBriefing
         public LocalisableString ToggleCaption { get; init; }
         public LocalisableString ToggleHint { get; init; }
         public Color4 Accent { get; init; } = BriefingTheme.AccentPink;
+        public LocalisableString ActionLabel { get; init; }
+        public Action Action { get; init; }
+        public LocalisableString DismissLabel { get; init; } = "Got it";
+        public LocalisableString Credit { get; init; }
 
         /// <summary>el bindable de config (ya bindeado) de la opcion que ofrece el popup. lo guardamos
         /// como campo (init) asi no lo recolecta el GC y la binding del checkbox sobrevive.</summary>
@@ -136,10 +141,11 @@ namespace osu.Game.Overlays.ToriiBriefing
                         },
                     },
                 },
-                new OsuSpriteText
+                new OsuTextFlowContainer(t => t.Font = OsuFont.GetFont(size: BriefingTheme.TypeTitle, weight: FontWeight.SemiBold))
                 {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
                     Text = Title,
-                    Font = OsuFont.GetFont(size: BriefingTheme.TypeTitle, weight: FontWeight.SemiBold),
                 },
                 bodyFlow = new OsuTextFlowContainer(t => t.Font = OsuFont.GetFont(size: BriefingTheme.TypeBody))
                 {
@@ -175,15 +181,43 @@ namespace osu.Game.Overlays.ToriiBriefing
                 });
             }
 
+            if (Action != null)
+            {
+                items.Add(new DismissButton(Accent)
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Width = 320,
+                    Height = 44,
+                    LabelText = ActionLabel,
+                    Action = () =>
+                    {
+                        Hide();
+                        Action();
+                    },
+                });
+            }
+
             items.Add(new DismissButton(Accent)
             {
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre,
                 Width = 320,
                 Height = 44,
-                LabelText = "Got it",
+                LabelText = DismissLabel,
                 Action = Hide,
             });
+
+            if (Credit != default)
+            {
+                items.Add(new OsuTextFlowContainer(t => t.Font = OsuFont.GetFont(size: 11, weight: FontWeight.Regular))
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Text = Credit,
+                    Colour = Color4.Gray,
+                });
+            }
 
             content.AddRange(items);
         }

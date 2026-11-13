@@ -103,6 +103,9 @@ namespace osu.Game.Configuration
         /// </summary>
         [Description("Midnight (Cerulean)")]
         MidnightCerulean,
+
+        [Description("Stable UI")]
+        StableUI,
     }
 
     /// <summary>

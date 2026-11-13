@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Net;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -325,10 +326,19 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
                 submitting = false;
                 confirmButton.Enabled.Value = true;
                 // el server rechaza < piso (422) o si ya elegiste (409); re-fetcheamos el estado.
-                subtitleText.Text = e.Message;
+                subtitleText.Text = GetSaveErrorMessage(e, pick.MinValue);
                 fetchFloor();
             });
             api.Queue(req);
         }
+
+        internal static string GetSaveErrorMessage(Exception error, double minimumDifficulty)
+            => (error as APIException)?.StatusCode switch
+            {
+                HttpStatusCode.Conflict => "You have already chosen your star rating for this season.",
+                HttpStatusCode.UnprocessableEntity => FormattableString.Invariant($"Choose at least {minimumDifficulty:0.00} stars based on your top plays."),
+                HttpStatusCode.Unauthorized => "Please sign in again to save your star rating.",
+                _ => "Could not save your star rating. Please try again.",
+            };
     }
 }

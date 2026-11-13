@@ -225,7 +225,8 @@ namespace osu.Game.Beatmaps.Formats
                 if (groupTimingPoint != null)
                 {
                     writer.Write(FormattableString.Invariant($"{groupTimingPoint.Time},"));
-                    writer.Write(FormattableString.Invariant($"{groupTimingPoint.BeatLength},"));
+                    double beatLength = groupTimingPoint.LegacyBeatLength ?? groupTimingPoint.BeatLength;
+                    writer.Write(FormattableString.Invariant($"{beatLength},"));
 
                     // `LegacyControlPointProperties` is a struct, thus it has by-value semantics,
                     // thus assigning `controlPointProperties` to a local creates a copy.
@@ -235,7 +236,12 @@ namespace osu.Game.Beatmaps.Formats
                     // as the legacy format writes it out as "negative beat length".
                     // Setting it to the default value of 1 ensures that any non-default slider velocity
                     // will not be subject to the `IsRedundant()` guard lower down and thus still be output correctly.
-                    timingPointProperties.SliderVelocity = 1;
+                    var velocityBounds = scrollSpeedEncodedAsSliderVelocity
+                        ? EffectControlPoint.DEFAULT.ScrollSpeedBindable
+                        : DifficultyControlPoint.DEFAULT.SliderVelocityBindable;
+                    timingPointProperties.SliderVelocity = onlineRulesetID != 0 && beatLength < 0
+                        ? Math.Clamp(100 / -beatLength, velocityBounds.MinValue, velocityBounds.MaxValue)
+                        : 1;
 
                     // Kiai flag cannot be specified on the first timing point in the beatmap:
                     // https://github.com/peppy/osu-stable-reference/blob/0b8b19af621dbb282773c22b36cc0453942b98d8/osu!/GameModes/Edit/Forms/TimingEntry.cs#L492-L495
@@ -287,7 +293,7 @@ namespace osu.Game.Beatmaps.Formats
                 return new LegacyControlPointProperties
                 {
                     SliderVelocity = difficultyPoint.SliderVelocity,
-                    TimingSignature = timingPoint.TimeSignature.Numerator,
+                    TimingSignature = timingPoint.LegacyTimeSignature ?? timingPoint.TimeSignature.Numerator,
                     SampleBank = updateSampleBank ? (int)toLegacySampleBank(tempHitSample.Bank) : lastControlPointProperties.SampleBank,
                     // Inherit the previous custom sample bank if the current custom sample bank is not set
                     CustomSampleBank = customSampleBank >= 0 ? customSampleBank : lastControlPointProperties.CustomSampleBank,
@@ -558,7 +564,7 @@ namespace osu.Game.Beatmaps.Formats
             var curveData = pathData as IHasPathWithRepeats;
 
             writer.Write(FormattableString.Invariant($"{(curveData?.RepeatCount ?? 0) + 1},"));
-            writer.Write(FormattableString.Invariant($"{pathData.Path.ExpectedDistance.Value ?? pathData.Path.Distance},"));
+            writer.Write(FormattableString.Invariant($"{pathData.Path.ExpectedDistance.Value ?? 0},"));
 
             if (curveData != null)
             {

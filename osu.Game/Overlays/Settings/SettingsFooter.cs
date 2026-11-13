@@ -7,13 +7,16 @@ using osu.Framework.Development;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Rulesets;
+using osu.Game.Overlays.Dialog;
 using osuTK;
 using osuTK.Graphics;
 
@@ -54,7 +57,13 @@ namespace osu.Game.Overlays.Settings
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                }
+                },
+                new CreditsButton
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Margin = new MarginPadding { Top = 8 },
+                },
             };
 
             foreach (var ruleset in rulesets.AvailableRulesets)
@@ -76,6 +85,46 @@ namespace osu.Game.Overlays.Settings
                 {
                     RulesetStore.LogRulesetFailure(ruleset, e);
                 }
+            }
+        }
+
+        internal partial class CreditsDialog : PopupDialog
+        {
+            public CreditsDialog()
+            {
+                HeaderText = "With thanks";
+                BodyText = "GooGuTeam (g0v0) - server and client contributions.\n\n"
+                           + "shigetiro - the client work Torii builds on.\n\n"
+                           + "telecomadm1145 - Stable UI and 2B/Aspire improvements, integrated with permission.\n\n"
+                           + "ppy and contributors - osu! and osu!framework.\n\n"
+                           + "Third-party licences and copyright notices are included with Torii. Credits do not imply endorsement.";
+                Icon = FontAwesome.Solid.Heart;
+                Buttons = new PopupDialogButton[] { new PopupDialogOkButton { Text = "Close" } };
+            }
+        }
+
+        private partial class CreditsButton : OsuAnimatedButton, IHasTooltip
+        {
+            public LocalisableString TooltipText => "Thanks to our contributors";
+
+            public CreditsButton()
+            {
+                Size = new Vector2(30);
+                Content.Child = new SpriteIcon
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Size = new Vector2(14),
+                    Icon = FontAwesome.Solid.Heart,
+                    Colour = Color4.HotPink,
+                };
+            }
+
+            [BackgroundDependencyLoader(true)]
+            private void load(IDialogOverlay? dialogs)
+            {
+                Enabled.Value = dialogs != null;
+                Action = () => dialogs?.Push(new CreditsDialog());
             }
         }
 

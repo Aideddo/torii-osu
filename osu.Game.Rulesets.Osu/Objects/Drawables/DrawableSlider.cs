@@ -19,6 +19,7 @@ using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Judgements;
 using osu.Game.Rulesets.Osu.Skinning.Default;
+using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Skinning;
 using osuTK;
@@ -70,6 +71,9 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
         private Container<DrawableSliderTick> tickContainer;
         private Container<DrawableSliderRepeat> repeatContainer;
         private PausableSkinnableSound slidingSample;
+
+        [Resolved(CanBeNull = true)]
+        private OsuVisualOrdering visualOrdering { get; set; }
 
         private readonly LayoutValue relativeAnchorPositionLayout;
 
@@ -139,6 +143,16 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
         }
 
         protected override JudgementResult CreateResult(Judgement judgement) => new OsuSliderJudgementResult(HitObject, judgement);
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            if (visualOrdering?.IsActive == true)
+            {
+                visualOrdering.Register(Body, this, OsuVisualKind.Body, localDepth: 1);
+                visualOrdering.Register(Ball, this, OsuVisualKind.Ball);
+            }
+        }
 
         protected override void OnApply()
         {

@@ -24,6 +24,19 @@ namespace osu.Game.Screens.Select
         public bool BeatmapSetsGroupedTogether { get; private set; }
 
         /// <summary>
+        /// Whether legacy song select collapses each beatmap set into one panel, as osu!stable does whenever it would group sets together:
+        /// a set shows as its first difficulty (stable's group leader) until it is expanded, and there is no separate set panel.
+        /// </summary>
+        public bool LegacySetsCollapsed { get; private set; }
+
+        /// <summary>
+        /// The first difficulty of each set while <see cref="LegacySetsCollapsed"/>, which stands for the whole set while it is collapsed.
+        /// </summary>
+        public IReadOnlySet<CarouselItem> LegacySetLeaders => legacySetLeaders;
+
+        private HashSet<CarouselItem> legacySetLeaders = new HashSet<CarouselItem>();
+
+        /// <summary>
         /// The total number of beatmap difficulties displayed post filter.
         /// </summary>
         public int BeatmapItemsCount { get; private set; }
@@ -54,6 +67,12 @@ namespace osu.Game.Screens.Select
         /// </summary>
         public BeatmapDifficultyCache? DifficultyCache { get; set; }
 
+        /// <summary>
+        /// Whether the legacy song select appearance is active. Legacy song select displays individual
+        /// difficulties directly, without the modern beatmap set panel.
+        /// </summary>
+        public Func<bool>? IsLegacySongSelect { get; init; }
+
         public async Task<List<CarouselItem>> Run(IEnumerable<CarouselItem> items, CancellationToken cancellationToken)
         {
             return await Task.Run(() =>
@@ -65,8 +84,12 @@ namespace osu.Game.Screens.Select
 
                 var criteria = GetCriteria();
                 var newItems = new List<CarouselItem>();
+                bool legacySongSelectActive = IsLegacySongSelect?.Invoke() == true;
 
-                BeatmapSetsGroupedTogether = ShouldGroupBeatmapsTogether(criteria);
+                BeatmapSetsGroupedTogether = !legacySongSelectActive && ShouldGroupBeatmapsTogether(criteria);
+                LegacySetsCollapsed = legacySongSelectActive && ShouldGroupBeatmapsTogether(criteria);
+
+                var newSetLeaders = new HashSet<CarouselItem>();
 
                 var groups = getGroups((List<CarouselItem>)items, criteria);
                 int displayedBeatmapsCount = 0;
@@ -126,10 +149,17 @@ namespace osu.Game.Screens.Select
                                 groupItem.NestedItemCount++;
                         }
 
-                        addItem(new CarouselItem(new GroupedBeatmap(group, beatmap))
+                        var beatmapItem = new CarouselItem(new GroupedBeatmap(group, beatmap))
                         {
-                            DrawHeight = BeatmapSetsGroupedTogether ? PanelBeatmap.HEIGHT : PanelBeatmapStandalone.HEIGHT,
-                        });
+                            DrawHeight = legacySongSelectActive
+                                ? PanelBeatmapStandalone.LEGACY_HEIGHT
+                                : BeatmapSetsGroupedTogether ? PanelBeatmap.HEIGHT : PanelBeatmapStandalone.HEIGHT,
+                        };
+
+                        if (LegacySetsCollapsed && newBeatmapSet)
+                            newSetLeaders.Add(beatmapItem);
+
+                        addItem(beatmapItem);
                         lastBeatmap = beatmap;
                         displayedBeatmapsCount++;
                     }
@@ -142,7 +172,8 @@ namespace osu.Game.Screens.Select
                         currentGroupItems?.Add(i);
                         currentSetItems?.Add(i);
 
-                        i.IsVisible = i.Model is GroupDefinition || (group == null && (i.Model is GroupedBeatmapSet || !BeatmapSetsGroupedTogether));
+                        i.IsVisible = i.Model is GroupDefinition
+                                      || (group == null && (i.Model is GroupedBeatmapSet || (!BeatmapSetsGroupedTogether && (!LegacySetsCollapsed || newSetLeaders.Contains(i)))));
                     }
                 }
 
@@ -151,6 +182,7 @@ namespace osu.Game.Screens.Select
                 Interlocked.Exchange(ref itemMap, newItemMap);
                 Interlocked.Exchange(ref setMap, newSetMap);
                 Interlocked.Exchange(ref groupMap, newGroupMap);
+                Interlocked.Exchange(ref legacySetLeaders, newSetLeaders);
                 BeatmapItemsCount = displayedBeatmapsCount;
                 return newItems;
             }, cancellationToken).ConfigureAwait(false);

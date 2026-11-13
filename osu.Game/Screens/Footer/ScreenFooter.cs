@@ -363,7 +363,7 @@ namespace osu.Game.Screens.Footer
 
                 if (newButton.Overlay != null)
                 {
-                    newButton.Action = () => showOverlay(newButton.Overlay);
+                    newButton.Action = newButton.ToggleOverlay ?? (() => showOverlay(newButton.Overlay));
                     overlays.Add(newButton.Overlay);
                 }
 

@@ -171,6 +171,7 @@ namespace osu.Game
         private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay stableSongSelectDisclaimer;
         private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay newDefaultThemeHint;
         private bool newThemeHintScheduled;
+        private bool stableV2PromoScheduled;
 
         // torii: preview transitorio del tamano de cursor, lo dispara el hotkey Ctrl+Shift+rueda/+/-.
         private CursorSizePreviewOverlay cursorSizePreview;
@@ -302,6 +303,7 @@ namespace osu.Game
         private OsuLogo osuLogo;
 
         private MainMenu menuScreen;
+        private ScreenFrontLayer screenFrontLayer;
 
         [CanBeNull]
         private DevBuildBanner devBuildBanner;
@@ -1368,7 +1370,14 @@ namespace osu.Game
 
             Add(sessionIdleTracker);
 
-            Container logoContainer;
+            Container logoContainer = null;
+            bool logoInFront = false;
+
+            void updateLogoDepth()
+            {
+                float depth = !logoInFront ? 0 : screenFrontLayer?.HoldLogoBelow.Value == true ? -1.5f : float.MinValue;
+                ScreenContainer.ChangeChildDepth(logoContainer, depth);
+            }
 
             ScreenContainer = new ScalingContainer(ScalingMode.ExcludeOverlays)
             {
@@ -1395,12 +1404,20 @@ namespace osu.Game
                         Child = screenStackFooter = new ScreenStackFooter(ScreenStack, backReceptor)
                         {
                             // TODO: this is really really weird and should not exist.
-                            RequestLogoInFront = inFront => ScreenContainer.ChangeChildDepth(logoContainer, inFront ? float.MinValue : 0),
+                            RequestLogoInFront = inFront =>
+                            {
+                                logoInFront = inFront;
+                                updateLogoDepth();
+                            },
                             BackButtonPressed = handleBackButton
                         },
                     },
+                    screenFrontLayer = new ScreenFrontLayer { Depth = -2 },
                 }
             };
+
+            Dependencies.Cache(screenFrontLayer);
+            screenFrontLayer.HoldLogoBelow.BindValueChanged(_ => updateLogoDepth());
 
             AddRange(new Drawable[]
             {
@@ -1549,20 +1566,17 @@ namespace osu.Game
 
             loadComponentSingleFile(stableSongSelectPromo = new osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay
             {
-                Title = "Try the stable song select!",
-                ToggleCaption = "Stable song select",
-                ToggleHint = "A classic stable-style song select. You can also find it in Settings, Torii, Interface.",
-                Accent = osu.Game.Overlays.ToriiBriefing.BriefingTheme.AccentCyan,
-                Toggle = LocalConfig.GetBindable<bool>(OsuSetting.ToriiLegacyFooterUseSkin),
+                Title = "The stable song select has been upgraded!",
+                ActionLabel = "Try Stable UI",
+                DismissLabel = "Not now",
+                Credit = "Original UI and assets by telecomadm1145. Integrated into Torii with permission.",
+                Action = () => osu.Game.Overlays.Settings.UIThemeRestartCoordinator.ApplyStableUI(LocalConfig, this, dialogOverlay),
             }, topMostOverlayContent.Add);
 
             loadComponentSingleFile(stableSongSelectDisclaimer = new osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay
             {
                 Title = "Stable song select is experimental",
-                ToggleCaption = "Stable song select",
-                ToggleHint = "Turn off any time if you experience visual bugs or prefer the default.",
                 Accent = osu.Game.Overlays.ToriiBriefing.BriefingTheme.AccentCyan,
-                Toggle = LocalConfig.GetBindable<bool>(OsuSetting.ToriiLegacyFooterUseSkin),
             }, topMostOverlayContent.Add);
 
             // torii: aviso (una sola vez) de que glass es el nuevo theme default. sin toggle, solo informa;
@@ -2323,16 +2337,15 @@ namespace osu.Game
             if (OverlayActivationMode.Value == OverlayActivation.Disabled)
                 return;
 
-            if (LocalConfig.Get<bool>(OsuSetting.ToriiStablePromoShown))
+            if (LocalConfig.Get<bool>(OsuSetting.ToriiStableV2PromoShown))
                 return;
 
-            // si ya la tiene prendida no tiene sentido ofrecersela.
-            if (LocalConfig.Get<bool>(OsuSetting.ToriiLegacyFooterUseSkin))
+            if (stableSongSelectPromo == null || !stableSongSelectPromo.IsLoaded)
                 return;
 
-            LocalConfig.SetValue(OsuSetting.ToriiStablePromoShown, true);
+            LocalConfig.SetValue(OsuSetting.ToriiStableV2PromoShown, true);
 
-            stableSongSelectPromo?.Present("We brought back a classic stable-style song select. Want to try it? Turn it on below, or any time in Settings, Torii, Interface.");
+            stableSongSelectPromo.Present("The classic interface now includes a retro carousel, results screen and mod selector. Try the full Stable UI theme or choose its components in Settings > Torii > Stable UI.");
         }
 
         /// <summary>
@@ -2379,7 +2392,7 @@ namespace osu.Game
 
             LocalConfig.SetValue(OsuSetting.ToriiStableDisclaimerSeen, true);
 
-            stableSongSelectDisclaimer?.Present("Heads up: the stable song select is experimental. Some skins may look broken and there can be bugs. You can turn it off below or anytime in Settings.");
+            stableSongSelectDisclaimer?.Present("Heads up: the stable song select is experimental. Some skins may look broken and there can be bugs. You can change its components in Settings, Torii, Stable UI, then apply and restart.");
         }
 
         private void postStableSongSelectDisclaimer()
@@ -2445,6 +2458,16 @@ namespace osu.Game
                 case MainMenu menu:
                     menuScreen = menu;
                     devBuildBanner?.Show();
+                    if (!stableV2PromoScheduled && !LocalConfig.Get<bool>(OsuSetting.ToriiStableV2PromoShown))
+                    {
+                        stableV2PromoScheduled = true;
+                        Scheduler.AddDelayed(() =>
+                        {
+                            stableV2PromoScheduled = false;
+                            if (menuScreen != null && menuScreen.GetChildScreen() == null && newDefaultThemeHint?.State.Value != Visibility.Visible)
+                                ShowStableSongSelectPromo();
+                        }, 1800);
+                    }
                     break;
 
                 case Player player:

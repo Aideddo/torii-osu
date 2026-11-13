@@ -79,7 +79,7 @@ namespace osu.Game.Overlays.Settings
                            + "Crimson (deep red), and Cerulean (deep cyan). For end-to-end skin "
                            + "matching (including gameplay), drop any stable-era .osk into your "
                            + "Skins folder and pick it from the skin dropdown above. Changing this "
-                           + "option restarts the game.",
+                           + "option requires a restart. Stable UI includes separately configurable classic screens under Torii > Stable UI.",
                 Current = themeBindable,
             })
             {
@@ -138,6 +138,12 @@ namespace osu.Game.Overlays.Settings
                     if (suppress || change.NewValue == change.OldValue)
                         return;
 
+                    if (change.NewValue == UIThemeOption.StableUI)
+                    {
+                        dialogOverlay?.Push(new StableUIRestartDialog(game));
+                        return;
+                    }
+
                     // Always route through the confirm dialog rather
                     // than attempting Velopack auto-restart. The
                     // auto-restart path (game.RestartAppWhenExited()
@@ -170,6 +176,22 @@ namespace osu.Game.Overlays.Settings
 
                 registered = true;
             }
+        }
+
+        public static void ApplyStableUI(OsuConfigManager config, OsuGame? game, IDialogOverlay? dialogs)
+        {
+            suppress = true;
+            try
+            {
+                config.SetValue(OsuSetting.UITheme, UIThemeOption.StableUI);
+                config.Save();
+            }
+            finally
+            {
+                suppress = false;
+            }
+
+            dialogs?.Push(new StableUIRestartDialog(game));
         }
     }
 }

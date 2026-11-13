@@ -31,10 +31,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.HitCircles.Components
 
         private readonly Container content;
 
-        [Resolved]
-        private EditorClock editorClock { get; set; }
+        [Resolved(CanBeNull = true)]
+        private EditorClock? editorClock { get; set; }
 
-        private Bindable<bool> showHitMarkers;
+        private Bindable<bool>? showHitMarkers;
 
         public HitCircleOverlapMarker()
         {
@@ -61,11 +61,14 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.HitCircles.Components
             showHitMarkers = config.GetBindable<bool>(OsuSetting.EditorShowHitMarkers);
         }
 
-        [Resolved]
-        private ISkinSource skin { get; set; }
+        [Resolved(CanBeNull = true)]
+        private ISkinSource? skin { get; set; }
 
         public override void UpdateFrom(HitCircle hitObject)
         {
+            if (!IsLoaded || editorClock == null || showHitMarkers == null)
+                return;
+
             base.UpdateFrom(hitObject);
 
             Scale = new Vector2(hitObject.Scale);
@@ -83,7 +86,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.HitCircles.Components
                 content.Alpha = 0.9f * (1 - alpha);
 
                 // TODO: should only update colour on skin/combo/object change.
-                if (hitObject is IHasComboInformation combo && content.Alpha > 0)
+                if (hitObject is IHasComboInformation combo && content.Alpha > 0 && skin != null)
                     ring.BorderColour = combo.GetComboColour(skin);
             }
             else

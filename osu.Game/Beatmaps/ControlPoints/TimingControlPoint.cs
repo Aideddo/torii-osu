@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using Newtonsoft.Json;
 using osu.Framework.Bindables;
 using osu.Game.Beatmaps.Timing;
 using osu.Game.Graphics;
@@ -45,7 +46,32 @@ namespace osu.Game.Beatmaps.ControlPoints
         public TimeSignature TimeSignature
         {
             get => TimeSignatureBindable.Value;
-            set => TimeSignatureBindable.Value = value;
+            set
+            {
+                TimeSignatureBindable.Value = value;
+                LegacyTimeSignature = null;
+            }
+        }
+
+        private int? legacyTimeSignature;
+
+        /// <summary>
+        /// Imported signed legacy meter, when not representable by the positive native signature.
+        /// Assign after <see cref="TimeSignature"/> when restoring imported timing.
+        /// </summary>
+        [JsonProperty(Order = 1)]
+        public int? LegacyTimeSignature
+        {
+            get => legacyTimeSignature;
+            set
+            {
+                if (legacyTimeSignature == value)
+                    return;
+                if (TimeSignatureBindable.Disabled)
+                    throw new InvalidOperationException("Cannot change legacy meter while time signature is disabled.");
+                legacyTimeSignature = value;
+                RaiseChanged();
+            }
         }
 
         /// <summary>
@@ -74,7 +100,34 @@ namespace osu.Game.Beatmaps.ControlPoints
         public double BeatLength
         {
             get => BeatLengthBindable.Value;
-            set => BeatLengthBindable.Value = value;
+            set
+            {
+                BeatLengthBindable.Value = value;
+                LegacyBeatLength = null;
+            }
+        }
+
+        private double? legacyBeatLength;
+
+        /// <summary>
+        /// Raw finite imported redline. Native/editor consumers continue to use bounded <see cref="BeatLength"/>.
+        /// Explicit beat-length edits clear this override, even if the bounded value is unchanged.
+        /// </summary>
+        [JsonProperty(Order = 1)]
+        public double? LegacyBeatLength
+        {
+            get => legacyBeatLength;
+            set
+            {
+                if (value.HasValue && !double.IsFinite(value.Value))
+                    throw new ArgumentOutOfRangeException(nameof(value), "Legacy beat length must be finite.");
+                if (legacyBeatLength == value)
+                    return;
+                if (BeatLengthBindable.Disabled)
+                    throw new InvalidOperationException("Cannot change legacy timing while beat length is disabled.");
+                legacyBeatLength = value;
+                RaiseChanged();
+            }
         }
 
         /// <summary>
@@ -84,9 +137,19 @@ namespace osu.Game.Beatmaps.ControlPoints
 
         public TimingControlPoint()
         {
-            TimeSignatureBindable.BindValueChanged(_ => RaiseChanged());
+            TimeSignatureBindable.BindValueChanged(change =>
+            {
+                if (!change.NewValue.Equals(change.OldValue))
+                    LegacyTimeSignature = null;
+                RaiseChanged();
+            });
             OmitFirstBarLineBindable.BindValueChanged(_ => RaiseChanged());
-            BeatLengthBindable.BindValueChanged(_ => RaiseChanged());
+            BeatLengthBindable.BindValueChanged(change =>
+            {
+                if (change.NewValue != change.OldValue)
+                    LegacyBeatLength = null;
+                RaiseChanged();
+            });
         }
 
         // Timing points are never redundant as they can change the time signature.
@@ -94,9 +157,14 @@ namespace osu.Game.Beatmaps.ControlPoints
 
         public override void CopyFrom(ControlPoint other)
         {
+            if (ReferenceEquals(this, other))
+                return;
+
             TimeSignature = ((TimingControlPoint)other).TimeSignature;
+            LegacyTimeSignature = ((TimingControlPoint)other).LegacyTimeSignature;
             OmitFirstBarLine = ((TimingControlPoint)other).OmitFirstBarLine;
             BeatLength = ((TimingControlPoint)other).BeatLength;
+            LegacyBeatLength = ((TimingControlPoint)other).LegacyBeatLength;
 
             base.CopyFrom(other);
         }
@@ -108,9 +176,11 @@ namespace osu.Game.Beatmaps.ControlPoints
         public bool Equals(TimingControlPoint? other)
             => base.Equals(other)
                && TimeSignature.Equals(other.TimeSignature)
+               && LegacyTimeSignature == other.LegacyTimeSignature
                && OmitFirstBarLine == other.OmitFirstBarLine
-               && BeatLength.Equals(other.BeatLength);
+               && BeatLength.Equals(other.BeatLength)
+               && LegacyBeatLength == other.LegacyBeatLength;
 
-        public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), TimeSignature, BeatLength, OmitFirstBarLine);
+        public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), TimeSignature, LegacyTimeSignature, BeatLength, LegacyBeatLength, OmitFirstBarLine);
     }
 }

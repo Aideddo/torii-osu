@@ -63,19 +63,22 @@ namespace osu.Game.Skinning.Select
                 }
 
                 string name = $@"mode-{r.NewValue.ShortName}-small";
-                var tex = source.GetTexture(name) ?? skins.DefaultClassicSkin.GetTexture(name);
+                var tex = source.GetStableTexture(name) ?? skins.DefaultClassicSkin.GetStableTexture(name);
 
                 // algunos skins traen un mode-*-small gigante como decoracion "skinnable top" (lo
                 // dibuja aparte y atras del chrome el LegacyTopDecoration); para eso caemos al icono
                 // classic bundleado en vez de redibujar la decoracion sobre el footer. los iconos
                 // normales van a tamaño natural como stable, aunque sobresalgan un poco del slot.
                 if (tex != null && Math.Max(tex.DisplayWidth, tex.DisplayHeight) > 250)
-                    tex = skins.DefaultClassicSkin.GetTexture(name);
+                    tex = skins.DefaultClassicSkin.GetStableTexture(name);
 
                 modeIcon.Texture = tex;
 
                 if (tex != null)
                     modeIcon.Size = new Vector2(tex.DisplayWidth, tex.DisplayHeight);
+
+                // stable recreates the icon on entering song select and on each mode change, springing it up from nothing (SongSelection.LoadModeSpecific).
+                modeIcon.ScaleTo(0).ScaleTo(1, 1000, Easing.OutElastic);
             }, true);
         }
     }

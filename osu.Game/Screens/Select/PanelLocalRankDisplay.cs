@@ -52,6 +52,11 @@ namespace osu.Game.Screens.Select
 
         public bool HasRank => updateable.Rank != null;
 
+        /// <summary>
+        /// Torii: the local user's best rank on the beatmap, if any.
+        /// </summary>
+        public ScoreRank? Rank => updateable.Rank;
+
         public PanelLocalRankDisplay(BeatmapInfo? beatmap = null)
         {
             AutoSizeAxes = Axes.Both;

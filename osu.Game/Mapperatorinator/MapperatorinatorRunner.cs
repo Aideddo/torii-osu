@@ -2175,7 +2175,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
 
             if (existingTorch != null)
             {
-                onLogLine($"pytorch {existingTorch} ya esta instalado en el entorno: se deja como esta.");
+                onLogLine($"PyTorch {existingTorch} is already installed in this environment; leaving it unchanged.");
                 await File.WriteAllTextAsync(Path.Combine(checkout, torch_device_marker), @"custom", cancellation).ConfigureAwait(false);
             }
             else
@@ -2884,16 +2884,16 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
 
     public enum MapperatorinatorGamemode
     {
-        [System.ComponentModel.Description(@"osu!")]
+        [System.ComponentModel.Description(@"torii")]
         Osu = 0,
 
-        [System.ComponentModel.Description(@"osu!taiko")]
+        [System.ComponentModel.Description(@"torii drums")]
         Taiko = 1,
 
-        [System.ComponentModel.Description(@"osu!catch")]
+        [System.ComponentModel.Description(@"torii fruits")]
         Catch = 2,
 
-        [System.ComponentModel.Description(@"osu!mania")]
+        [System.ComponentModel.Description(@"torii keys")]
         Mania = 3,
     }
 

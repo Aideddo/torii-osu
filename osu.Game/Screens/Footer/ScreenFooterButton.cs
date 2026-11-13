@@ -114,6 +114,8 @@ namespace osu.Game.Screens.Footer
 
         public readonly OverlayContainer? Overlay;
 
+        public Action? ToggleOverlay { get; init; }
+
         public ScreenFooterButton(OverlayContainer? overlay = null)
         {
             Overlay = overlay;
