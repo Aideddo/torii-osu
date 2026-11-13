@@ -69,6 +69,9 @@ namespace osu.Game.Overlays
                 {
                     PadExtent = true,
                     Sigma = new Vector2(20),
+                    // Torii: blurring every frame while a toast is shown is expensive (especially on mobile GPUs); the background only
+                    // changes while it resizes or fades.
+                    CacheDrawnEffect = true,
                 }).With(postEffectDrawable =>
                 {
                     postEffectDrawable.Scale = new Vector2(1.5f, 1);
