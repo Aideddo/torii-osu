@@ -44,6 +44,9 @@ jobs:
           New-Item -ItemType Directory -Path $temp -Force | Out-Null
           "TEMP=$temp" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           "TMP=$temp" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          $env:DOTNET_CLI_HOME = Join-Path $temp 'dotnet-home'
+          New-Item -ItemType Directory -Path $env:DOTNET_CLI_HOME -Force | Out-Null
+          "DOTNET_CLI_HOME=$env:DOTNET_CLI_HOME" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           $sdk = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
           $dotnet = (Get-Command dotnet -ErrorAction Stop).Source
           if ($sdk.StartsWith('11.')) {
