@@ -1,0 +1,61 @@
+name: Local Windows preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: torii-local-windows
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'ShikkesoraSIM/torii-hiding' && github.actor == 'ShikkesoraSIM'
+    runs-on: [self-hosted, Windows, X64, torii-windows-local]
+    timeout-minutes: 60
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
+    defaults:
+      run:
+        shell: powershell
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: client
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ShikkesoraSIM/torii-framework
+          ref: 25e68d530f7116437c4cfaf127169ac4d6619927
+          path: torii-framework
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ShikkesoraSIM/torii-resources
+          ref: 052c77623424f3f1a571d8bcbac0d608d458f8f8
+          path: toriirefresh-resources
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: client/global.json
+      - name: Build candidate source without starting the game
+        run: |
+          dotnet build osu.Desktop/osu.Desktop.csproj -c Release -v minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record source and framework provenance
+        run: |
+          $source = (git rev-parse HEAD).Trim()
+          $framework = (git -C ../torii-framework rev-parse HEAD).Trim()
+          $resources = (git -C ../toriirefresh-resources rev-parse HEAD).Trim()
+          $dll = Get-ChildItem osu.Desktop/bin/Release -Recurse -Filter osu.Game.dll |
+            Where-Object { $_.FullName -notmatch '[\\/]ref[\\/]' } | Select-Object -First 1
+          if (!$dll) { throw 'Missing compiled game assembly' }
+          $hash = (Get-FileHash -LiteralPath $dll.FullName -Algorithm MD5).Hash.ToLowerInvariant()
+          "Source: $source" >> $env:GITHUB_STEP_SUMMARY
+          "Framework: $framework" >> $env:GITHUB_STEP_SUMMARY
+          "Resources: $resources" >> $env:GITHUB_STEP_SUMMARY
+          "Game assembly MD5: $hash" >> $env:GITHUB_STEP_SUMMARY
+          "Preflight only. Not a release package; Satori overlay and server registration are release gates." >> $env:GITHUB_STEP_SUMMARY
