@@ -24,7 +24,7 @@ namespace osu.Game.Rulesets.UI
 
         private readonly IMod mod;
 
-        private Drawable background = null!;
+        private Drawable? background;
         private SpriteIcon? modIcon;
 
         private Color4 activeForegroundColour;
@@ -43,53 +43,45 @@ namespace osu.Game.Rulesets.UI
         [BackgroundDependencyLoader]
         private void load(TextureStore textures, OsuColour colours, OverlayColourProvider? colourProvider)
         {
-            FillFlowContainer contentFlow;
-            ModSwitchTiny tinySwitch;
-
-            InternalChildren = new[]
+            if (mod.Icon != null)
             {
-                background = new Sprite
+                // Prominent standalone mod icon: no cramped acronym pill and no restricting background plate
+                InternalChild = modIcon = new SpriteIcon
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    FillMode = FillMode.Fit,
-                    Texture = textures.Get("Icons/BeatmapDetails/mod-icon"),
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                },
-                contentFlow = new FillFlowContainer
+                    Size = new Vector2(56, 40),
+                    Icon = mod.Icon.Value
+                };
+            }
+            else
+            {
+                // Fallback for mods without an icon (display acronym text on badge plate)
+                InternalChildren = new[]
                 {
-                    AutoSizeAxes = Axes.Both,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Direction = FillDirection.Vertical,
-                    Child = tinySwitch = new ModSwitchTiny(mod)
+                    background = new Sprite
                     {
-                        Anchor = Anchor.TopCentre,
-                        Origin = Anchor.TopCentre,
+                        RelativeSizeAxes = Axes.Both,
+                        FillMode = FillMode.Fit,
+                        Texture = textures.Get("Icons/BeatmapDetails/mod-icon"),
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                    },
+                    new ModSwitchTiny(mod)
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
                         Scale = new Vector2(0.6f),
                         Active = { BindTarget = Active }
                     }
-                }
-            };
-
-            if (mod.Icon != null)
-            {
-                contentFlow.Insert(-1, modIcon = new SpriteIcon
-                {
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    Size = new Vector2(37, 26),
-                    // arbitrary adjustment for better vertical alignment
-                    Margin = new MarginPadding { Top = -1 },
-                    Icon = mod.Icon.Value
-                });
-                tinySwitch.Scale = new Vector2(0.3f);
+                };
             }
 
             var modTypeColour = colours.ForModType(mod.Type);
 
-            inactiveForegroundColour = colourProvider?.Background5 ?? colours.Gray3;
-            activeForegroundColour = modTypeColour;
+            inactiveForegroundColour = colourProvider?.Light1 ?? Colour4.White.Opacity(0.85f);
+            // When active, the panel lights up in mod color; the icon turns black/dark for negative-fill contrast
+            activeForegroundColour = colourProvider?.Background6 ?? Colour4.Black;
 
             inactiveBackgroundColour = colourProvider?.Background2 ?? colours.Gray5;
             activeBackgroundColour = Interpolation.ValueAt<Colour4>(0.1f, Colour4.Black, modTypeColour, 0, 1);
@@ -106,7 +98,7 @@ namespace osu.Game.Rulesets.UI
         private void updateState()
         {
             modIcon?.FadeColour(Active.Value ? activeForegroundColour : inactiveForegroundColour, 200, Easing.OutQuint);
-            background.FadeColour(Active.Value ? activeBackgroundColour : inactiveBackgroundColour, 200, Easing.OutQuint);
+            background?.FadeColour(Active.Value ? activeBackgroundColour : inactiveBackgroundColour, 200, Easing.OutQuint);
         }
     }
 }
