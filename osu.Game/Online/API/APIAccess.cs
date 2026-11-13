@@ -826,25 +826,6 @@ namespace osu.Game.Online.API
             Queue(refreshRequest);
         }
 
-        public void SwitchSubProfile(string accessToken, string? refreshToken = null, long expiresIn = 86400 * 30)
-        {
-            if (state.Value != APIState.Online)
-                return;
-
-            Schedule(() =>
-            {
-                var newToken = new OAuthToken
-                {
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken ?? string.Empty,
-                    ExpiresIn = expiresIn,
-                };
-
-                authentication.Token.Value = newToken;
-                RefreshLocalUser();
-            });
-        }
-
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);

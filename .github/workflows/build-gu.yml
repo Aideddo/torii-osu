@@ -1107,7 +1107,7 @@ jobs:
     # - release event
     # - workflow_dispatch
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-    needs: [build, version]
+    needs: [build, version, register-client-hashes]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -1318,8 +1318,8 @@ jobs:
     # so registering them just creates orphan entries the server will never see.
     if: |
       needs.build.result == 'success' &&
-      needs.release.result == 'success'
-    needs: [build, version, release]
+      (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+    needs: [build, version]
     runs-on: ubuntu-latest
     steps:
     - name: Download hash artifacts
@@ -1339,12 +1339,12 @@ jobs:
         if [[ -z "$TORII_VERSION_WEBHOOK_SECRET" ]]; then
           echo "TORII_VERSION_WEBHOOK_SECRET secret not configured — skipping hash registration."
           echo "Set it in repo Settings → Secrets to enable automatic hash registration."
-          exit 0
+          exit 1
         fi
         if [[ -z "$TORII_SERVER_URL" ]]; then
           echo "TORII_SERVER_URL variable not configured — skipping hash registration."
           echo "Set it in repo Settings → Variables (e.g. https://api.yourserver.com)."
-          exit 0
+          exit 1
         fi
 
         # Collect all hash files into a single JSON object: {md5: os_label}
@@ -1394,7 +1394,8 @@ jobs:
         if [[ "$HTTP_STATUS" == "200" ]]; then
           echo "Hash registration successful!"
         else
-          echo "::warning::Hash registration returned HTTP $HTTP_STATUS — scores will still work, hashes can be registered manually via the admin panel"
+          echo "::error::Hash registration returned HTTP $HTTP_STATUS; release publication is blocked."
+          exit 1
         fi
 
   notify:

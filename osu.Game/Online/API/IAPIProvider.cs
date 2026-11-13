@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -137,11 +137,6 @@ namespace osu.Game.Online.API
         /// No-op while not online.
         /// </summary>
         void RefreshLocalUser();
-
-        /// <summary>
-        /// Torii: switch active OAuth token to another sub-profile or master user in-place.
-        /// </summary>
-        void SwitchSubProfile(string accessToken, string? refreshToken = null, long expiresIn = 86400 * 30);
 
         /// <summary>
         /// Schedule a callback to run on the update thread.
