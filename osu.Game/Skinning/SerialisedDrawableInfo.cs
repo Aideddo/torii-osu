@@ -145,6 +145,17 @@ namespace osu.Game.Skinning
         /// </summary>
         /// <param name="ruleset">The active ruleset (if any). Used as the second assembly to scan.</param>
         public static Type[] GetAllToriiSkinComponents(RulesetInfo? ruleset = null)
+            => getToriiSkinComponents(ruleset, vr: false);
+
+        /// <summary>
+        /// Retrieve all <see cref="IVRSkinComponent"/> types: the Torii skin components which only make sense in VR.
+        /// These are not part of <see cref="GetAllToriiSkinComponents"/>.
+        /// </summary>
+        /// <param name="ruleset">The active ruleset (if any). Used as the second assembly to scan.</param>
+        public static Type[] GetAllVRSkinComponents(RulesetInfo? ruleset = null)
+            => getToriiSkinComponents(ruleset, vr: true);
+
+        private static Type[] getToriiSkinComponents(RulesetInfo? ruleset, bool vr)
         {
             var assemblies = new HashSet<System.Reflection.Assembly> { typeof(OsuGame).Assembly };
 
@@ -155,6 +166,7 @@ namespace osu.Game.Skinning
                              .Where(t => !t.IsInterface && !t.IsAbstract && t.IsPublic)
                              .Where(t => typeof(ISerialisableDrawable).IsAssignableFrom(t))
                              .Where(t => typeof(IToriiSkinComponent).IsAssignableFrom(t))
+                             .Where(t => typeof(IVRSkinComponent).IsAssignableFrom(t) == vr)
                              .Distinct()
                              .OrderBy(t => t.Name)
                              .ToArray();
