@@ -172,6 +172,8 @@ namespace osu.Game
         private osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay newDefaultThemeHint;
         private bool newThemeHintScheduled;
         private bool stableV2PromoScheduled;
+        private int classicPromoMenuVisits;
+        private bool classicPromoPlayedMap;
 
         // torii: preview transitorio del tamano de cursor, lo dispara el hotkey Ctrl+Shift+rueda/+/-.
         private CursorSizePreviewOverlay cursorSizePreview;
@@ -1566,7 +1568,7 @@ namespace osu.Game
 
             loadComponentSingleFile(stableSongSelectPromo = new osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay
             {
-                Title = "Torii Classic (Stable) is here",
+                Title = "Stable UI has been improved and is now more complete!",
                 ActionLabel = "Try Torii Classic (Stable)",
                 DismissLabel = "Not now",
                 Credit = "Original UI and assets by telecomadm1145. Integrated into Torii with permission.",
@@ -2345,7 +2347,7 @@ namespace osu.Game
 
             LocalConfig.SetValue(OsuSetting.ToriiClassicThemePromoShown, true);
 
-            stableSongSelectPromo.Present("A classic song select, mod menu and results screen. Enable Torii Classic (Stable), or choose its components in Settings > Torii > Torii Classic (Stable). Restart to apply.");
+            stableSongSelectPromo.Present("Previously, the classic interface had a partial song select and results screen. It now includes a much more complete song select, carousel, leaderboard, mod menu, results screen and footer.\n\nTo use it, change UI theme to Torii Classic (Stable) in Settings. You can choose which classic components to use under Torii > Torii Classic (Stable). Restart to apply.");
         }
 
         /// <summary>
@@ -2441,6 +2443,8 @@ namespace osu.Game
             switch (current)
             {
                 case Player player:
+                    if (player.GameplayState is { HasPassed: true } or { HasFailed: true })
+                        classicPromoPlayedMap = true;
                     player.PlayingState.UnbindFrom(UserPlayingState);
 
                     // reset for sanity.
@@ -2458,13 +2462,17 @@ namespace osu.Game
                 case MainMenu menu:
                     menuScreen = menu;
                     devBuildBanner?.Show();
-                    if (!stableV2PromoScheduled && !LocalConfig.Get<bool>(OsuSetting.ToriiClassicThemePromoShown))
+                    classicPromoMenuVisits++;
+                    if (classicPromoMenuVisits > 1 && classicPromoPlayedMap && !stableV2PromoScheduled && !LocalConfig.Get<bool>(OsuSetting.ToriiClassicThemePromoShown))
                     {
                         stableV2PromoScheduled = true;
                         Scheduler.AddDelayed(() =>
                         {
                             stableV2PromoScheduled = false;
-                            if (menuScreen != null && menuScreen.GetChildScreen() == null && newDefaultThemeHint?.State.Value != Visibility.Visible)
+                            if (ScreenStack.CurrentScreen == menu && menu.GetChildScreen() == null
+                                && newDefaultThemeHint?.State.Value != Visibility.Visible
+                                && Settings?.State.Value != Visibility.Visible
+                                && dialogOverlay?.State.Value != Visibility.Visible)
                                 ShowStableSongSelectPromo();
                         }, 1800);
                     }

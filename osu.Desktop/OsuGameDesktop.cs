@@ -125,8 +125,42 @@ namespace osu.Desktop
 
         public override bool RestartAppWhenExited()
         {
-            if (IsPackageManaged || !IsDeployedBuild)
+            if (IsPackageManaged)
                 return false;
+
+            if (!IsDeployedBuild)
+            {
+                if (!osu.Framework.Development.DebugUtils.IsDebugBuild)
+                    return false;
+
+                string? executable = Environment.ProcessPath;
+                if (string.IsNullOrEmpty(executable))
+                    return false;
+
+                var start = new ProcessStartInfo
+                {
+                    FileName = executable,
+                    WorkingDirectory = AppContext.BaseDirectory,
+                    UseShellExecute = true,
+                };
+                string[] arguments = Environment.GetCommandLineArgs();
+                int firstArgument = Path.GetFileNameWithoutExtension(executable).Equals("dotnet", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+                for (int i = firstArgument; i < arguments.Length; i++)
+                    start.ArgumentList.Add(arguments[i]);
+
+                RestartOnExitAction = () =>
+                {
+                    try
+                    {
+                        Process.Start(start);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Failed to restart development build.");
+                    }
+                };
+                return true;
+            }
 
             RestartOnExitAction = () =>
             {
