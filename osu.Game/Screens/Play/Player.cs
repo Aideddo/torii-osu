@@ -17,6 +17,7 @@ using osu.Framework.Platform;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Rendering;
 using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
@@ -40,8 +41,11 @@ using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
 using osu.Game.Screens.Ranking;
 using osu.Game.Skinning;
+using osu.Game.Storyboards;
 using osu.Game.Users;
 using osu.Game.Utils;
+using osu.Game.VR;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Screens.Play
@@ -216,6 +220,11 @@ namespace osu.Game.Screens.Play
         [Resolved]
         private GameHost gameHost { get; set; } = null!;
 
+        /// <summary>
+        /// Torii: the VR background layer, or null outside VR.
+        /// </summary>
+        private ExternalRenderTarget vrBackgroundTarget => VRRuntime.IsVR ? gameHost.GetExternalRenderTarget(VRLayers.BACKGROUND) : null;
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -254,11 +263,17 @@ namespace osu.Game.Screens.Play
 
         private bool constantHitsoundVolume;
 
+        /// <summary>
+        /// Torii: whether the storyboard's overlay layer stays in front of the playfield in VR (it's moved to the background layer otherwise).
+        /// </summary>
+        private bool vrStoryboardOverlayInFront;
+
         [BackgroundDependencyLoader(true)]
         private void load(OsuConfigManager config, OsuGameBase game, CancellationToken cancellationToken)
         {
             // torii: capturado aca porque loadPlayableBeatmap corre adentro de este load.
             constantHitsoundVolume = config.Get<bool>(OsuSetting.ToriiConstantHitsoundVolume);
+            vrStoryboardOverlayInFront = config.Get<bool>(OsuSetting.VRStoryboardOverlayInFront);
 
             var gameplayMods = Mods.Value.Select(m => m.DeepClone()).ToArray();
 
@@ -283,7 +298,7 @@ namespace osu.Game.Screens.Play
             }
 
             if (game != null)
-                gameActive.BindTo(game.IsActive);
+                gameActive.BindTo(game.GameplayFocus);
 
             DrawableRuleset = ruleset.CreateDrawableRulesetWith(playableBeatmap, gameplayMods);
             dependencies.CacheAs(DrawableRuleset);
@@ -495,9 +510,15 @@ namespace osu.Game.Screens.Play
                 RelativeSizeAxes = Axes.Both,
                 Children = new Drawable[]
                 {
-                    DimmableStoryboard = new DimmableStoryboard(GameplayState.Storyboard, GameplayState.Mods)
+                    // Torii: in VR, the storyboard (and video) is part of the background layer far behind the game panel.
+                    new RenderTargetRedirectContainer
                     {
-                        RelativeSizeAxes = Axes.Both
+                        RelativeSizeAxes = Axes.Both,
+                        Target = vrBackgroundTarget,
+                        Child = createVRStoryboardBuffer(DimmableStoryboard = new DimmableStoryboard(GameplayState.Storyboard, GameplayState.Mods)
+                        {
+                            RelativeSizeAxes = Axes.Both
+                        }),
                     },
                     letterboxOverlay = new LetterboxOverlay
                     {
@@ -511,10 +532,38 @@ namespace osu.Game.Screens.Play
             return container;
         }
 
+        /// <summary>
+        /// Torii: the resolution storyboards are drawn at in VR, relative to the background layer's.
+        /// </summary>
+        private const float vr_storyboard_resolution = 0.5f;
+
+        /// <summary>
+        /// Torii: in VR, draws a storyboard with sprites at reduced resolution (then scaled up onto the background layer).
+        /// </summary>
+        /// <remarks>
+        /// Storyboards stack many blended sprites, often each covering the whole screen and more, and headsets' mobile GPUs can't fill that
+        /// many pixels within a frame: frame rate halved during busy sections. Fill cost goes with the square of the resolution, and little
+        /// is lost: the layer is far behind the panel, and storyboards are authored for a 480 pixels tall screen.
+        /// </remarks>
+        private Drawable createVRStoryboardBuffer(DimmableStoryboard storyboard)
+        {
+            if (!VRRuntime.IsVR || !GameplayState.Storyboard.Layers.Any(l => l.Elements.Any(e => e is StoryboardSprite)))
+                return storyboard;
+
+            return new BufferedContainer
+            {
+                RelativeSizeAxes = Axes.Both,
+                FrameBufferScale = new Vector2(vr_storyboard_resolution),
+                Child = storyboard,
+            };
+        }
+
         private Drawable createGameplayComponents() => new ScalingContainer(ScalingMode.Gameplay)
         {
             Children = new Drawable[]
             {
+                // Torii: in VR, an adjustable dark backing behind gameplay keeps hit objects readable over the room / background layer.
+                new VRPlayfieldBacking(),
                 DrawableRuleset.With(r =>
                     r.FrameStableComponents.Children = new Drawable[]
                     {
@@ -533,7 +582,14 @@ namespace osu.Game.Screens.Play
                 RelativeSizeAxes = Axes.Both,
                 Children = new[]
                 {
-                    DimmableStoryboard.OverlayLayerContainer.CreateProxy(),
+                    // Torii: in VR the storyboard's overlay layer also goes to the background layer by default, rather than in the
+                    // player's face over the playfield (full field-of-view flashes are much harsher in a headset).
+                    new RenderTargetRedirectContainer
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Target = vrStoryboardOverlayInFront ? null : vrBackgroundTarget,
+                        Child = DimmableStoryboard.OverlayLayerContainer.CreateProxy(),
+                    },
                     HUDOverlay = new HUDOverlay(DrawableRuleset, GameplayState.Mods, Configuration)
                     {
                         HoldToQuit =
@@ -1336,7 +1392,20 @@ namespace osu.Game.Screens.Play
                 b.StoryboardReplacesBackground.BindTo(storyboardReplacesBackground);
 
                 failAnimationContainer.Background = b;
+
+                // Torii: in VR the background layer is larger than the panel the flashlight darkens, so it would stay lit around it.
+                if (VRRuntime.IsVR && GameplayState.Mods.OfType<ModFlashlight>().Any())
+                {
+                    b.IgnoreUserSettings.Value = true;
+                    b.DimWhenUserSettingsIgnored.Value = 1;
+                }
             });
+
+            if (VRRuntime.IsVR && GameplayState.Mods.OfType<ModFlashlight>().Any())
+            {
+                DimmableStoryboard.IgnoreUserSettings.Value = true;
+                DimmableStoryboard.DimWhenUserSettingsIgnored.Value = 1;
+            }
 
             HUDOverlay.IsPlaying.BindTo(localUserPlaying);
             ShowingOverlayComponents.BindTo(HUDOverlay.ShowHud);
