@@ -1444,6 +1444,11 @@ namespace osu.Game
             if (Host is IOpenXRHost xrHost)
             {
                 Add(new OpenXRHostIntegration(xrHost.OpenXR));
+
+                // Torii: controller movement statistics, shown by VRMovementCounter.
+                var movementTracker = new VRMovementTracker { PlayingState = { BindTarget = UserPlayingState } };
+                Dependencies.Cache(movementTracker);
+                Add(movementTracker);
             }
 
             Dependencies.Cache(ScreenFooter);
