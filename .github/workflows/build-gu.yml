@@ -12,6 +12,10 @@ on:
         description: 'Release version (e.g., 1.0.0)'
         required: false
         default: '1.0.0-dev'
+      publish_release:
+        description: 'Publish only after all platforms and hash registration pass'
+        type: boolean
+        default: false
   release:
     types: [ published ]
 
@@ -1106,7 +1110,7 @@ jobs:
     # - tag push (v*)
     # - release event
     # - workflow_dispatch
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
     needs: [build, version, register-client-hashes]
     runs-on: ubuntu-latest
     permissions:
@@ -1318,7 +1322,7 @@ jobs:
     # so registering them just creates orphan entries the server will never see.
     if: |
       needs.build.result == 'success' &&
-      (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+      (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish_release))
     needs: [build, version]
     runs-on: ubuntu-latest
     steps:
