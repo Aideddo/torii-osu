@@ -78,6 +78,7 @@ namespace osu.Game.Tests.Visual.Gameplay
         {
             Vector3 start = default;
 
+            AddStep("choose the free camera", () => cameraSetting.Current.Value = VRReplayCamera.Free);
             AddUntilStep("replay running", () => player.GameplayClockContainer.IsRunning);
             AddStep("hold right mouse over the scene", () =>
             {
@@ -115,10 +116,12 @@ namespace osu.Game.Tests.Visual.Gameplay
         [Test]
         public void TestCameras()
         {
-            AddStep("choose the player's view in the settings", () => cameraSetting.Current.Value = VRReplayCamera.FollowHead);
+            AddAssert("the player's view to begin with", () => cameraSetting.Current.Value, () => Is.EqualTo(VRReplayCamera.FollowHead));
             AddUntilStep("camera where their head is", () => Vector3.Distance(view.CameraPosition, head.Position), () => Is.LessThan(0.01f));
             AddAssert("no headset in the way", () => view.ShowHead, () => Is.False);
-            AddAssert("choice kept", () => config.Get<VRReplayCamera>(OsuSetting.VRReplaySceneCamera), () => Is.EqualTo(VRReplayCamera.FollowHead));
+
+            AddAssert("the panel is seen through", () => view.PanelBackground.A, () => Is.LessThan(0.5f));
+            // (No background to show on it here: the wall is tested with a beatmap that has one.)
 
             AddStep("choose over the shoulder", () => cameraSetting.Current.Value = VRReplayCamera.OverTheShoulder);
             AddAssert("headset shown", () => view.ShowHead);
@@ -138,6 +141,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddWaitStep("wait", 5);
             AddAssert("stays put", () => Vector3.Distance(view.CameraPosition, start), () => Is.LessThan(0.01f));
 
+            AddAssert("choice kept", () => config.Get<VRReplayCamera>(OsuSetting.VRReplaySceneCamera), () => Is.EqualTo(VRReplayCamera.OverTheShoulder));
             AddStep("choose free", () => cameraSetting.Current.Value = VRReplayCamera.Free);
             AddUntilStep("flies on from there", () => Vector3.Distance(view.CameraPosition, start), () => Is.GreaterThan(0.05f));
             AddAssert("ahead, as it looked", () => view.CameraPosition.Z, () => Is.LessThan(start.Z));

@@ -66,6 +66,8 @@ namespace osu.Game.Tests.Visual.Gameplay
                 importedSet = beatmaps.GetAllUsableBeatmapSets().First();
             });
             AddStep("start flat", () => LocalConfig.SetValue(OsuSetting.VRReplaySceneView, false));
+            // (Seen from outside: through the player's eyes there's no headset to see.)
+            AddStep("free camera", () => LocalConfig.SetValue(OsuSetting.VRReplaySceneCamera, VRReplayCamera.Free));
         }
 
         protected override IBeatmap CreateBeatmap(RulesetInfo ruleset) => beatmaps.GetWorkingBeatmap(importedSet?.Beatmaps.First()).Beatmap;

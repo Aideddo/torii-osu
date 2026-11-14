@@ -7,8 +7,10 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Textures;
 using osu.Framework.Input;
 using osu.Framework.Platform.OpenXR;
+using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
@@ -24,6 +26,8 @@ namespace osu.Game.VR
     /// <summary>
     /// Torii: outside VR, shows a replay of a play made in VR (one which saved <see cref="VRReplayExtras"/>) as it happened: the
     /// replay on the player's game panel, a headset where their head was and their hands around it, seen through a camera to fly about with.
+    /// The room is made to look like the one they played in (the "custom field" environment): the beatmap's background on a wall far
+    /// behind the panel, which is see-through but for the backing they'd have behind the playfield.
     /// Switched on and off in the replay's settings (see <see cref="CreateSettings"/>); off, the replay is shown as any other.
     /// </summary>
     /// <remarks>
@@ -77,6 +81,12 @@ namespace osu.Game.VR
         /// </summary>
         private const double shoulder_smoothing = 300, head_smoothing = 100;
 
+        /// <summary>
+        /// How far the wall with the background is from the player, in metres, and how wide it is as they see it, in radians:
+        /// as in VR (see <see cref="OpenXRSession.WallDistance"/> and <see cref="OpenXRSession.WallAngle"/>).
+        /// </summary>
+        private const float wall_distance = 10, wall_angle = 69 * MathF.PI / 180;
+
         private readonly string scoreHash;
         private readonly Func<Drawable> takeContent;
         private readonly Action<Drawable> returnContent;
@@ -86,6 +96,17 @@ namespace osu.Game.VR
 
         [Resolved]
         private DrawableRuleset drawableRuleset { get; set; } = null!;
+
+        [Resolved]
+        private IBindable<WorkingBeatmap> beatmap { get; set; } = null!;
+
+        private readonly Bindable<double> backgroundDim = new Bindable<double>();
+        private readonly Bindable<float> playfieldBacking = new Bindable<float>();
+
+        // The beatmap's background, and the part of it shown on the wall (the wall has the shape of the panel, the image needn't).
+        private Texture? background;
+        private Texture? wallTexture;
+        private float wallTextureAspect;
 
         private SceneViewContainer scene = null!;
         private SongProgress progress = null!;
@@ -143,6 +164,10 @@ namespace osu.Game.VR
 
             config.BindWith(OsuSetting.VRReplaySceneView, Showing);
             config.BindWith(OsuSetting.VRReplaySceneCamera, Camera);
+            config.BindWith(OsuSetting.DimLevel, backgroundDim);
+            config.BindWith(OsuSetting.VRPlayfieldBacking, playfieldBacking);
+
+            background = beatmap.Value.GetBackground();
 
             VRReplayExtrasEncoder.LoadAsync(store, scoreHash, Scheduler, loaded =>
             {
@@ -292,7 +317,12 @@ namespace osu.Game.VR
 
                 if (!cameraPlaced)
                     placeCamera(panel);
+
+                placeWall(panel);
             }
+
+            // Behind the replay there's only what the player had behind the playfield: the rest is seen through to the wall.
+            scene.PanelBackground = new osuTK.Graphics.Color4(0, 0, 0, playfieldBacking.Value);
 
             scene.HeldModel = extras.ControllerModel == VRControllerModel.Pen ? VRModels.Pen : null;
             scene.FloorHeight = (playerPose?.Position.Y ?? scene.Panel.Centre.Y) - 1.6f;
@@ -389,6 +419,43 @@ namespace osu.Game.VR
 
             direction = Vector3.Normalize(direction);
             return (MathF.Atan2(-direction.X, -direction.Z), MathF.Asin(Math.Clamp(direction.Y, -1, 1)));
+        }
+
+        /// <summary>
+        /// Puts the wall with the background where the player had it: far behind the panel, standing on the floor like a cinema screen.
+        /// </summary>
+        private void placeWall(VRPanelGeometry panel)
+        {
+            if (background == null)
+                return;
+
+            float width = 2 * wall_distance * MathF.Tan(wall_angle / 2);
+            float height = width / panel.Aspect;
+
+            // Upright whichever way the panel is tilted.
+            var facing = panel.Pose.Levelled;
+
+            scene.WallCentre = new Vector3(facing.Position.X, scene.FloorHeight + height / 2, facing.Position.Z) + Vector3.Transform(new Vector3(0, 0, -wall_distance), facing.Rotation);
+            scene.WallOrientation = facing.Rotation;
+            scene.WallSize = new Vector2(width, height);
+
+            // Dimmed as the viewer has backgrounds dimmed.
+            float brightness = (float)(1 - backgroundDim.Value);
+            scene.WallColour = new osuTK.Graphics.Color4(brightness, brightness, brightness, 1);
+
+            // Filling the wall: what of the image doesn't fit its shape is cut off evenly.
+            if (wallTexture == null || wallTextureAspect != panel.Aspect)
+            {
+                wallTextureAspect = panel.Aspect;
+
+                float imageAspect = (float)background.Width / Math.Max(background.Height, 1);
+                float shownWidth = imageAspect > panel.Aspect ? background.Height * panel.Aspect : background.Width;
+                float shownHeight = imageAspect > panel.Aspect ? background.Height : background.Width / panel.Aspect;
+
+                wallTexture = background.Crop(new osu.Framework.Graphics.Primitives.RectangleF((background.Width - shownWidth) / 2, (background.Height - shownHeight) / 2, shownWidth, shownHeight));
+            }
+
+            scene.WallTexture = wallTexture;
         }
 
         // (The scene is the player's own room: hands are where they were recorded.)
