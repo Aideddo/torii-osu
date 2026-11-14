@@ -20,6 +20,8 @@ using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Osu.Replays;
 using osu.Game.Scoring;
 using osu.Game.Screens.Play;
+using osu.Game.Screens.Play.HUD;
+using osu.Game.Screens.Play.PlayerSettings;
 using osu.Game.Tests.Resources;
 using osu.Game.VR;
 
@@ -85,8 +87,19 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddUntilStep("scene offered", () => scene, () => Is.Not.Null);
             AddAssert("replay shown as usual", () => Player.GameplayClockContainer.Parent, () => Is.SameAs(Player));
 
-            AddStep("show the scene", () => scene!.ChildrenOfType<osu.Game.Graphics.UserInterfaceV2.RoundedButton>().Single().TriggerClick());
+            AddStep("add its settings", () =>
+            {
+                var settings = scene!.CreateSettings();
+                scene.Overlay.Add(settings);
+                viewSetting = settings.ChildrenOfType<PlayerCheckbox>().Single();
+            });
+            AddUntilStep("settings loaded", () => viewSetting.IsLoaded);
+
+            AddStep("show the scene", () => viewSetting.Current.Value = true);
             AddAssert("showing", () => scene!.Showing.Value);
+            // (The replay's own bar is with the replay, on the panel.)
+            AddUntilStep("with a bar to seek with in front", () => scene!.ChildrenOfType<SongProgress>().Single(p => !view!.ChildrenOfType<SongProgress>().Contains(p)).Alpha,
+                () => Is.GreaterThan(0));
             AddAssert("replay shown in the scene", () => Player.GameplayClockContainer.Parent, () => Is.SameAs(view));
             AddUntilStep("player's hands in the scene", () => view!.Hands[IVRControllers.RIGHT].GripValid && view.Hands[IVRControllers.RIGHT].AimValid);
             AddAssert("a headset where their head was", () => view!.ShowHead && view.HeadModel != null);
@@ -97,13 +110,23 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddStep("note the time", () => time = Player.GameplayClockContainer.CurrentTime);
             AddUntilStep("replay carries on", () => Player.GameplayClockContainer.CurrentTime, () => Is.GreaterThan(time + 500));
 
-            AddStep("back to flat", () => scene!.ChildrenOfType<osu.Game.Graphics.UserInterfaceV2.RoundedButton>().Single().TriggerClick());
+            AddStep("back to flat", () => viewSetting.Current.Value = false);
             AddAssert("replay shown as usual", () => Player.GameplayClockContainer.Parent, () => Is.SameAs(Player));
             AddStep("note the time", () => time = Player.GameplayClockContainer.CurrentTime);
             AddUntilStep("replay carries on", () => Player.GameplayClockContainer.CurrentTime, () => Is.GreaterThan(time + 500));
 
-            AddStep("show the scene again", () => scene!.ChildrenOfType<osu.Game.Graphics.UserInterfaceV2.RoundedButton>().Single().TriggerClick());
+            AddStep("show the scene again", () => viewSetting.Current.Value = true);
             AddAssert("choice kept", () => LocalConfig.Get<bool>(OsuSetting.VRReplaySceneView));
+        }
+
+        [Test]
+        public void TestShownFromTheStartUnlessSwitchedOff()
+        {
+            AddStep("setting as it comes", () => LocalConfig.GetBindable<bool>(OsuSetting.VRReplaySceneView).SetDefault());
+            CreateTest();
+
+            AddUntilStep("scene offered", () => scene, () => Is.Not.Null);
+            AddAssert("replay shown in the scene", () => Player.GameplayClockContainer.Parent, () => Is.SameAs(view));
         }
 
         [Test]
@@ -115,6 +138,9 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddUntilStep("replay playing", () => Player.GameplayClockContainer.CurrentTime, () => Is.GreaterThan(0));
             AddAssert("no scene", () => scene, () => Is.Null);
         }
+
+        // The setting as the replay's settings show it (a plain player has no settings to show it in).
+        private PlayerCheckbox viewSetting = null!;
 
         private VRReplayScene? scene => Player.ChildrenOfType<VRReplayScene>().SingleOrDefault();
 

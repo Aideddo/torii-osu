@@ -242,6 +242,12 @@ namespace osu.Game.Screens.Play
         /// </summary>
         private VRReplayRecorder vrReplayRecorder;
 
+        /// <summary>
+        /// Torii: shows the replay as the scene it was played in (see <see cref="VR.VRReplayScene"/>), or null where it can't be:
+        /// in VR, or for a replay of a play not made in VR.
+        /// </summary>
+        protected VRReplayScene VRReplayScene { get; private set; }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -349,13 +355,13 @@ namespace osu.Game.Screens.Play
             // (Not on phones and tablets: the camera is flown with a mouse and keyboard.)
             if (vrTracking == null && !osu.Framework.RuntimeInfo.IsMobile && replayExtrasStore?.Has(Score.ScoreInfo, ReplayExtrasType.VRTracking) == true)
             {
-                AddInternal(new VRReplayScene(Score.ScoreInfo.Hash, () =>
+                AddInternal(VRReplayScene = new VRReplayScene(Score.ScoreInfo.Hash, () =>
                 {
                     RemoveInternal(GameplayClockContainer, false);
                     return GameplayClockContainer;
                 }, AddInternal)
                 {
-                    // Its button stays in front of the replay.
+                    // What it shows flat stays in front of the replay.
                     Depth = float.MinValue,
                 });
             }
