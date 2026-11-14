@@ -309,6 +309,7 @@ namespace osu.Game
             {
                 dependencies.CacheAs<IVRControllers>(new OpenXRHostIntegration.Controllers(xrHost.OpenXR.ControllerInput));
                 dependencies.CacheAs<IVRTracking>(new OpenXRHostIntegration.Tracking(xrHost.OpenXR));
+                dependencies.CacheAs<IVRScene>(new OpenXRHostIntegration.Scene(xrHost.OpenXR));
             }
 
             // Torii: what plays save next to their replays (e.g. head and controller tracking in VR).

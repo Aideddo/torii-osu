@@ -231,6 +231,9 @@ namespace osu.Game.Screens.Play
         [Resolved(CanBeNull = true)]
         private IVRTracking vrTracking { get; set; }
 
+        [Resolved(CanBeNull = true)]
+        private IVRScene vrScene { get; set; }
+
         /// <summary>
         /// Torii: records what a play in VR saves along with its replay (see <see cref="VRReplayExtras"/>), or null outside VR.
         /// </summary>
@@ -349,6 +352,10 @@ namespace osu.Game.Screens.Play
             // Torii: plays in VR save where the head and controllers were along with their replays.
             if (vrTracking != null && config.Get<bool>(OsuSetting.VRSaveReplayExtras))
                 GameplayClockContainer.Add(vrReplayRecorder = new VRReplayRecorder());
+
+            // Torii: and replays of such plays show their player's hands again.
+            if (vrTracking != null && vrScene != null)
+                GameplayClockContainer.Add(new VRReplayGhostHands());
 
             var rulesetSkinProvider = new RulesetSkinProvidingContainer(ruleset, playableBeatmap, Beatmap.Value.Skin);
             config.BindWith(OsuSetting.BeatmapSkins, rulesetSkinProvider.BeatmapSkins);

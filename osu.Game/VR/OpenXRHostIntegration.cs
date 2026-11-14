@@ -40,9 +40,14 @@ namespace osu.Game.VR
             this.xr = xr;
         }
 
+        // The scene's requests are per-frame: it's told about every frame from here.
+        private Scene? scene;
+
         [BackgroundDependencyLoader]
-        private void load(OsuConfigManager config)
+        private void load(OsuConfigManager config, IVRScene? vrScene)
         {
+            scene = vrScene as Scene;
+
             var environment = config.GetBindable<VREnvironment>(OsuSetting.VREnvironment);
 
             bind(environment, v => xr.Environment = v switch
@@ -73,6 +78,7 @@ namespace osu.Game.VR
             bind(penTilt = config.GetBindable<float>(OsuSetting.VRPenTilt), _ => updatePen());
             bind(penOffsetForward = config.GetBindable<float>(OsuSetting.VRPenOffsetForward), _ => updatePen());
             bind(penOffsetUp = config.GetBindable<float>(OsuSetting.VRPenOffsetUp), _ => updatePen());
+            scene?.DefaultControllers.BindValueChanged(_ => updatePen());
 
             // Panel layout: settings apply to the headset, and resizing / pushing the panel by hand writes back to the settings.
             bind(panelSize = config.GetBindable<float>(OsuSetting.VRPanelSize), v => xr.PanelHorizontalAngle = v * MathF.PI / 180);
@@ -80,6 +86,17 @@ namespace osu.Game.VR
             bind(panelPlacement = config.GetBindable<string>(OsuSetting.VRPanelPlacement), applyPlacement);
 
             xr.PanelLayoutChanged += onPanelLayoutChanged;
+
+            // A panel placed by the game for a while (see IVRScene.UsePanel) goes back to where the settings have it.
+            scene?.PanelOverridden.BindValueChanged(overridden =>
+            {
+                if (overridden.NewValue)
+                    return;
+
+                xr.PanelHorizontalAngle = panelSize.Value * MathF.PI / 180;
+                xr.PanelDistance = panelDistance.Value;
+                applyPlacement(panelPlacement.Value);
+            });
 
             // Music data for the custom field's floor.
             AddInternal(new VREnvironmentAudio { Output = (bands, pulse, kiai) => xr.SetEnvironmentAudio(bands, pulse, kiai) });
@@ -91,15 +108,28 @@ namespace osu.Game.VR
             if (controllerModel == null || penTilt == null || penOffsetForward == null || penOffsetUp == null)
                 return;
 
-            bool pen = controllerModel.Value == VRControllerModel.Pen;
+            // (A replay being watched has the user hold plain controllers.)
+            bool pen = controllerModel.Value == VRControllerModel.Pen && scene?.DefaultControllers.Value != true;
 
             xr.HeldModel = pen ? VRModels.Pen : null;
             xr.ControllerInput.PointerTilt = pen ? penTilt.Value * MathF.PI / 180 : 0;
             xr.ControllerInput.PointerOffset = pen ? new System.Numerics.Vector3(0, penOffsetUp.Value / 100, -penOffsetForward.Value / 100) : default;
         }
 
+        protected override void Update()
+        {
+            base.Update();
+
+            // This updates ahead of the screens making requests: what they asked for last frame is known by now.
+            scene?.EndRequests();
+        }
+
         private void onPanelLayoutChanged() => Schedule(() =>
         {
+            // Moved while placed by the game: not where the user keeps it.
+            if (scene?.PanelOverridden.Value == true)
+                return;
+
             panelSize.Value = xr.PanelHorizontalAngle * 180 / MathF.PI;
             panelDistance.Value = xr.PanelDistance;
             panelPlacement.Value = VRPanelPlacement.Format(xr.PanelOffset, xr.PanelRotation);
@@ -154,6 +184,107 @@ namespace osu.Game.VR
 
             public double GetDistanceMoved(int hand) => input.GetDistanceMoved(hand);
         }
+
+        /// <summary>
+        /// Lets the game draw into an OpenXR host's scene.
+        /// </summary>
+        public class Scene : IVRScene
+        {
+            /// <summary>
+            /// Whether the user holds plain controllers whatever their settings, as requested for the current frame.
+            /// </summary>
+            public readonly BindableBool DefaultControllers = new BindableBool();
+
+            /// <summary>
+            /// Whether the panel is placed by the game rather than by the user's settings, as requested for the current frame.
+            /// </summary>
+            public readonly BindableBool PanelOverridden = new BindableBool();
+
+            private readonly OpenXRHostController xr;
+
+            private bool defaultControllersRequested;
+            private bool ghostHandsRequested;
+            private bool panelRequested;
+            private VRPanelGeometry? requestedPanel;
+
+            public Scene(OpenXRHostController xr)
+            {
+                this.xr = xr;
+            }
+
+            public void ShowGhostHands(VRGhostHand? left, VRGhostHand? right, int activeHand, VRControllerModel model)
+            {
+                ghostHandsRequested = true;
+
+                xr.GhostHands.HeldModel = model == VRControllerModel.Pen ? VRModels.Pen : null;
+                xr.GhostHands.Show(ToHandState(left), ToHandState(right), activeHand);
+            }
+
+            public void UsePanel(VRPanelGeometry panel)
+            {
+                panelRequested = true;
+                PanelOverridden.Value = true;
+
+                if (panel == requestedPanel)
+                    return;
+
+                requestedPanel = panel;
+
+                // The host places the panel relative to its anchor.
+                var tracking = xr.GetTrackingState();
+                var anchor = tracking.Frame > 0 ? new VRPose(tracking.AnchorPosition, tracking.AnchorOrientation) : VRPose.IDENTITY;
+                var placement = panel.Pose.RelativeTo(anchor);
+
+                xr.PanelOffset = placement.Position;
+                xr.PanelRotation = placement.Rotation;
+                xr.PanelDistance = panel.Radius;
+                xr.PanelHorizontalAngle = panel.HorizontalAngle;
+            }
+
+            public void UseDefaultControllers()
+            {
+                defaultControllersRequested = true;
+                DefaultControllers.Value = true;
+            }
+
+            /// <summary>
+            /// Ends what wasn't requested again since the last call. To be called once per update frame, ahead of anything making requests.
+            /// </summary>
+            public void EndRequests()
+            {
+                if (!ghostHandsRequested)
+                    xr.GhostHands.Hide();
+
+                DefaultControllers.Value = defaultControllersRequested;
+
+                if (!panelRequested)
+                {
+                    requestedPanel = null;
+                    PanelOverridden.Value = false;
+                }
+
+                ghostHandsRequested = defaultControllersRequested = panelRequested = false;
+            }
+
+        }
+
+        /// <summary>
+        /// A hand as the framework draws one: untracked if there is none.
+        /// </summary>
+        public static XrHandState ToHandState(VRGhostHand? hand) => hand is not VRGhostHand h
+            ? default
+            : new XrHandState
+            {
+                GripValid = true,
+                GripPosition = h.Grip.Position,
+                GripOrientation = h.Grip.Rotation,
+                AimValid = true,
+                AimPosition = h.Pointer.Position,
+                AimOrientation = h.Pointer.Rotation,
+                AimDirection = System.Numerics.Vector3.Transform(-System.Numerics.Vector3.UnitZ, h.Pointer.Rotation),
+                Trigger = h.Trigger,
+                Squeeze = h.Squeeze,
+            };
 
         /// <summary>
         /// Exposes an OpenXR host's tracking to the game.
