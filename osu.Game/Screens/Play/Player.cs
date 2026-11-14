@@ -248,9 +248,46 @@ namespace osu.Game.Screens.Play
         /// </summary>
         protected VRReplayScene VRReplayScene { get; private set; }
 
+        // Torii: the storyboard (and video), and what it's drawn in behind the gameplay: in a replay shown as a scene it's taken
+        // from there and shown on the wall behind the panel, as it was for the player.
+        private Drawable vrStoryboardLayer;
+        private Container vrUnderlay;
+
+        /// <summary>
+        /// Torii: has <paramref name="drawable"/> keep the clock it has when it's moved elsewhere (out of the
+        /// <see cref="GameplayClockContainer"/>, where it would run by the screen's clock instead).
+        /// </summary>
+        private static void keepClock(Drawable drawable)
+        {
+            drawable.Clock = drawable.Clock;
+            drawable.ProcessCustomClock = false;
+        }
+
+        /// <summary>
+        /// Torii: shown as a scene, the replay takes no input from the mouse. What's only shown or used with the mouse is put flat in
+        /// front of the scene instead (see <see cref="VRReplayScene.Overlay"/>): the buttons to skip with.
+        /// </summary>
+        private void moveToVRReplaySceneOverlay(Drawable drawable)
+        {
+            if (drawable?.Parent is not Container<Drawable> parent)
+                return;
+
+            keepClock(drawable);
+            parent.Remove(drawable, false);
+            VRReplayScene.Overlay.Add(drawable);
+        }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            if (VRReplayScene != null && LoadedBeatmapSuccessfully)
+            {
+                moveToVRReplaySceneOverlay(SkipIntroOverlay);
+                moveToVRReplaySceneOverlay(skipOutroOverlay);
+                moveToVRReplaySceneOverlay(skipBreakOverlay);
+                moveToVRReplaySceneOverlay(skipBreakBriefingOverlay);
+            }
 
             // torii: censo de diagnostico del arbol de dibujo (TORII_DRAW_CENSUS=1),
             // para diffear contra otro build que compone esta misma escena.
@@ -359,7 +396,12 @@ namespace osu.Game.Screens.Play
                 {
                     RemoveInternal(GameplayClockContainer, false);
                     return GameplayClockContainer;
-                }, AddInternal)
+                }, AddInternal, () =>
+                {
+                    keepClock(vrStoryboardLayer);
+                    vrUnderlay.Remove(vrStoryboardLayer, false);
+                    return vrStoryboardLayer;
+                }, d => vrUnderlay.Add(d))
                 {
                     // What it shows flat stays in front of the replay.
                     Depth = float.MinValue,
@@ -552,15 +594,17 @@ namespace osu.Game.Screens.Play
 
         private Drawable createUnderlayComponents(WorkingBeatmap working)
         {
-            var container = new Container
+            var container = vrUnderlay = new Container
             {
                 RelativeSizeAxes = Axes.Both,
                 Children = new Drawable[]
                 {
                     // Torii: in VR, the storyboard (and video) is part of the background layer far behind the game panel.
-                    new RenderTargetRedirectContainer
+                    vrStoryboardLayer = new RenderTargetRedirectContainer
                     {
                         RelativeSizeAxes = Axes.Both,
+                        // Behind the rest here, also when put back after being shown elsewhere (see VRReplayScene).
+                        Depth = 1,
                         Target = vrBackgroundTarget,
                         Child = createVRStoryboardBuffer(DimmableStoryboard = new DimmableStoryboard(GameplayState.Storyboard, GameplayState.Mods)
                         {

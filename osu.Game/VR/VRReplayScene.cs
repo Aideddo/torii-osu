@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -10,6 +11,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Input;
 using osu.Framework.Platform.OpenXR;
+using osu.Framework.Testing;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
@@ -90,6 +92,8 @@ namespace osu.Game.VR
         private readonly string scoreHash;
         private readonly Func<Drawable> takeContent;
         private readonly Action<Drawable> returnContent;
+        private readonly Func<Drawable> takeBackdrop;
+        private readonly Action<Drawable> returnBackdrop;
 
         [Resolved]
         private ReplayExtrasStore store { get; set; } = null!;
@@ -109,7 +113,12 @@ namespace osu.Game.VR
         private float wallTextureAspect;
 
         private SceneViewContainer scene = null!;
-        private SongProgress progress = null!;
+        // The bar to seek with, flat in front of the scene; and the replay's own, hidden meanwhile so there aren't two.
+        private Drawable progress = null!;
+        private readonly List<SongProgress> hiddenProgress = new List<SongProgress>();
+        private double lastProgressSearch;
+
+        private Drawable? backdrop;
         private OsuSpriteText hint = null!;
 
         private Drawable? content;
@@ -129,11 +138,15 @@ namespace osu.Game.VR
         /// <param name="scoreHash">The hash of the replay.</param>
         /// <param name="takeContent">Takes what the replay is drawn by from where it's shown, to be shown in the scene.</param>
         /// <param name="returnContent">Puts it back.</param>
-        public VRReplayScene(string scoreHash, Func<Drawable> takeContent, Action<Drawable> returnContent)
+        /// <param name="takeBackdrop">Takes what the player had on the wall behind the panel (the storyboard) from where it's shown.</param>
+        /// <param name="returnBackdrop">Puts it back.</param>
+        public VRReplayScene(string scoreHash, Func<Drawable> takeContent, Action<Drawable> returnContent, Func<Drawable> takeBackdrop, Action<Drawable> returnBackdrop)
         {
             this.scoreHash = scoreHash;
             this.takeContent = takeContent;
             this.returnContent = returnContent;
+            this.takeBackdrop = takeBackdrop;
+            this.returnBackdrop = returnBackdrop;
 
             RelativeSizeAxes = Axes.Both;
         }
@@ -217,13 +230,14 @@ namespace osu.Game.VR
 
             // The replay's own bar is on the panel in the scene, out of reach.
             // (Added only now: the replay's clock isn't there to be had until the replay has loaded.)
-            AddInternal(new ReplayClockDependencies(drawableRuleset)
+            // (Shown and hidden as a whole: the bar itself fades in on its own once loaded.)
+            AddInternal(progress = new ReplayClockDependencies(drawableRuleset)
             {
-                Child = progress = new ArgonSongProgress
+                Alpha = 0,
+                Child = new ArgonSongProgress
                 {
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.BottomCentre,
-                    Alpha = 0,
                 },
             });
 
@@ -280,16 +294,26 @@ namespace osu.Game.VR
 
             if (show)
             {
+                // (What goes on the wall comes out of the replay first: it's inside it.)
+                scene.Wall.Add(backdrop = takeBackdrop());
                 scene.Add(content = takeContent());
                 scene.Show();
             }
             else
             {
                 scene.Remove(content!, false);
+                scene.Wall.Remove(backdrop!, false);
                 scene.Hide();
 
                 returnContent(content!);
+                returnBackdrop(backdrop!);
                 content = null;
+                backdrop = null;
+
+                foreach (var p in hiddenProgress)
+                    p.Alpha = 1;
+
+                hiddenProgress.Clear();
             }
         }
 
@@ -299,6 +323,21 @@ namespace osu.Game.VR
 
             if (content == null || extras == null)
                 return;
+
+            // The replay's own bar can't be used on the panel: there's one in front of the scene instead.
+            // (Looked for now and then: the replay's display is put together over a while, and may be changed.)
+            if (Time.Current - lastProgressSearch > 500)
+            {
+                lastProgressSearch = Time.Current;
+
+                foreach (var p in ((CompositeDrawable)content).ChildrenOfType<SongProgress>())
+                {
+                    if (!hiddenProgress.Contains(p))
+                        hiddenProgress.Add(p);
+
+                    p.Alpha = 0;
+                }
+            }
 
             // The time the replay's cursor is shown for.
             double time = drawableRuleset.FrameStableClock.CurrentTime;
