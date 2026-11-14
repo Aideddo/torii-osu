@@ -13,9 +13,25 @@ namespace osu.Game.Database
 {
     public class LegacyScoreExporter : LegacyExporter<ScoreInfo>
     {
+        private readonly ReplayExtrasStore extras;
+
         public LegacyScoreExporter(Storage storage)
             : base(storage)
         {
+            extras = new ReplayExtrasStore(storage);
+        }
+
+        /// <summary>
+        /// Torii: what was saved along with the replay (e.g. head and controller tracking of a play in VR) goes next to it, under the
+        /// same name. Importing the replay from there takes it along again.
+        /// </summary>
+        protected override void OnExported(ScoreInfo model, string filename)
+        {
+            if (!extras.Exists(model.Hash))
+                return;
+
+            using (var stream = ExportStorage.CreateFileSafely(Path.ChangeExtension(filename, ReplayExtrasStore.EXTENSION)))
+                extras.CopyTo(model.Hash, stream);
         }
 
         protected override string GetFilename(ScoreInfo score)

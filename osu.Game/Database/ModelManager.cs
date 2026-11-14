@@ -203,8 +203,17 @@ namespace osu.Game.Database
                     return false;
 
                 processableItem.DeletePending = true;
+                OnDeleted(processableItem, realm);
                 return true;
             });
+        }
+
+        /// <summary>
+        /// Torii: invoked when an item has been deleted (marked as pending deletion), within the write doing so: for what is kept
+        /// outside the database for it to be removed as well.
+        /// </summary>
+        protected virtual void OnDeleted(TModel item, Realm realm)
+        {
         }
 
         public void Undelete(TModel item)

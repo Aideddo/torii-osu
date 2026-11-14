@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
@@ -33,12 +35,51 @@ namespace osu.Game.Scoring
 
         private readonly IAPIProvider api;
 
+        private readonly ReplayExtrasStore extras;
+
         public ScoreImporter(RulesetStore rulesets, Func<BeatmapManager> beatmaps, Storage storage, RealmAccess realm, IAPIProvider api)
             : base(storage, realm)
         {
             this.rulesets = rulesets;
             this.beatmaps = beatmaps;
             this.api = api;
+
+            extras = new ReplayExtrasStore(storage);
+        }
+
+        /// <summary>
+        /// Torii: a replay imported from a file takes along the extras file lying next to it under the same name, if there is one
+        /// (as an export puts it: see <see cref="LegacyScoreExporter"/>).
+        /// </summary>
+        public override async Task<Live<ScoreInfo>?> Import(ImportTask task, ImportParameters parameters = default, CancellationToken cancellationToken = default)
+        {
+            var imported = await base.Import(task, parameters, cancellationToken).ConfigureAwait(false);
+
+            // (A task with a stream has no file of its own to look next to.)
+            if (imported == null || task.Stream != null)
+                return imported;
+
+            try
+            {
+                string extrasPath = Path.ChangeExtension(task.Path, ReplayExtrasStore.EXTENSION);
+                string? hash = imported.PerformRead(s => s.Hash);
+
+                if (!string.IsNullOrEmpty(hash) && File.Exists(extrasPath))
+                {
+                    using (var stream = File.OpenRead(extrasPath))
+                    {
+                        if (extras.Import(hash, stream))
+                            Logger.Log($@"Imported the extras next to replay '{Path.GetFileName(task.Path)}'.", LoggingTarget.Database);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                // The replay itself is in.
+                Logger.Error(e, @"Failed to import the extras next to a replay.", LoggingTarget.Database);
+            }
+
+            return imported;
         }
 
         protected override ScoreInfo? CreateModel(ArchiveReader archive, ImportParameters parameters)

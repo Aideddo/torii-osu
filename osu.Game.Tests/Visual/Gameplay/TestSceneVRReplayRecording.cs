@@ -3,6 +3,7 @@
 
 using System.Linq;
 using NUnit.Framework;
+using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
@@ -67,6 +68,18 @@ namespace osu.Game.Tests.Visual.Gameplay
             }));
             AddUntilStep("movement shown", () => moreInfo.ChildrenOfType<SpriteText>().Any(t => t.Text.ToString() == "Controllers moved"));
             AddStep("remove more info", () => Remove(moreInfo, true));
+        }
+
+        [Test]
+        public void TestExtrasRemovedWithDeletedScore()
+        {
+            PlayThrough();
+            string hash = string.Empty;
+
+            AddStep("note the replay", () => hash = SavedScore.Hash);
+            AddStep("delete the score", () => Dependencies.Get<ScoreManager>().Delete(SavedScore));
+            AddAssert("score deleted", () => Realm.Run(r => r.Find<ScoreInfo>(Player.Score.ScoreInfo.ID)!.DeletePending));
+            AddAssert("extras removed right away", () => !Store.Exists(hash));
         }
     }
 }

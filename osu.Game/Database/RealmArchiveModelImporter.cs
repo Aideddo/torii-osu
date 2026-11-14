@@ -256,7 +256,7 @@ namespace osu.Game.Database
         /// <param name="parameters">Parameters to further configure the import process.</param>
         /// <param name="cancellationToken">An optional cancellation token.</param>
         /// <returns>The imported model, if successful.</returns>
-        public async Task<Live<TModel>?> Import(ImportTask task, ImportParameters parameters = default, CancellationToken cancellationToken = default)
+        public virtual async Task<Live<TModel>?> Import(ImportTask task, ImportParameters parameters = default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
