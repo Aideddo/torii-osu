@@ -9,6 +9,7 @@ using osu.Framework.Platform.OpenXR;
 using osu.Framework.Screens;
 using osu.Framework.Testing;
 using osu.Game.Configuration;
+using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu;
 using osu.Game.Scoring;
@@ -41,7 +42,11 @@ namespace osu.Game.Tests.Visual.Gameplay
         [SetUpSteps]
         public void SetUpSteps()
         {
-            AddStep("setting as it comes", () => config.GetBindable<bool>(OsuSetting.VRReplaySceneView).SetDefault());
+            AddStep("settings as they come", () =>
+            {
+                config.GetBindable<bool>(OsuSetting.VRReplaySceneView).SetDefault();
+                config.GetBindable<VRReplayCamera>(OsuSetting.VRReplaySceneCamera).SetDefault();
+            });
             AddStep("settings shown", () => config.SetValue(OsuSetting.ReplaySettingsOverlay, true));
             AddStep("create player", () =>
             {
@@ -107,6 +112,47 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddUntilStep("pauses the replay as ever", () => !player.GameplayClockContainer.IsRunning);
         }
 
+        [Test]
+        public void TestCameras()
+        {
+            AddStep("choose the player's view in the settings", () => cameraSetting.Current.Value = VRReplayCamera.FollowHead);
+            AddUntilStep("camera where their head is", () => Vector3.Distance(view.CameraPosition, head.Position), () => Is.LessThan(0.01f));
+            AddAssert("no headset in the way", () => view.ShowHead, () => Is.False);
+            AddAssert("choice kept", () => config.Get<VRReplayCamera>(OsuSetting.VRReplaySceneCamera), () => Is.EqualTo(VRReplayCamera.FollowHead));
+
+            AddStep("choose over the shoulder", () => cameraSetting.Current.Value = VRReplayCamera.OverTheShoulder);
+            AddAssert("headset shown", () => view.ShowHead);
+            // (The player faces the panel down -Z: right of them is +X, behind them +Z.)
+            AddUntilStep("camera behind their right shoulder", () => Vector3.Distance(view.CameraPosition, head.Position + new Vector3(0.55f, 0.2f, 1f)), () => Is.LessThan(0.01f));
+            AddAssert("looking ahead past them", () => Vector3.Transform(-Vector3.UnitZ, view.CameraOrientation).Z, () => Is.LessThan(-0.8f));
+
+            Vector3 start = default;
+
+            AddStep("try to fly it", () =>
+            {
+                start = view.CameraPosition;
+                InputManager.MoveMouseTo(player.ScreenSpaceDrawQuad.Centre);
+                InputManager.PressButton(MouseButton.Right);
+                InputManager.PressKey(Key.W);
+            });
+            AddWaitStep("wait", 5);
+            AddAssert("stays put", () => Vector3.Distance(view.CameraPosition, start), () => Is.LessThan(0.01f));
+
+            AddStep("choose free", () => cameraSetting.Current.Value = VRReplayCamera.Free);
+            AddUntilStep("flies on from there", () => Vector3.Distance(view.CameraPosition, start), () => Is.GreaterThan(0.05f));
+            AddAssert("ahead, as it looked", () => view.CameraPosition.Z, () => Is.LessThan(start.Z));
+            AddStep("release all", () =>
+            {
+                InputManager.ReleaseKey(Key.W);
+                InputManager.ReleaseButton(MouseButton.Right);
+            });
+        }
+
+        // Where the player's head is throughout, before a panel down -Z from them.
+        private static readonly VRPose head = new VRPose(new Vector3(0, 1.6f, 0.1f), Quaternion.Identity);
+
+        private SettingsEnumDropdown<VRReplayCamera> cameraSetting => scene.ChildrenOfType<ReplaySettingsOverlay>().Single().ChildrenOfType<SettingsEnumDropdown<VRReplayCamera>>().Single();
+
         private VRReplayScene scene => player.ChildrenOfType<VRReplayScene>().Single();
 
         private SceneViewContainer view => scene.ChildrenOfType<SceneViewContainer>().Single();
@@ -125,7 +171,6 @@ namespace osu.Game.Tests.Visual.Gameplay
                 {
                     var score = mods.OfType<ModAutoplay>().First().CreateScoreFromReplayData(beatmap, mods);
                     var panel = new VRPanelGeometry(new VRPose(new Vector3(0, 1.5f, 0), Quaternion.Identity), 1.4f, 1.1f, 16f / 9, true);
-                    var head = new VRPose(new Vector3(0, 1.6f, 0.1f), Quaternion.Identity);
 
                     var extras = new VRReplayExtras();
                     extras.Panels.Add(new VRReplayPanel { Time = -100000, Geometry = panel });
