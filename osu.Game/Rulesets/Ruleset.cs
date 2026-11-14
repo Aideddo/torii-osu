@@ -218,6 +218,11 @@ namespace osu.Game.Rulesets
         public ModTouchDevice? GetTouchDeviceMod() => CreateMod<ModTouchDevice>();
 
         /// <summary>
+        /// Torii: the mod marking plays made with VR controllers, if the ruleset has one.
+        /// </summary>
+        public ModVR? GetVRMod() => CreateMod<ModVR>();
+
+        /// <summary>
         /// Creates a <see cref="ScoreMultiplierCalculator"/> relevant to this ruleset.
         /// </summary>
         public virtual ScoreMultiplierCalculator CreateScoreMultiplierCalculator(ScoreMultiplierContext context) => new ScoreMultiplierCalculator(context);

@@ -202,6 +202,7 @@ namespace osu.Game.Graphics
         public static IconUsage ModTraceable => get(OsuIconMapping.ModTraceable);
         public static IconUsage ModTransform => get(OsuIconMapping.ModTransform);
         public static IconUsage ModTwoKeys => get(OsuIconMapping.ModTwoKeys);
+        public static IconUsage ModVR => get(OsuIconMapping.ModVR);
         public static IconUsage ModWiggle => get(OsuIconMapping.ModWiggle);
         public static IconUsage ModWindDown => get(OsuIconMapping.ModWindDown);
         public static IconUsage ModWindUp => get(OsuIconMapping.ModWindUp);
@@ -724,6 +725,10 @@ namespace osu.Game.Graphics
 
             [Description(@"Mods/mod-two-keys")]
             ModTwoKeys,
+
+            // Torii: for plays made in VR.
+            [Description(@"Mods/mod-vr")]
+            ModVR,
 
             [Description(@"Mods/mod-wiggle")]
             ModWiggle,

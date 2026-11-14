@@ -8,6 +8,9 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Screens;
 using osu.Framework.Testing;
+using osu.Game.Online.API;
+using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens.Ranking;
 using osu.Game.Screens.Ranking.Statistics;
@@ -48,6 +51,11 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddAssert("distance moved saved", () => extras!.LeftDistance, () => Is.GreaterThan(0));
             AddAssert("nothing moved by the other hand", () => extras!.RightDistance, () => Is.Zero);
             AddAssert("pen settings saved", () => extras!.PenOffsetForward, () => Is.EqualTo(5));
+
+            // (By the controller having been moved alone.)
+            AddAssert("score marked as a VR play", () => Realm.Run(r => r.Find<ScoreInfo>(Player.Score.ScoreInfo.ID)!.Mods.OfType<ModVR>().Count()), () => Is.EqualTo(1));
+            AddAssert("submitted with the mark", () => SoloScoreInfo.ForSubmission(SavedScore).Mods,
+                () => Has.Some.Matches<APIMod>(m => m.Acronym == "VR"));
 
             StatisticsPanel moreInfo = null!;
 
