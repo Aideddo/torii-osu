@@ -225,6 +225,17 @@ namespace osu.Game.Screens.Play
         /// </summary>
         private ExternalRenderTarget vrBackgroundTarget => VRRuntime.IsVR ? gameHost.GetExternalRenderTarget(VRLayers.BACKGROUND) : null;
 
+        /// <summary>
+        /// Torii: null outside VR.
+        /// </summary>
+        [Resolved(CanBeNull = true)]
+        private IVRTracking vrTracking { get; set; }
+
+        /// <summary>
+        /// Torii: records what a play in VR saves along with its replay (see <see cref="VRReplayExtras"/>), or null outside VR.
+        /// </summary>
+        private VRReplayRecorder vrReplayRecorder;
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -334,6 +345,10 @@ namespace osu.Game.Screens.Play
             Score.ScoreInfo.Mods = gameplayMods;
 
             dependencies.CacheAs(GameplayState = new GameplayState(playableBeatmap, ruleset, gameplayMods, Score, ScoreProcessor, HealthProcessor, Beatmap.Value.Storyboard, PlayingState));
+
+            // Torii: plays in VR save where the head and controllers were along with their replays.
+            if (vrTracking != null && config.Get<bool>(OsuSetting.VRSaveReplayExtras))
+                GameplayClockContainer.Add(vrReplayRecorder = new VRReplayRecorder());
 
             var rulesetSkinProvider = new RulesetSkinProvidingContainer(ruleset, playableBeatmap, Beatmap.Value.Skin);
             config.BindWith(OsuSetting.BeatmapSkins, rulesetSkinProvider.BeatmapSkins);
@@ -1176,6 +1191,9 @@ namespace osu.Game.Screens.Play
             // - Must be cloned for the same reason.
             Score scoreCopy = Score.DeepClone();
 
+            // Torii: likewise ended now, and saved once the import has given the replay its hash.
+            vrReplayRecorder?.Stop();
+
             return prepareScoreForDisplayTask = Task.Run(async () =>
             {
                 try
@@ -1195,6 +1213,8 @@ namespace osu.Game.Screens.Play
                 {
                     Logger.Error(ex, @"Score import failed!");
                 }
+
+                vrReplayRecorder?.Save(scoreCopy.ScoreInfo);
 
                 return scoreCopy.ScoreInfo;
             });

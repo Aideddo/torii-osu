@@ -81,6 +81,15 @@ namespace osu.Game.Overlays.Settings.Sections.VR
                 {
                     Keywords = new[] { "vr", "pen", "offset", "height", "pointer" },
                 },
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = "Save tracking with replays",
+                    HintText = "Saves where your head and controllers were along with each replay, so it can show them again. Around 30 KB per minute of play.",
+                    Current = config.GetBindable<bool>(OsuSetting.VRSaveReplayExtras),
+                })
+                {
+                    Keywords = new[] { "vr", "replay", "tracking", "record", "controller", "head", "extras" },
+                },
                 new SettingsItemV2(new FormSliderBar<float>
                 {
                     Caption = "Haptic feedback",

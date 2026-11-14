@@ -154,5 +154,44 @@ namespace osu.Game.VR
 
             public double GetDistanceMoved(int hand) => input.GetDistanceMoved(hand);
         }
+
+        /// <summary>
+        /// Exposes an OpenXR host's tracking to the game.
+        /// </summary>
+        public class Tracking : IVRTracking
+        {
+            private readonly OpenXRHostController xr;
+
+            public Tracking(OpenXRHostController xr)
+            {
+                this.xr = xr;
+            }
+
+            public string RuntimeName => xr.RuntimeName;
+
+            public VRTrackingState GetState()
+            {
+                var state = xr.GetTrackingState();
+
+                return new VRTrackingState
+                {
+                    Frame = state.Frame,
+                    Head = state.HeadValid ? new VRPose(state.HeadPosition, state.HeadOrientation) : null,
+                    Left = convert(state.LeftHand),
+                    Right = convert(state.RightHand),
+                    ActiveHand = state.ActiveHand,
+                    Panel = new VRPanelGeometry(new VRPose(state.PanelCentre, state.PanelOrientation), state.PanelRadius, state.PanelHorizontalAngle, state.PanelAspect,
+                        state.PanelCylinder),
+                };
+            }
+
+            private static VRHandTracking convert(in XrHandState hand) => new VRHandTracking
+            {
+                Grip = hand.GripValid ? new VRPose(hand.GripPosition, hand.GripOrientation) : null,
+                Pointer = hand.AimValid ? new VRPose(hand.AimPosition, hand.AimOrientation) : null,
+                Trigger = hand.Trigger,
+                Squeeze = hand.Squeeze,
+            };
+        }
     }
 }

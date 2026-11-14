@@ -306,7 +306,10 @@ namespace osu.Game
 
             // Torii: VR controllers, for gameplay to map each trigger to its own key.
             if (Host is IOpenXRHost xrHost)
+            {
                 dependencies.CacheAs<IVRControllers>(new OpenXRHostIntegration.Controllers(xrHost.OpenXR.ControllerInput));
+                dependencies.CacheAs<IVRTracking>(new OpenXRHostIntegration.Tracking(xrHost.OpenXR));
+            }
 
             // Torii: what plays save next to their replays (e.g. head and controller tracking in VR).
             dependencies.Cache(new ReplayExtrasStore(Storage));
