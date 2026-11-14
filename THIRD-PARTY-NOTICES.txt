@@ -196,6 +196,25 @@ reduced to 512x512 and the other texture maps were removed. Shown where the
 player's head was when a replay of a play made in VR is watched as a 3D scene.
 
 ================================================================================
+12. "Meta Quest Pro Left Controller" and "Meta Quest Pro Right Controller" 3D
+    models (generic VR controllers)
+================================================================================
+
+"Meta Quest Pro Left Controller" and "Meta Quest Pro Right Controller" by
+mreimer (https://sketchfab.com/mreimer)
+Sources:
+  https://sketchfab.com/3d-models/meta-quest-pro-left-controller-b65700705dec4df9a12dd9e31933fb62
+  https://sketchfab.com/3d-models/meta-quest-pro-right-controller-76a1fbb0530842eea882019bcfe51b79
+Licence: Creative Commons Attribution-NoDerivatives 4.0 International
+         (CC BY-ND 4.0)
+Licence text: https://creativecommons.org/licenses/by-nd/4.0/legalcode
+
+Distributed unmodified, as downloaded (meta_quest_pro_left_controller.glb and
+meta_quest_pro_right_controller.glb). Drawn where a VR controller is and no
+model of the actual controller is available: in the hands of the player of a
+replay, and for the user's own controllers on VR runtimes which provide none.
+
+================================================================================
 
 Questions about this notice, or a request to correct it, can be sent to the
 Torii maintainer. Corrections will be made promptly.

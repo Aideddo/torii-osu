@@ -93,6 +93,7 @@ namespace osu.Game.VR
                 {
                     Alpha = 0,
                     HeadModel = VRModels.Headset,
+                    ControllerModels = (VRModels.ControllerLeft, VRModels.ControllerRight),
                 },
                 new FillFlowContainer
                 {

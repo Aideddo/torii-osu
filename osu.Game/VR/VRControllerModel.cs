@@ -3,6 +3,8 @@
 
 using System.ComponentModel;
 using System.IO;
+using System.Numerics;
+using osu.Framework.Platform.OpenXR;
 
 namespace osu.Game.VR
 {
@@ -36,6 +38,35 @@ namespace osu.Game.VR
         /// pen only, re-centred and simplified. See THIRD-PARTY-NOTICES.txt.
         /// </remarks>
         public static byte[] Pen => pen ??= load("osu.Game.VR.Models.pen.glb");
+
+        private static XrPlacedModel? controllerLeft;
+        private static XrPlacedModel? controllerRight;
+
+        // Where the controller models' origin and axes are in a controller's grip pose: found by lining their buttons, trigger and
+        // handle up with a model the Quest gives of its own controllers. The same for both, which mirror each other.
+        private static readonly Vector3 controller_position = new Vector3(0, 0, -0.02f);
+        private static readonly Quaternion controller_rotation = Quaternion.Normalize(new Quaternion(0, 0.9135f, -0.4067f, 0));
+
+        /// <summary>
+        /// A controller for the left hand, drawn where a controller is and there's no model of the actual one: the hands of the player
+        /// of a replay, and the user's own on runtimes which have no model of their controllers.
+        /// </summary>
+        /// <remarks>
+        /// "Meta Quest Pro Left Controller" by mreimer (https://sketchfab.com/3d-models/meta-quest-pro-left-controller-b65700705dec4df9a12dd9e31933fb62),
+        /// CC BY-ND 4.0: the file is the author's, unchanged; it's only placed when drawn. See THIRD-PARTY-NOTICES.txt.
+        /// </remarks>
+        public static XrPlacedModel ControllerLeft
+            => controllerLeft ??= new XrPlacedModel(load("osu.Game.VR.Models.meta_quest_pro_left_controller.glb"), controller_position, controller_rotation);
+
+        /// <summary>
+        /// A controller for the right hand. See <see cref="ControllerLeft"/>.
+        /// </summary>
+        /// <remarks>
+        /// "Meta Quest Pro Right Controller" by mreimer (https://sketchfab.com/3d-models/meta-quest-pro-right-controller-76a1fbb0530842eea882019bcfe51b79),
+        /// CC BY-ND 4.0, unchanged.
+        /// </remarks>
+        public static XrPlacedModel ControllerRight
+            => controllerRight ??= new XrPlacedModel(load("osu.Game.VR.Models.meta_quest_pro_right_controller.glb"), controller_position, controller_rotation);
 
         private static byte[]? headset;
 

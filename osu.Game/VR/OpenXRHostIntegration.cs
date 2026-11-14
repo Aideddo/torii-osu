@@ -80,6 +80,9 @@ namespace osu.Game.VR
             bind(penOffsetUp = config.GetBindable<float>(OsuSetting.VRPenOffsetUp), _ => updatePen());
             scene?.DefaultControllers.BindValueChanged(_ => updatePen());
 
+            // What a controller looks like where the runtime has no model of it, and in the hands of a replay's player.
+            xr.GenericControllerModels = (VRModels.ControllerLeft, VRModels.ControllerRight);
+
             // Panel layout: settings apply to the headset, and resizing / pushing the panel by hand writes back to the settings.
             bind(panelSize = config.GetBindable<float>(OsuSetting.VRPanelSize), v => xr.PanelHorizontalAngle = v * MathF.PI / 180);
             bind(panelDistance = config.GetBindable<float>(OsuSetting.VRPanelDistance), v => xr.PanelDistance = v);
