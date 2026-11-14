@@ -300,6 +300,10 @@ namespace osu.Game
 
             dependencies.CacheAs(Storage);
 
+            // Torii: switching in and out of VR mode, where the platform can (desktop).
+            if (CreateVRModeControl() is IVRModeControl vrModeControl)
+                dependencies.CacheAs(vrModeControl);
+
             // Torii: VR controllers, for gameplay to map each trigger to its own key.
             if (Host is IOpenXRHost xrHost)
                 dependencies.CacheAs<IVRControllers>(new OpenXRHostIntegration.Controllers(xrHost.OpenXR.ControllerInput));
@@ -907,6 +911,12 @@ namespace osu.Game
         }
 
         /// <summary>
+        /// Torii: whether the user already made clear they want the next <see cref="AttemptExit"/> (e.g. by choosing to switch VR mode,
+        /// which restarts the game), so the main menu doesn't ask again. It still does while operations are ongoing.
+        /// </summary>
+        public bool ExitConfirmed { get; set; }
+
+        /// <summary>
         /// An action that restarts the application after it has exited.
         /// </summary>
         [CanBeNull]
@@ -917,6 +927,7 @@ namespace osu.Game
         /// </summary>
         public void CancelRestartOnExit()
         {
+            ExitConfirmed = false;
             RestartOnExitAction = null;
         }
 
@@ -925,6 +936,12 @@ namespace osu.Game
         /// </summary>
         /// <returns>Whether a restart operation was queued.</returns>
         public virtual bool RestartAppWhenExited() => false;
+
+        /// <summary>
+        /// Torii: creates the control for switching in and out of VR mode, on platforms where the game can (desktop). Null otherwise.
+        /// </summary>
+        [CanBeNull]
+        protected virtual IVRModeControl CreateVRModeControl() => null;
 
         #endregion
 

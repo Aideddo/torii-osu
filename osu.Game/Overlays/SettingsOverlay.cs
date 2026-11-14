@@ -68,6 +68,9 @@ namespace osu.Game.Overlays
 
         protected override float ExpandedPosition => lastOpenedSubPanel?.State.Value == Visibility.Visible ? -PANEL_WIDTH : base.ExpandedPosition;
 
+        [Resolved]
+        private VR.IVRModeControl? vrMode { get; set; }
+
         [BackgroundDependencyLoader]
         private void load(RulesetStore rulesets)
         {
@@ -82,8 +85,9 @@ namespace osu.Game.Overlays
                 new GameplaySection()
             };
 
-            // Torii: VR builds get their own section right after General, so VR options are easy to find.
-            if (VR.VRRuntime.IsVR)
+            // Torii: VR builds get their own section right after General, so VR options are easy to find. So do desktop builds
+            // outside VR mode, for switching to it.
+            if (VR.VRRuntime.IsVR || vrMode != null)
                 sections.Insert(1, new VRSection());
 
             foreach (Ruleset ruleset in rulesets.AvailableRulesets.Select(info => info.CreateInstance()))

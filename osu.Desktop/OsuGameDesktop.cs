@@ -23,6 +23,9 @@ using osu.Game.IO;
 using osu.Game.IPC;
 using osu.Game.Performance;
 using osu.Game.Utils;
+using osu.Game.VR;
+using osu.Desktop.VR;
+using osu.Framework.Platform.OpenXR;
 
 namespace osu.Desktop
 {
@@ -38,10 +41,19 @@ namespace osu.Desktop
 
         public bool EnableWebSocketServer { get; init; }
 
+        private readonly string[] args;
+
         public OsuGameDesktop(string[]? args = null)
             : base(args)
         {
+            this.args = args ?? Array.Empty<string>();
         }
+
+        private DesktopVRModeControl? vrModeControl;
+
+        // Torii: VR mode can be switched on and off on Windows and Linux (the platforms with a host presenting through OpenXR).
+        protected override IVRModeControl? CreateVRModeControl()
+            => RuntimeInfo.OS is RuntimeInfo.Platform.Windows or RuntimeInfo.Platform.Linux ? vrModeControl = new DesktopVRModeControl(this, args) : null;
 
         public override StableStorage? GetStorageForStableInstall()
         {
@@ -169,6 +181,25 @@ namespace osu.Desktop
             }
 
             base.LoadComplete();
+
+            // Torii: when the headset's runtime is closed (or VR couldn't be started at all), carry on outside VR mode rather than exit
+            // or sit there showing nothing.
+            if (Host is IOpenXRHost xrHost && vrModeControl is DesktopVRModeControl control)
+            {
+                xrHost.OpenXR.ExitWhenSessionEnds = false;
+                xrHost.OpenXR.ExitRequested += () => Schedule(control.LeaveAsEnded);
+                // Failing after the session had started is the runtime going away without notice.
+                xrHost.OpenXR.SessionFailed += () => Schedule(() =>
+                {
+                    if (xrHost.OpenXR.RuntimeName.Length > 0)
+                        control.LeaveAsEnded();
+                    else
+                        control.LeaveAsFailed();
+                });
+
+                if (xrHost.OpenXR.Failed)
+                    Schedule(control.LeaveAsFailed);
+            }
 
             LoadComponentAsync(new DiscordRichPresence(), Add);
 

@@ -16,6 +16,7 @@ using osu.Game;
 using osu.Game.IPC;
 using osu.Game.Tournament;
 using osu.Game.VR;
+using osu.Desktop.VR;
 using SDL;
 using Velopack;
 
@@ -420,14 +421,23 @@ namespace osu.Desktop
             string gameName = base_game_name;
             bool tournamentClient = false;
 
-            // Torii: --vr presents through an OpenXR runtime (e.g. Monado, which simulates a headset) instead of the window.
-            bool vr = args.Contains("--vr");
+            // Torii: --vr presents through an OpenXR runtime (SteamVR; or e.g. Monado, which simulates a headset) instead of the window.
+            // The game switches in and out of this mode by restarting itself (see DesktopVRModeControl).
+            bool vr = args.Contains(DesktopVRModeControl.VR_ARGUMENT);
+
+            waitForReplacedInstance(args);
 
             if (vr)
             {
                 // Must happen before the game is constructed, as config defaults read it.
                 VRRuntime.EnableVR();
-                Environment.SetEnvironmentVariable("OSU_SDL3", "1");
+
+                // The OpenXR hosts need SDL3. Remembered if it wasn't the user's choice, so leaving VR mode goes back to theirs.
+                if (Environment.GetEnvironmentVariable("OSU_SDL3") != "1")
+                {
+                    Environment.SetEnvironmentVariable("OSU_SDL3", "1");
+                    Environment.SetEnvironmentVariable(DesktopVRModeControl.FORCED_SDL3_VARIABLE, "1");
+                }
             }
 
             foreach (string arg in args)
@@ -439,7 +449,7 @@ namespace osu.Desktop
 
                 switch (key)
                 {
-                    case "--vr":
+                    case DesktopVRModeControl.VR_ARGUMENT:
                         break;
 
                     case "--tournament":
@@ -490,6 +500,11 @@ namespace osu.Desktop
                            ? Host.GetOpenXRDesktopHost(gameName, hostOptions, debugDirectory: Path.Combine(storageFolder, "vr-debug"))
                            : Host.GetSuitableDesktopHost(gameName, hostOptions))
                 {
+                    // Torii: SteamVR can be running without a headset (e.g. a wireless one not connected yet): wait for it, for as long
+                    // as SteamVR is there. The desktop window says so (see VRDesktopView).
+                    if (host is osu.Framework.Platform.OpenXR.IOpenXRHost xrHost)
+                        xrHost.OpenXR.WaitForHeadset = DesktopVRModeControl.IsRuntimeRunning;
+
                     if (!host.IsPrimaryInstance)
                     {
                         if (trySendIPCMessage(host, cwd, args))
@@ -521,7 +536,7 @@ namespace osu.Desktop
                         host.Run(new TournamentGame());
                     else
                     {
-                        host.Run(new OsuGameDesktop(args.Where(a => a != "--vr").ToArray())
+                        host.Run(new OsuGameDesktop(args)
                         {
                             IsFirstRun = isFirstRun,
                             EnableWebSocketServer = Environment.GetEnvironmentVariable("OSU_WEBSOCKET_SERVER") == "1",
@@ -538,6 +553,32 @@ namespace osu.Desktop
             {
                 logFatalError("Fatal Startup Exception", ex);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Torii: when the game restarted itself (to switch VR mode), waits for the instance being replaced to exit, as two can't run at
+        /// once.
+        /// </summary>
+        private static void waitForReplacedInstance(string[] args)
+        {
+            string? argument = args.FirstOrDefault(a => a.StartsWith(DesktopVRModeControl.WAIT_ARGUMENT, StringComparison.Ordinal));
+
+            if (argument == null || !int.TryParse(argument[DesktopVRModeControl.WAIT_ARGUMENT.Length..], out int processId))
+                return;
+
+            try
+            {
+                using (var process = System.Diagnostics.Process.GetProcessById(processId))
+                    process.WaitForExit(20000);
+            }
+            catch (ArgumentException)
+            {
+                // Already gone.
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"[Torii] Could not wait for the previous instance to exit: {e.Message}");
             }
         }
 

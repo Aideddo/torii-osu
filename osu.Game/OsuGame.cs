@@ -1700,6 +1700,18 @@ namespace osu.Game
             loadComponentSingleFile<IDialogOverlay>(dialogOverlay = new DialogOverlay(), topMostOverlayContent.Add, true);
             loadComponentSingleFile(new MedalOverlay(), topMostOverlayContent.Add);
 
+            // Torii: offering VR mode on the desktop, and what the desktop window shows while the game is in the headset.
+            // (Cached while the base game loads, so too late for a [Resolved] member of this class.)
+            var vrMode = Dependencies.Get<VR.IVRModeControl>();
+
+            if (vrMode != null)
+            {
+                loadComponentSingleFile(new VR.VRModePrompt(vrMode, FirstRunOverlay), Add);
+
+                if (vrMode.Enabled)
+                    loadComponentSingleFile(new VR.VRDesktopView(), Add);
+            }
+
             // Torii: restriction notice — watches api.State/LastLoginError and shows
             // why/when when the local user is restricted. Self-contained, input only when visible.
             loadComponentSingleFile(new osu.Game.Overlays.ToriiBriefing.ToriiRestrictionOverlay(), topMostOverlayContent.Add);
