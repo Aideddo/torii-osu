@@ -100,11 +100,19 @@ namespace osu.Game.Scoring
                     databasedScoreInfo = Query(s => s.Hash == scoreInfo.Hash);
             }
 
+            // Torii: a deleted score stays in the database until it's purged, and the same play may have been downloaded since:
+            // that one is the one to find (the deleted one has lost what was saved along with its replay, for a start).
             if (originalScoreInfo.OnlineID > 0)
-                databasedScoreInfo ??= Query(s => s.OnlineID == originalScoreInfo.OnlineID);
+            {
+                databasedScoreInfo ??= Query(s => s.OnlineID == originalScoreInfo.OnlineID && !s.DeletePending)
+                                       ?? Query(s => s.OnlineID == originalScoreInfo.OnlineID);
+            }
 
             if (originalScoreInfo.LegacyOnlineID > 0)
-                databasedScoreInfo ??= Query(s => s.LegacyOnlineID == originalScoreInfo.LegacyOnlineID);
+            {
+                databasedScoreInfo ??= Query(s => s.LegacyOnlineID == originalScoreInfo.LegacyOnlineID && !s.DeletePending)
+                                       ?? Query(s => s.LegacyOnlineID == originalScoreInfo.LegacyOnlineID);
+            }
 
             if (databasedScoreInfo == null)
             {

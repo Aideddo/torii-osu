@@ -167,6 +167,8 @@ namespace osu.Game
 
         protected ScoreModelDownloader ScoreDownloader { get; private set; }
 
+        private ReplayExtrasStore replayExtrasStore;
+
         protected SkinManager SkinManager { get; private set; }
 
         protected RealmRulesetStore RulesetStore { get; private set; }
@@ -313,7 +315,7 @@ namespace osu.Game
             }
 
             // Torii: what plays save next to their replays (e.g. head and controller tracking in VR).
-            dependencies.Cache(new ReplayExtrasStore(Storage));
+            dependencies.Cache(replayExtrasStore = new ReplayExtrasStore(Storage));
 
             // Torii: tracks which in-game "NEW" feature badges have been seen/dismissed
             // (sidecar JSON under the torii/ storage dir). Cached after Storage so its
@@ -428,7 +430,7 @@ namespace osu.Game
             });
 
             dependencies.Cache(BeatmapDownloader = new BeatmapModelDownloader(BeatmapManager, API));
-            dependencies.Cache(ScoreDownloader = new ScoreModelDownloader(ScoreManager, API));
+            dependencies.Cache(ScoreDownloader = new ScoreModelDownloader(ScoreManager, API, replayExtrasStore));
 
             // Add after all the above cache operations as it depends on them.
             base.Content.Add(difficultyCache);

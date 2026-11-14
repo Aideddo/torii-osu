@@ -81,5 +81,41 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddAssert("score deleted", () => Realm.Run(r => r.Find<ScoreInfo>(Player.Score.ScoreInfo.ID)!.DeletePending));
             AddAssert("extras removed right away", () => !Store.Exists(hash));
         }
+
+        /// <summary>
+        /// A deleted score stays in the database until it's purged. Downloaded again in the meantime, the play is watched from the
+        /// download: that's the one with tracking, the deleted one's having gone with it.
+        /// </summary>
+        [Test]
+        public void TestDownloadedScoreFoundOverDeletedOne()
+        {
+            const long online_id = 1234;
+            const string downloaded_hash = "downloaded";
+
+            PlayThrough();
+
+            AddStep("submitted, deleted, then downloaded", () =>
+            {
+                var scores = Dependencies.Get<ScoreManager>();
+
+                Realm.Write(r => r.Find<ScoreInfo>(SavedScore.ID)!.OnlineID = online_id);
+                scores.Delete(SavedScore);
+
+                Realm.Write(r =>
+                {
+                    var original = r.Find<ScoreInfo>(SavedScore.ID)!;
+
+                    r.Add(new ScoreInfo(original.BeatmapInfo, original.Ruleset)
+                    {
+                        ID = System.Guid.NewGuid(),
+                        OnlineID = online_id,
+                        Hash = downloaded_hash,
+                    });
+                });
+            });
+
+            AddAssert("downloaded score found by its online ID", () => Dependencies.Get<ScoreManager>().GetScore(new ScoreInfo { OnlineID = online_id })?.ScoreInfo.Hash,
+                () => Is.EqualTo(downloaded_hash));
+        }
     }
 }

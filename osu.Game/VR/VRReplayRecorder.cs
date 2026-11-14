@@ -2,10 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.IO;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Game.Configuration;
+using osu.Game.Online.API;
+using osu.Game.Online.API.Requests;
 using osu.Game.Rulesets.UI;
 using osu.Game.Scoring;
 using osu.Game.Screens.Play;
@@ -32,6 +35,9 @@ namespace osu.Game.VR
 
         [Resolved]
         private ReplayExtrasStore? store { get; set; }
+
+        [Resolved]
+        private IAPIProvider? api { get; set; }
 
         private readonly VRReplayExtras extras = new VRReplayExtras { RecordedAt = DateTimeOffset.Now };
 
@@ -130,8 +136,9 @@ namespace osu.Game.VR
         public void Stop() => stopped = true;
 
         /// <summary>
-        /// Saves what was recorded as extras of <paramref name="score"/>'s replay. To be called after <see cref="Stop"/>, once the
-        /// score has been imported (which gives the replay its hash). Not bound to the update thread.
+        /// Saves what was recorded as extras of <paramref name="score"/>'s replay, and uploads them if the score was submitted.
+        /// To be called after <see cref="Stop"/>, once the score has been imported (which gives the replay its hash). Not bound to
+        /// the update thread.
         /// </summary>
         public void Save(ScoreInfo score)
         {
@@ -150,7 +157,23 @@ namespace osu.Game.VR
             catch (Exception e)
             {
                 Logger.Error(e, @"Failed to save VR replay extras.");
+                return;
             }
+
+            // Not submitted (offline, or the submission failed): there's nothing online to add them to.
+            if (score.OnlineID <= 0 || api == null)
+                return;
+
+            var data = new MemoryStream();
+            store.CopyTo(hash, data);
+
+            long onlineId = score.OnlineID;
+            var request = new UploadReplayExtrasRequest(onlineId, data.ToArray());
+
+            request.Success += () => Logger.Log($@"Uploaded {data.Length} bytes of replay extras for score {onlineId}.");
+            request.Failure += e => Logger.Log($@"Uploading the replay extras of score {onlineId} failed: {e.Message}", level: LogLevel.Important);
+
+            api.Queue(request);
         }
     }
 }
