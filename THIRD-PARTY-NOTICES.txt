@@ -182,6 +182,20 @@ of the game's other mod icons, and rendered to a 120x84 image
 mod, which marks plays made with VR controllers.
 
 ================================================================================
+11. "VR Headset Free Model" 3D model (headset in replays of VR plays)
+================================================================================
+
+"VR Headset Free Model" by Vitamin (https://sketchfab.com/btrseller)
+Source: https://sketchfab.com/3d-models/vr-headset-free-model-51b8dbff65e247979f068914f6197909
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0)
+Licence text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Modified by Torii: scaled to real size, re-centred on the point between the
+wearer's eyes and turned to face the other way; its base colour texture was
+reduced to 512x512 and the other texture maps were removed. Shown where the
+player's head was when a replay of a play made in VR is watched as a 3D scene.
+
+================================================================================
 
 Questions about this notice, or a request to correct it, can be sent to the
 Torii maintainer. Corrections will be made promptly.

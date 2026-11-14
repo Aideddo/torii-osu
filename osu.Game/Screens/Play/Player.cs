@@ -234,6 +234,9 @@ namespace osu.Game.Screens.Play
         [Resolved(CanBeNull = true)]
         private IVRScene vrScene { get; set; }
 
+        [Resolved(CanBeNull = true)]
+        private ReplayExtrasStore replayExtrasStore { get; set; }
+
         /// <summary>
         /// Torii: records what a play in VR saves along with its replay (see <see cref="VRReplayExtras"/>), or null outside VR.
         /// </summary>
@@ -340,6 +343,22 @@ namespace osu.Game.Screens.Play
             AddInternal(screenSuspension = new ScreenSuspensionHandler(GameplayClockContainer));
 
             Score = CreateScore(playableBeatmap);
+
+            // Torii: outside VR, a replay of a play made in VR can be watched as the scene it was (the replay is taken off the screen
+            // and put on the player's panel there, see VRReplayScene). In VR the player's hands are shown instead (VRReplayGhostHands).
+            // (Not on phones and tablets: the camera is flown with a mouse and keyboard.)
+            if (vrTracking == null && !osu.Framework.RuntimeInfo.IsMobile && replayExtrasStore?.Has(Score.ScoreInfo, ReplayExtrasType.VRTracking) == true)
+            {
+                AddInternal(new VRReplayScene(Score.ScoreInfo.Hash, () =>
+                {
+                    RemoveInternal(GameplayClockContainer, false);
+                    return GameplayClockContainer;
+                }, AddInternal)
+                {
+                    // Its button stays in front of the replay.
+                    Depth = float.MinValue,
+                });
+            }
 
             // ensure the score is in a consistent state with the current player.
             Score.ScoreInfo.BeatmapInfo = Beatmap.Value.BeatmapInfo;

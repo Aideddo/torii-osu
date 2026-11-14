@@ -37,6 +37,18 @@ namespace osu.Game.VR
         /// </remarks>
         public static byte[] Pen => pen ??= load("osu.Game.VR.Models.pen.glb");
 
+        private static byte[]? headset;
+
+        /// <summary>
+        /// A VR headset (binary glTF), in metres: its origin is the point between the wearer's eyes, it faces -Z and +Y is up.
+        /// Shown where the player's head was when a replay of a VR play is watched as a scene.
+        /// </summary>
+        /// <remarks>
+        /// "VR Headset Free Model" by Vitamin (https://sketchfab.com/3d-models/vr-headset-free-model-51b8dbff65e247979f068914f6197909),
+        /// CC BY 4.0; scaled, re-centred and turned, with its base colour texture only. See THIRD-PARTY-NOTICES.txt.
+        /// </remarks>
+        public static byte[] Headset => headset ??= load("osu.Game.VR.Models.headset.glb");
+
         private static byte[] load(string name)
         {
             using var stream = typeof(VRModels).Assembly.GetManifestResourceStream(name)

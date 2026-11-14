@@ -70,5 +70,6 @@
   <!-- Torii VR: the pen held in place of the controllers (see VRControllerModel; credited in THIRD-PARTY-NOTICES.txt). -->
   <ItemGroup>
     <EmbeddedResource Include="VR\Models\pen.glb" LogicalName="osu.Game.VR.Models.pen.glb" />
+    <EmbeddedResource Include="VR\Models\headset.glb" LogicalName="osu.Game.VR.Models.headset.glb" />
   </ItemGroup>
 </Project>

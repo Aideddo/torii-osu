@@ -384,6 +384,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.VRHapticStrength, 0.6f, 0f, 1f, 0.05f);
             // Whether plays in VR save head and controller tracking along with their replays (see VRReplayRecorder).
             SetDefault(OsuSetting.VRSaveReplayExtras, true);
+            // Outside VR: whether replays of VR plays open in the 3D scene view (see VRReplayScene).
+            SetDefault(OsuSetting.VRReplaySceneView, false);
             // torii: el stable song select es OPT-IN (se ofrece via el promo "try this!" tras varias
             // visitas). arranca APAGADO. era true por error: caia en modo stable sin que el usuario lo
             // pidiera y ademas tapaba el promo (el guard cortaba + el contador de visitas nunca subia).
@@ -804,6 +806,7 @@ namespace osu.Game.Configuration
         VRPenOffsetForward,
         VRPenOffsetUp,
         VRHapticStrength,
+        VRReplaySceneView,
         VRSaveReplayExtras,
         VRPanelPlacement,
         VRHideBoundaryInPassthrough,
