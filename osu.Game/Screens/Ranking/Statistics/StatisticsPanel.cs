@@ -25,6 +25,7 @@ using osu.Game.Online.Placeholders;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens.Ranking.Statistics.User;
+using osu.Game.VR;
 using osuTK;
 using Realms;
 
@@ -53,6 +54,9 @@ namespace osu.Game.Screens.Ranking.Statistics
 
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
+
+        [Resolved]
+        private ReplayExtrasStore? replayExtrasStore { get; set; }
 
         private readonly Container content;
         private readonly LoadingSpinner spinner;
@@ -214,6 +218,8 @@ namespace osu.Game.Screens.Ranking.Statistics
             }), localCancellationSource.Token);
         }
 
+        private static string formatDistance(double metres) => metres >= 1000 ? $"{metres / 1000:N2} km" : $"{metres:N1} m";
+
         /// <summary>
         /// Creates the <see cref="StatisticItem"/>s to be displayed in this panel for a given <paramref name="newScore"/>.
         /// </summary>
@@ -223,6 +229,17 @@ namespace osu.Game.Screens.Ranking.Statistics
         {
             foreach (var statistic in newScore.Ruleset.CreateInstance().CreateStatisticsForScore(newScore, playableBeatmap))
                 yield return statistic;
+
+            // Torii: how far the controllers were moved, for a play in VR which saved it.
+            if (replayExtrasStore != null && VRReplayExtrasEncoder.Load(replayExtrasStore, newScore.Hash, frames: false) is VRReplayExtras vrExtras)
+            {
+                yield return new StatisticItem("VR Movement", () => new SimpleStatisticTable(3, new SimpleStatisticItem[]
+                {
+                    new SimpleStatisticItem<string>("Controllers moved") { Value = formatDistance(vrExtras.LeftDistance + vrExtras.RightDistance) },
+                    new SimpleStatisticItem<string>("Left") { Value = formatDistance(vrExtras.LeftDistance) },
+                    new SimpleStatisticItem<string>("Right") { Value = formatDistance(vrExtras.RightDistance) },
+                }));
+            }
 
             if (AchievedScore != null
                 && newScore.UserID > 1

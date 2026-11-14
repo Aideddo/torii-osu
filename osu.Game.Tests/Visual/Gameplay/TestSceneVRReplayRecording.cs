@@ -3,9 +3,14 @@
 
 using System.Linq;
 using NUnit.Framework;
+using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Screens;
+using osu.Framework.Testing;
 using osu.Game.Scoring;
 using osu.Game.Screens.Ranking;
+using osu.Game.Screens.Ranking.Statistics;
 using osu.Game.VR;
 
 namespace osu.Game.Tests.Visual.Gameplay
@@ -43,6 +48,17 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddAssert("distance moved saved", () => extras!.LeftDistance, () => Is.GreaterThan(0));
             AddAssert("nothing moved by the other hand", () => extras!.RightDistance, () => Is.Zero);
             AddAssert("pen settings saved", () => extras!.PenOffsetForward, () => Is.EqualTo(5));
+
+            StatisticsPanel moreInfo = null!;
+
+            AddStep("show more info", () => Add(moreInfo = new StatisticsPanel
+            {
+                RelativeSizeAxes = Axes.Both,
+                State = { Value = Visibility.Visible },
+                Score = { Value = SavedScore },
+            }));
+            AddUntilStep("movement shown", () => moreInfo.ChildrenOfType<SpriteText>().Any(t => t.Text.ToString() == "Controllers moved"));
+            AddStep("remove more info", () => Remove(moreInfo, true));
         }
     }
 }
