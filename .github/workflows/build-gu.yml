@@ -161,6 +161,16 @@ jobs:
             runtime: android
             artifact-name: torii-android
             executable: osu.Android-Signed.apk
+            android-project: osu.Android
+            release-apk: torii.apk
+          # The standalone VR app for Meta Quest (package sh.shikkesora.torii.vr, "Torii Nova VR"): built, patched and signed
+          # like the phone app, released as torii-quest.apk.
+          - os: ubuntu-latest
+            runtime: android-quest
+            artifact-name: torii-quest
+            executable: osu.Android.Quest-Signed.apk
+            android-project: osu.Android.Quest
+            release-apk: torii-quest.apk
 
     steps:
     - name: Checkout code
@@ -206,14 +216,14 @@ jobs:
           10.0.x
 
     - name: Setup Java for Android (Android only)
-      if: matrix.runtime == 'android'
+      if: startsWith(matrix.runtime, 'android')
       uses: actions/setup-java@v4
       with:
         distribution: 'microsoft'
         java-version: '17'
 
     - name: Setup Android SDK (Android only)
-      if: matrix.runtime == 'android'
+      if: startsWith(matrix.runtime, 'android')
       uses: android-actions/setup-android@v3
       with:
         cmdline-tools-version: 8512546
@@ -222,13 +232,13 @@ jobs:
         packages: platform-tools
 
     - name: Accept Android SDK licenses (Android only)
-      if: matrix.runtime == 'android'
+      if: startsWith(matrix.runtime, 'android')
       shell: bash
       run: |
         yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Install Android workload (Android only)
-      if: matrix.runtime == 'android'
+      if: startsWith(matrix.runtime, 'android')
       shell: bash
       run: |
         dotnet workload install android --version 10.0.402
@@ -314,8 +324,8 @@ jobs:
       shell: bash
       run: |
         echo "Cleaning previous build artifacts for ${{ matrix.runtime }}"
-        if [[ "${{ matrix.runtime }}" == "android" ]]; then
-          rm -rf osu.Android/bin osu.Android/obj
+        if [[ "${{ matrix.runtime }}" == android* ]]; then
+          rm -rf ${{ matrix.android-project }}/bin ${{ matrix.android-project }}/obj
         else
           rm -rf osu.Desktop/bin osu.Desktop/obj
         fi
@@ -326,8 +336,8 @@ jobs:
       shell: bash
       run: |
         echo "Restoring packages for runtime: ${{ matrix.runtime }}"
-        if [[ "${{ matrix.runtime }}" == "android" ]]; then
-          dotnet restore osu.Android/osu.Android.csproj \
+        if [[ "${{ matrix.runtime }}" == android* ]]; then
+          dotnet restore ${{ matrix.android-project }}/${{ matrix.android-project }}.csproj \
             --verbosity normal \
             --configfile nuget.config \
             --no-cache \
@@ -342,7 +352,7 @@ jobs:
         fi
 
     - name: Setup Android signing (Android only)
-      if: matrix.runtime == 'android'
+      if: startsWith(matrix.runtime, 'android')
       shell: bash
       env:
         ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -400,7 +410,7 @@ jobs:
         ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       run: |
         echo "Building for runtime: ${{ matrix.runtime }}"
-        if [[ "${{ matrix.runtime }}" == "android" ]]; then
+        if [[ "${{ matrix.runtime }}" == android* ]]; then
           # Build Android APK
           # Prefer signing values from secrets, fallback to temporary defaults.
           KEYSTORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-temp123}"
@@ -418,7 +428,7 @@ jobs:
             exit 1
           fi
           
-          dotnet publish osu.Android/osu.Android.csproj \
+          dotnet publish ${{ matrix.android-project }}/${{ matrix.android-project }}.csproj \
             --configuration Release \
             --verbosity normal \
             --no-restore \
@@ -441,10 +451,10 @@ jobs:
           # any .apk otherwise — under .NET 10 + CoreCLR-experimental the
           # build sometimes drops only an unsigned APK and we'll sign it
           # explicitly below.
-          ALL_APKS=$(find osu.Android/bin/Release/ -name "*.apk" 2>/dev/null || true)
+          ALL_APKS=$(find ${{ matrix.android-project }}/bin/Release/ -name "*.apk" 2>/dev/null || true)
           if [[ -z "$ALL_APKS" ]]; then
             echo "ERROR: No APK file found after build!"
-            find osu.Android/bin/Release/ -type f 2>&1 | head -50 || true
+            find ${{ matrix.android-project }}/bin/Release/ -type f 2>&1 | head -50 || true
             exit 1
           fi
 
@@ -599,20 +609,20 @@ jobs:
         fi
 
     - name: Download Satori 10
-      if: matrix.runtime != 'android'
+      if: ${{ !startsWith(matrix.runtime, 'android') }}
       uses: actions/download-artifact@v4
       with:
         name: satori-net10-${{ matrix.runtime }}
         path: satori-payload
 
     - name: Attach and verify Satori 10
-      if: matrix.runtime != 'android'
+      if: ${{ !startsWith(matrix.runtime, 'android') }}
       shell: bash
       run: |
         python3 .github/scripts/satori_runtime.py overlay "${{ matrix.runtime }}" satori-payload --output "publish/${{ matrix.runtime }}"
 
     - name: Resolve desktop executable name
-      if: matrix.runtime != 'android'
+      if: ${{ !startsWith(matrix.runtime, 'android') }}
       shell: bash
       run: |
         PUBLISH_DIR="publish/${{ matrix.runtime }}"
@@ -665,12 +675,12 @@ jobs:
         echo "RESOLVED_EXECUTABLE=$RESOLVED" >> "$GITHUB_ENV"
 
     - name: Set executable permissions (Linux/macOS)
-      if: (matrix.os == 'ubuntu-latest' || startsWith(matrix.os, 'macos-')) && matrix.runtime != 'android'
+      if: (matrix.os == 'ubuntu-latest' || startsWith(matrix.os, 'macos-')) && !startsWith(matrix.runtime, 'android')
       shell: bash
       run: chmod +x "publish/${{ matrix.runtime }}/${RESOLVED_EXECUTABLE}"
 
     - name: Compute osu.Game.dll MD5 hash
-      if: matrix.runtime != 'android'
+      if: ${{ !startsWith(matrix.runtime, 'android') }}
       shell: bash
       run: |
         # IMPORTANT: hash osu.Game.dll, NOT the bootstrapper executable.
@@ -725,6 +735,8 @@ jobs:
       # Bug discovered 2026-05-11 when Shikkesora's Pixel showed unbadged in
       # her own friend list. Running it as a separate step (instead of
       # branching the desktop step) keeps the desktop hash logic untouched.
+      #
+      # The Quest app is Android too and reports this very hash, so it's registered once, by the phone build.
       if: matrix.runtime == 'android'
       shell: bash
       run: |
@@ -737,6 +749,7 @@ jobs:
         echo "Hash for android (ApplicationDisplayVersion '${VERSION}'): $HASH"
 
     - name: Upload hash artifact
+      if: matrix.runtime != 'android-quest'
       uses: actions/upload-artifact@v4
       with:
         name: hash-${{ matrix.runtime }}-${{ needs.version.outputs.version }}
@@ -744,7 +757,7 @@ jobs:
         retention-days: 30
 
     - name: Drop XML docs from the publish
-      if: matrix.runtime != 'android'
+      if: ${{ !startsWith(matrix.runtime, 'android') }}
       shell: bash
       run: |
         # 4,6 MB de comentarios en texto plano al lado del exe que no sirven en
@@ -752,7 +765,7 @@ jobs:
         find "publish/${{ matrix.runtime }}" -maxdepth 1 -name '*.xml' -delete || true
 
     - name: Create Velopack package
-      if: matrix.runtime != 'android'
+      if: ${{ !startsWith(matrix.runtime, 'android') }}
       shell: bash
       run: |
         if [[ "${{ matrix.runtime }}" == osx-* ]] && [[ "${{ matrix.os }}" != macos* ]]; then
@@ -930,10 +943,10 @@ jobs:
           done
         fi
         # Android APK rename — user-facing filename, follows rebrand.
-        if [[ "${{ matrix.runtime }}" == "android" ]]; then
+        if [[ "${{ matrix.runtime }}" == android* ]]; then
           mkdir -p Releases
           if [ -f "publish/${{ matrix.runtime }}/${{ matrix.executable }}" ]; then
-            cp "publish/${{ matrix.runtime }}/${{ matrix.executable }}" "Releases/torii.apk"
+            cp "publish/${{ matrix.runtime }}/${{ matrix.executable }}" "Releases/${{ matrix.release-apk }}"
           fi
         fi
 
@@ -998,8 +1011,8 @@ jobs:
             required_files+=("Releases/Torii-macOS-AppleSilicon.zip")
             required_files+=("Releases/portable-${{ matrix.runtime }}.zip")
             ;;
-          android)
-            required_files+=("Releases/torii.apk")
+          android|android-quest)
+            required_files+=("Releases/${{ matrix.release-apk }}")
             ;;
         esac
 
@@ -1140,6 +1153,7 @@ jobs:
           [torii-macos-intel]="Torii-macOS-Intel.zip"
           [torii-macos-apple-silicon]="Torii-macOS-AppleSilicon.zip"
           [torii-android]="torii.apk"
+          [torii-quest]="torii-quest.apk"
         )
         VERSION="${{ needs.version.outputs.version }}"
 
@@ -1169,7 +1183,7 @@ jobs:
 
           if [ "$fetched" != "1" ]; then
             # android no existe en el stream estable: ahi no es un error.
-            if [ "$name" = "torii-android" ]; then
+            if [ "$name" = "torii-android" ] || [ "$name" = "torii-quest" ]; then
               echo "no android artifact on this stream, skipping"
             else
               echo "::error::${file} (artifact ${art}) could not be recovered after 3 attempts"
@@ -1193,6 +1207,7 @@ jobs:
           "portable-linux-x64.tar.gz"
           "portable-linux-arm64.tar.gz"
           "torii.apk"
+          "torii-quest.apk"
           "Torii-macOS-Intel.zip"
           "Torii-macOS-AppleSilicon.zip"
           "portable-osx-x64.zip"
@@ -1276,6 +1291,7 @@ jobs:
         ### Platform Notes
         - **macOS:** if needed, allow the app in System Settings because it is not notarized.
         - **Android APK:** \`torii.apk\`
+        - **Meta Quest APK (standalone VR):** \`torii-quest.apk\` (sideload it onto the headset)
         - **Android:** si el celular rechaza el APK por politica de firma, bajalo desde la pagina de descargas del server.
         EOF
 

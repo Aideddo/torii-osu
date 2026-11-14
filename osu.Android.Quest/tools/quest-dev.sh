@@ -9,6 +9,7 @@
 #   ANDROID_SDK Android SDK (default: ~/Android/Sdk)
 #   OPTIMIZE    compile with optimizations (default true). A plain Debug build runs the JIT without optimizations, which costs ~3x
 #               the CPU time per frame. Switching it needs a full rebuild (REBUILD=1), as incremental builds don't notice the change.
+#   FLAVOUR=test  the build that plays on the test server (tools/test-server.env), installed next to the usual one under its own name.
 #   HEADLOCK=1  launch with the panel locked to the head (debug; controller pointer input disabled), so screenshots show the game while
 #               the headset lies on a desk. Default 0. Remove with: adb shell rm <files dir>/debug-headlock-panel
 #
@@ -17,6 +18,11 @@
 set -euo pipefail
 REPO=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 PKG=sh.shikkesora.torii.vr
+FLAVOUR_ARGS=()
+if [ "${FLAVOUR:-}" = test ]; then
+  PKG=$PKG.test
+  FLAVOUR_ARGS=(-p:ApplicationId="$PKG" "-p:ApplicationTitle=Torii VR (test server)" -p:ToriiEnvironmentFile="$REPO/osu.Android.Quest/tools/test-server.env")
+fi
 FILES=/sdcard/Android/data/$PKG/files
 APK=$REPO/osu.Android.Quest/bin/Debug/net10.0-android/$PKG-Signed.apk
 OUT=$REPO/vr-screenshots
@@ -30,7 +36,7 @@ pause() { timeout "$1" cat /dev/zero >/dev/null 2>&1 || true; }
 build() {
   "$DOTNET" build "$REPO/osu.Android.Quest/osu.Android.Quest.csproj" -c Debug -nologo -v q -p:Optimize="${OPTIMIZE:-true}" \
     $([ "${REBUILD:-0}" = 1 ] && echo --no-incremental) \
-    -p:AndroidSdkDirectory="$ANDROID_SDK" -p:JavaSdkDirectory="$JAVA_HOME" 2>&1 | grep -E " error |Error\(s\)" | sort -u
+    -p:AndroidSdkDirectory="$ANDROID_SDK" -p:JavaSdkDirectory="$JAVA_HOME" "${FLAVOUR_ARGS[@]}" 2>&1 | grep -E " error |Error\(s\)" | sort -u
 }
 # Not incremental: an incremental install interrupted by a dropped USB connection can end with the package deleted (and its data with it).
 deploy() { adb install -r --no-incremental "$APK" 2>&1 | tail -1; }

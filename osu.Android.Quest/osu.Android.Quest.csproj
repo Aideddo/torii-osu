@@ -29,6 +29,11 @@
     <ApplicationTitle>Torii Nova VR</ApplicationTitle>
     <AndroidManifest>AndroidManifest.xml</AndroidManifest>
   </PropertyGroup>
+  <ItemGroup Label="Environment" Condition=" '$(ToriiEnvironmentFile)' != '' ">
+    <!-- Environment variables set when the app starts (KEY=value lines), e.g. tools/test-server.env to play on a test server.
+         Build such a flavour with its own ApplicationId and ApplicationTitle, so it installs next to the usual one. -->
+    <AndroidEnvironment Include="$(ToriiEnvironmentFile)" />
+  </ItemGroup>
   <ItemGroup Label="Shared sources from osu.Android">
     <Compile Include="..\osu.Android\**\*.cs" Exclude="..\osu.Android\obj\**;..\osu.Android\bin\**" LinkBase="Shared" />
     <AndroidResource Include="..\osu.Android\Resources\**\*" Link="Resources\%(RecursiveDir)%(Filename)%(Extension)" />

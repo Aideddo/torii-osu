@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Torii: manifest for the Meta Quest (immersive VR) build. See osu.Android/AndroidManifest.xml for the phone build. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="sh.shikkesora.torii.vr" android:installLocation="auto">
+<!-- Torii: manifest for the Meta Quest (immersive VR) build. See osu.Android/AndroidManifest.xml for the phone build.
+     The package and the label come from ApplicationId and ApplicationTitle of the project, so a flavour can have its own. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="auto">
 	<uses-sdk android:minSdkVersion="29" android:targetSdkVersion="34" />
 
 	<!-- Immersive VR app: requires 6DoF head tracking, so it can't be installed on phones. -->
@@ -31,7 +32,6 @@
 
 	<application android:allowBackup="true"
 				 android:supportsRtl="true"
-				 android:label="Torii Nova VR"
 				 android:icon="@mipmap/ic_launcher"
 				 android:roundIcon="@mipmap/ic_launcher"
 				 android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
@@ -39,7 +39,7 @@
 
 		<!-- AndroidGameHost resolves the authority as "<package>.fileprovider". -->
 		<provider android:name="androidx.core.content.FileProvider"
-				  android:authorities="sh.shikkesora.torii.vr.fileprovider"
+				  android:authorities="${applicationId}.fileprovider"
 				  android:grantUriPermissions="true"
 				  android:exported="false">
 			<meta-data android:name="android.support.FILE_PROVIDER_PATHS"
