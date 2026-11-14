@@ -308,6 +308,9 @@ namespace osu.Game
             if (Host is IOpenXRHost xrHost)
                 dependencies.CacheAs<IVRControllers>(new OpenXRHostIntegration.Controllers(xrHost.OpenXR.ControllerInput));
 
+            // Torii: what plays save next to their replays (e.g. head and controller tracking in VR).
+            dependencies.Cache(new ReplayExtrasStore(Storage));
+
             // Torii: tracks which in-game "NEW" feature badges have been seen/dismissed
             // (sidecar JSON under the torii/ storage dir). Cached after Storage so its
             // constructor can resolve it. Consumed by NewFeatureBadge on form controls.
