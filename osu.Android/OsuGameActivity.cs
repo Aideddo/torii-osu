@@ -70,6 +70,9 @@ namespace osu.Android
 #if TORII_QUEST
         // Torii: render into an OpenXR panel and let the runtime pace and present frames.
         protected override AndroidGameHost CreateHost() => new OpenXRAndroidGameHost(this);
+
+        // Torii: the OpenXR session says whether the game is displayed and has input, not the (unseen) Android window.
+        protected override bool PauseOnWindowFocusLoss => false;
 #endif
 
         protected override Framework.Game CreateGame()
