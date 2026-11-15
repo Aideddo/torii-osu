@@ -370,8 +370,9 @@ namespace osu.Game.VR
 
             if (extras.TryGetFrameAt(time, out var frame))
             {
-                scene.Hands[IVRControllers.LEFT] = createHand(frame.Left, extras.LeftPointer);
-                scene.Hands[IVRControllers.RIGHT] = createHand(frame.Right, extras.RightPointer);
+                // A controller the player had left alone is hidden, as it was for them.
+                scene.Hands[IVRControllers.LEFT] = extras.IsHandIdleAt(IVRControllers.LEFT, time) ? default : createHand(frame.Left, extras.LeftPointer);
+                scene.Hands[IVRControllers.RIGHT] = extras.IsHandIdleAt(IVRControllers.RIGHT, time) ? default : createHand(frame.Right, extras.RightPointer);
                 scene.ActiveHand = frame.ActiveHand;
 
                 head = frame.Head;

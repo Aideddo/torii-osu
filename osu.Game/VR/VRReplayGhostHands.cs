@@ -81,9 +81,10 @@ namespace osu.Game.VR
             // Where the panel actually is: about to be where it was put, or where the viewer has moved it since.
             var panel = state.Panel;
 
+            // A controller the player had left alone is hidden, as it was for them.
             scene.ShowGhostHands(
-                createHand(frame.Left, extras.LeftPointer, recordedPanel, panel),
-                createHand(frame.Right, extras.RightPointer, recordedPanel, panel),
+                extras.IsHandIdleAt(IVRControllers.LEFT, time) ? null : createHand(frame.Left, extras.LeftPointer, recordedPanel, panel),
+                extras.IsHandIdleAt(IVRControllers.RIGHT, time) ? null : createHand(frame.Right, extras.RightPointer, recordedPanel, panel),
                 frame.ActiveHand,
                 extras.ControllerModel);
         }

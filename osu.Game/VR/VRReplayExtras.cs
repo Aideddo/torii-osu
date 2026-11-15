@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Newtonsoft.Json;
+using osu.Framework.Platform.OpenXR;
 
 namespace osu.Game.VR
 {
@@ -136,18 +137,7 @@ namespace osu.Game.VR
             if (Frames.Count == 0 || time < Frames[0].Time || time > Frames[^1].Time)
                 return false;
 
-            // The last frame at or before the time.
-            int low = 0, high = Frames.Count - 1;
-
-            while (low < high)
-            {
-                int mid = (low + high + 1) / 2;
-
-                if (Frames[mid].Time <= time)
-                    low = mid;
-                else
-                    high = mid - 1;
-            }
+            int low = frameIndexAt(time);
 
             var before = Frames[low];
             frame = before;
@@ -168,6 +158,69 @@ namespace osu.Game.VR
             frame.Left = blend(before.Left, after.Left, amount);
             frame.Right = blend(before.Right, after.Right, amount);
             return true;
+        }
+
+        /// <summary>
+        /// The last frame at or before <paramref name="time"/>, which must be within the recording.
+        /// </summary>
+        private int frameIndexAt(double time)
+        {
+            int low = 0, high = Frames.Count - 1;
+
+            while (low < high)
+            {
+                int mid = (low + high + 1) / 2;
+
+                if (Frames[mid].Time <= time)
+                    low = mid;
+                else
+                    high = mid - 1;
+            }
+
+            return low;
+        }
+
+        // Per frame, whether each hand had been left alone long enough to be hidden (left, right interleaved). Worked out on first use.
+        private bool[]? idleHands;
+
+        /// <summary>
+        /// Whether the controller of <paramref name="hand"/> had been left alone for a while at <paramref name="time"/>, so it's hidden as
+        /// the player's own would have been (see <see cref="ControllerIdleTracker"/>).
+        /// </summary>
+        /// <param name="hand"><see cref="IVRControllers.LEFT"/> or <see cref="IVRControllers.RIGHT"/>.</param>
+        /// <param name="time">The gameplay time, in milliseconds.</param>
+        public bool IsHandIdleAt(int hand, double time)
+        {
+            if (Frames.Count == 0 || time < Frames[0].Time || time > Frames[^1].Time)
+                return false;
+
+            idleHands ??= computeIdleHands();
+            return idleHands[frameIndexAt(time) * 2 + hand];
+        }
+
+        private bool[] computeIdleHands()
+        {
+            var tracker = new ControllerIdleTracker();
+            bool[] idle = new bool[Frames.Count * 2];
+
+            for (int i = 0; i < Frames.Count; i++)
+            {
+                var frame = Frames[i];
+
+                update(IVRControllers.LEFT, frame.Left);
+                update(IVRControllers.RIGHT, frame.Right);
+
+                void update(int hand, in VRReplayHand h)
+                {
+                    var grip = h.Grip ?? VRPose.IDENTITY;
+                    bool touched = ControllerIdleTracker.IsPulled(h.Trigger) || ControllerIdleTracker.IsPulled(h.Squeeze);
+
+                    tracker.Update(hand, h.Grip != null, grip.Position, grip.Rotation, touched, frame.ActiveHand, frame.Time / 1000);
+                    idle[i * 2 + hand] = tracker.IsIdle(hand);
+                }
+            }
+
+            return idle;
         }
 
         private static VRReplayHand blend(in VRReplayHand a, in VRReplayHand b, float amount) => new VRReplayHand
