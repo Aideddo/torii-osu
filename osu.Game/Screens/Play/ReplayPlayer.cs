@@ -50,6 +50,7 @@ namespace osu.Game.Screens.Play
         private double? lastFrameTime;
 
         private double userPlaybackRateBeforeFastForward;
+        private bool fastForwarding;
 
         private ReplayFailIndicator? failIndicator;
         private PlaybackSettings? playbackSettings;
@@ -245,6 +246,10 @@ namespace osu.Game.Screens.Play
                 case GlobalAction.FastForwardReplay:
                     if (e.Repeat) return false;
 
+                    // Torii: shift means nothing for a replay of a VR play (it flies the scene's camera down).
+                    if (VRReplayScene != null) return true;
+
+                    fastForwarding = true;
                     userPlaybackRateBeforeFastForward = playbackSettings!.UserPlaybackRate.Value;
                     playbackSettings!.UserPlaybackRate.Value *= 2;
                     return true;
@@ -280,6 +285,9 @@ namespace osu.Game.Screens.Play
             switch (e.Action)
             {
                 case GlobalAction.FastForwardReplay:
+                    if (!fastForwarding) return;
+
+                    fastForwarding = false;
                     playbackSettings!.UserPlaybackRate.Value = userPlaybackRateBeforeFastForward;
                     return;
             }

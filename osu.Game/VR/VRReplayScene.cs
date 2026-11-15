@@ -66,6 +66,11 @@ namespace osu.Game.VR
         /// </summary>
         private const float move_speed = 1.5f;
 
+        /// <summary>
+        /// The headset isn't drawn with the camera closer to it than this, in metres: it would fill the view.
+        /// </summary>
+        private const float head_hide_distance = 0.35f;
+
 
         /// <summary>
         /// Radians per pixel the mouse is dragged.
@@ -169,7 +174,7 @@ namespace osu.Game.VR
                     Origin = Anchor.TopLeft,
                     Margin = new MarginPadding(10),
                     Font = OsuFont.Default.With(size: 12),
-                    Text = @"hold right mouse: look, W A S D: move, space: up, shift: down, R: reset",
+                    Text = @"hold right mouse: look, W A S D: move, space: up, shift: down",
                     Alpha = 0,
                 },
                 Overlay.With(o => o.Depth = -1),
@@ -177,6 +182,10 @@ namespace osu.Game.VR
 
             config.BindWith(OsuSetting.VRReplaySceneView, Showing);
             config.BindWith(OsuSetting.VRReplaySceneCamera, Camera);
+
+            // Always starts in 3D through the player's eyes; the settings only change it for the replay being watched.
+            Showing.Value = true;
+            Camera.Value = VRReplayCamera.FollowHead;
             config.BindWith(OsuSetting.DimLevel, backgroundDim);
             config.BindWith(OsuSetting.VRPlayfieldBacking, playfieldBacking);
 
@@ -380,9 +389,6 @@ namespace osu.Game.VR
             else
                 scene.Hands[IVRControllers.LEFT] = scene.Hands[IVRControllers.RIGHT] = default;
 
-            // (Seen through the player's eyes, the headset would be all there is to see.)
-            scene.ShowHead = head != null && Camera.Value != VRReplayCamera.FollowHead;
-
             if (head is VRPose headPose)
             {
                 scene.HeadPosition = headPose.Position;
@@ -408,6 +414,10 @@ namespace osu.Game.VR
                     updateCamera();
                     break;
             }
+
+            // (Seen through the player's eyes, or from right next to it, the headset would be all there is to see.)
+            scene.ShowHead = head is VRPose shownHead && Camera.Value != VRReplayCamera.FollowHead
+                                                      && Vector3.Distance(scene.CameraPosition, shownHead.Position) > head_hide_distance;
         }
 
         /// <summary>
@@ -547,9 +557,6 @@ namespace osu.Game.VR
 
                 if (move != Vector3.Zero)
                     scene.CameraPosition += Vector3.Normalize(move) * move_speed * (float)(Time.Elapsed / 1000);
-
-                if (state.Keyboard.Keys.IsPressed(Key.R))
-                    cameraPlaced = false;
             }
             else
                 lastMousePosition = null;
