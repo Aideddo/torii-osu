@@ -62,6 +62,64 @@ namespace osu.Game.Overlays.Settings
     }
 
     /// <summary>
+    /// Torii: checkbox for <see cref="OsuSetting.ToriiLightweightInterface"/>, which like Potato Mode is read once at startup.
+    /// </summary>
+    public partial class LightweightInterfaceToggleAndRestart : Container
+    {
+        [Resolved(CanBeNull = true)]
+        private OsuGame? game { get; set; }
+
+        [Resolved(CanBeNull = true)]
+        private IDialogOverlay? dialogOverlay { get; set; }
+
+        private Bindable<bool> setting = null!;
+        private bool reverting;
+
+        [BackgroundDependencyLoader]
+        private void load(OsuConfigManager config)
+        {
+            RelativeSizeAxes = Axes.X;
+            AutoSizeAxes = Axes.Y;
+
+            setting = config.GetBindable<bool>(OsuSetting.ToriiLightweightInterface);
+
+            InternalChild = new SettingsItemV2(new FormCheckBox
+            {
+                Caption = "Lightweight interface",
+                HintText = "Gives up a few effects in menus that cost a lot of frame time for what they add: beatmap covers appear "
+                           + "without fading in, and song select panels lose their frosted glass, beat pulse and moving triangles. "
+                           + "On by default on mobile and standalone headsets. "
+                           + "Much milder than Potato mode, which includes it. Changing this option restarts the game.",
+                Current = setting,
+            })
+            {
+                Keywords = new[] { @"lightweight", @"performance", @"fps", @"lag", @"stutter", @"perf", @"quest", @"vr", @"mobile", @"menu" },
+            };
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            setting.BindValueChanged(change =>
+            {
+                if (reverting || dialogOverlay == null)
+                    return;
+
+                dialogOverlay.Push(new ConfirmDialog(
+                    "The lightweight interface changes how menus are built, so the game needs to restart. It will close now, please open it again.",
+                    () => game?.AttemptExit(),
+                    () =>
+                    {
+                        reverting = true;
+                        setting.Value = change.OldValue;
+                        reverting = false;
+                    }));
+            });
+        }
+    }
+
+    /// <summary>
     /// Process-wide one-shot subscription that owns the restart-confirm
     /// flow for <see cref="OsuSetting.ToriiPotatoMode"/>. Mirrors
     /// <c>UIThemeRestartCoordinator</c>: the toggle lives at a single call

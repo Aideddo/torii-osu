@@ -65,40 +65,49 @@ namespace osu.Game.Graphics.UserInterfaceV2
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
 
-            InternalChildren = new Drawable[]
+            // Torii: drawn into a frame buffer, redrawn only when something in it changes. The background and the switch each mask
+            // (rounded corners and borders), which splits draw batches: settings shows a couple dozen of these at a time.
+            InternalChild = new BufferedContainer(cachedFrameBuffer: true)
             {
-                background = new FormControlBackground(),
-                new Container
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                TrackSubtreeChanges = true,
+                ReleaseFrameBufferWhenNotDrawn = true,
+                Children = new Drawable[]
                 {
-                    RelativeSizeAxes = Axes.X,
-                    Height = ExtendedHeight ? 52 : 0,
-                    AutoSizeAxes = ExtendedHeight ? Axes.None : Axes.Y,
-                    Padding = new MarginPadding(9),
-                    Children = new Drawable[]
+                    background = new FormControlBackground(),
+                    new Container
                     {
-                        new Container
+                        RelativeSizeAxes = Axes.X,
+                        Height = ExtendedHeight ? 52 : 0,
+                        AutoSizeAxes = ExtendedHeight ? Axes.None : Axes.Y,
+                        Padding = new MarginPadding(9),
+                        Children = new Drawable[]
                         {
-                            Anchor = Anchor.CentreLeft,
-                            Origin = Anchor.CentreLeft,
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Padding = new MarginPadding { Right = SwitchButton.WIDTH + 5 },
-                            Children = new Drawable[]
+                            new Container
                             {
-                                caption = new FormFieldCaption
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Padding = new MarginPadding { Right = SwitchButton.WIDTH + 5 },
+                                Children = new Drawable[]
                                 {
-                                    Caption = Caption,
-                                    TooltipText = HintText,
-                                    NewFeatureId = NewFeatureId,
-                                    ShowExplicitContentBadge = ShowExplicitContentBadge,
+                                    caption = new FormFieldCaption
+                                    {
+                                        Caption = Caption,
+                                        TooltipText = HintText,
+                                        NewFeatureId = NewFeatureId,
+                                        ShowExplicitContentBadge = ShowExplicitContentBadge,
+                                    },
                                 },
                             },
-                        },
-                        switchButton = new SwitchButton
-                        {
-                            Anchor = Anchor.CentreRight,
-                            Origin = Anchor.CentreRight,
-                            Current = Current,
+                            switchButton = new SwitchButton
+                            {
+                                Anchor = Anchor.CentreRight,
+                                Origin = Anchor.CentreRight,
+                                Current = Current,
+                            },
                         },
                     },
                 },

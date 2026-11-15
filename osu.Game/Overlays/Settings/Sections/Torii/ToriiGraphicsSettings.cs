@@ -23,6 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
             Children = new Drawable[]
             {
                 new PotatoModeToggleAndRestart(),
+                new LightweightInterfaceToggleAndRestart(),
                 new SettingsItemV2(new FormEnumDropdown<ToriiInputAudioHzMode>
                 {
                     Caption = "Input/audio thread rate",

@@ -579,6 +579,7 @@ namespace osu.Game
 
             // Torii: Potato Mode read-once flag (heavy visuals check it at construction). Restart-gated.
             Performance.PotatoMode.SetFromConfig(LocalConfig.Get<bool>(OsuSetting.ToriiPotatoMode));
+            Performance.LightweightInterface.SetFromConfig(LocalConfig.Get<bool>(OsuSetting.ToriiLightweightInterface));
             // Potato forces the legacy (BASS) audio path; its larger buffer rides over GC hitches
             // that starve the tiny WASAPI buffer on weak machines (the map-switch stutter).
             if (Performance.PotatoMode.Active)

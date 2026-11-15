@@ -88,6 +88,8 @@ namespace osu.Game.Graphics.Backgrounds
             spawnRatio.BindValueChanged(_ => Reset(), true);
         }
 
+        private bool populatedStill;
+
         protected override void Update()
         {
             base.Update();
@@ -95,6 +97,19 @@ namespace osu.Game.Graphics.Backgrounds
             // Potato mode: no triangle spawning, movement, or per-frame redraw.
             if (PotatoMode.Active)
                 return;
+
+            // Torii: with the lightweight interface triangles are there but don't move: moving, they are redrawn every frame, and so is
+            // any frame buffer they're cached in (song select panels, for one).
+            if (LightweightInterface.Active)
+            {
+                if (!populatedStill && DrawWidth > 0 && DrawHeight > 0)
+                {
+                    Reset();
+                    populatedStill = true;
+                }
+
+                return;
+            }
 
             if (CreateNewTriangles)
                 addTriangles(false);

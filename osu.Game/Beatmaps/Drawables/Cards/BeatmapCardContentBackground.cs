@@ -54,16 +54,21 @@ namespace osu.Game.Beatmaps.Drawables.Cards
         protected override void LoadComplete()
         {
             base.LoadComplete();
-            Dimmed.BindValueChanged(_ => updateState(), true);
+            Dimmed.BindValueChanged(_ => Schedule(updateState));
+
+            // Torii: the initial state is applied here and now. Scheduled like later changes, it ran after FinishTransforms() and so
+            // animated: every card coming into view spent its first 360 ms fading in a cover that hadn't loaded yet, which with cards
+            // cached in frame buffers meant redrawing each of them on every one of those frames.
+            updateState();
             FinishTransforms(true);
         }
 
-        private void updateState() => Schedule(() =>
+        private void updateState()
         {
             background.FadeColour(Dimmed.Value ? colourProvider.Background4 : colourProvider.Background2, BeatmapCard.TRANSITION_DURATION, Easing.OutQuint);
 
             var gradient = ColourInfo.GradientHorizontal(Colour4.White.Opacity(0), Colour4.White.Opacity(0.2f));
             cover.FadeColour(gradient, BeatmapCard.TRANSITION_DURATION, Easing.OutQuint);
-        });
+        }
     }
 }

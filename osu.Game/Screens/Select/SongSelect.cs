@@ -124,7 +124,8 @@ namespace osu.Game.Screens.Select
         {
             dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
 
-            if (OsuColour.IsGlassTheme && !Performance.PotatoMode.Active)
+            // Torii: not with the lightweight interface either, where panels are cached in frame buffers (see Panel).
+            if (OsuColour.IsGlassTheme && !Performance.LightweightInterface.Active)
             {
                 panelBackdrop = new PanelBackdrop(4f);
                 dependencies.CacheAs<IPanelBackdrop>(panelBackdrop);

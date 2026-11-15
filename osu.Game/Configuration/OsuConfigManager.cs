@@ -281,6 +281,10 @@ namespace osu.Game.Configuration
             // Torii: Potato Mode (extreme-perf preset, read once at startup, restart-gated).
             SetDefault(OsuSetting.ToriiPotatoMode, false);
 
+            // Torii: lightweight interface (see Performance.LightweightInterface), read once at startup, restart-gated.
+            // On where there's the least frame time to spare.
+            SetDefault(OsuSetting.ToriiLightweightInterface, RuntimeInfo.IsMobile);
+
             // Torii: input/audio/update thread rate. Drives GameHost.ToriiInputAudioHz live.
             SetDefault(OsuSetting.ToriiInputAudioHz, ToriiInputAudioHzMode.Hz2000);
             // torii: marca de una sola vez. el primer arranque siembra el default de hz segun la
@@ -748,6 +752,7 @@ namespace osu.Game.Configuration
         ToriiGlassDefaultMigrated,
         ToriiNewThemePopupPending,
         ToriiPotatoMode,
+        ToriiLightweightInterface,
         ToriiInputAudioHz,
         ToriiInputAudioHzAutoTuned,
         ToriiInputAudioHzRetunedWeakQuad,

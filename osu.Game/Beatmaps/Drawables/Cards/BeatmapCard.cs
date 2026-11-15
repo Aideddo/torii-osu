@@ -81,6 +81,16 @@ namespace osu.Game.Beatmaps.Drawables.Cards
                 throw new InvalidOperationException($"An action should be assigned to this {nameof(BeatmapCard)}. To use the default, assign {nameof(DefaultAction)}.");
         }
 
+        /// <summary>
+        /// Torii: runs <paramref name="action"/> whenever something the card displays changes on its own (download and favourite state).
+        /// </summary>
+        internal void BindDisplayedStateChanged(Action action)
+        {
+            DownloadTracker.State.BindValueChanged(_ => action());
+            DownloadTracker.Progress.BindValueChanged(_ => action());
+            FavouriteState.BindValueChanged(_ => action());
+        }
+
         protected void DefaultAction()
         {
             if (containingInputManager?.CurrentState.Keyboard.ShiftPressed == true)
