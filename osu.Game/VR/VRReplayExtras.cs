@@ -223,6 +223,74 @@ namespace osu.Game.VR
             return idle;
         }
 
+        // Per frame, how far both controllers had moved by then, in metres. Worked out on first use.
+        private double[]? distances;
+
+        /// <summary>
+        /// How far both controllers had been moved by <paramref name="time"/> of the play, in metres: nothing before the recording,
+        /// all of it (<see cref="LeftDistance"/> and <see cref="RightDistance"/>) after.
+        /// </summary>
+        /// <param name="time">The gameplay time, in milliseconds.</param>
+        public double GetDistanceAt(double time)
+        {
+            if (Frames.Count == 0 || time < Frames[0].Time)
+                return 0;
+
+            distances ??= computeDistances();
+
+            if (time >= Frames[^1].Time)
+                return distances[^1];
+
+            int low = frameIndexAt(time);
+
+            double from = distances[low];
+            double to = distances[low + 1];
+            double gap = Frames[low + 1].Time - Frames[low].Time;
+
+            return gap <= 0 ? from : from + (to - from) * (time - Frames[low].Time) / gap;
+        }
+
+        private double[] computeDistances()
+        {
+            double[] left = pathLengths(f => f.Left.Grip, LeftDistance);
+            double[] right = pathLengths(f => f.Right.Grip, RightDistance);
+
+            for (int i = 0; i < left.Length; i++)
+                left[i] += right[i];
+
+            return left;
+        }
+
+        /// <summary>
+        /// How far a controller had moved by each frame, going by where it was in the frames.
+        /// </summary>
+        /// <param name="getGrip">The controller's pose in a frame.</param>
+        /// <param name="total">How far it was measured to have moved over the whole play, which the result ends at.</param>
+        private double[] pathLengths(Func<VRReplayFrame, VRPose?> getGrip, double total)
+        {
+            double[] lengths = new double[Frames.Count];
+            double length = 0;
+
+            for (int i = 1; i < Frames.Count; i++)
+            {
+                // Movement while tracking was lost or the play was held up (paused) isn't part of the play.
+                if (getGrip(Frames[i - 1]) is VRPose before && getGrip(Frames[i]) is VRPose after && Frames[i].Time - Frames[i - 1].Time <= max_blend_gap)
+                    length += Vector3.Distance(before.Position, after.Position);
+
+                lengths[i] = length;
+            }
+
+            // The frames are saved at a limited resolution and may be further apart than the controller was measured at, so the path
+            // through them isn't quite as long as what was measured: it gives how the measured distance is spread over the play.
+            if (length > 0 && total > 0)
+            {
+                for (int i = 0; i < lengths.Length; i++)
+                    lengths[i] *= total / length;
+            }
+
+            return lengths;
+        }
+
         private static VRReplayHand blend(in VRReplayHand a, in VRReplayHand b, float amount) => new VRReplayHand
         {
             Grip = blend(a.Grip, b.Grip, amount),

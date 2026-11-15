@@ -12,6 +12,8 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation.HUD;
+using osu.Game.Rulesets.UI;
+using osu.Game.Scoring;
 using osu.Game.Skinning;
 using osu.Game.VR;
 using osuTK;
@@ -20,6 +22,8 @@ namespace osu.Game.Screens.Play.HUD
 {
     /// <summary>
     /// Torii: shows how far the VR controllers (both hands added together) have been moved.
+    /// While a replay is watched, the distance for the beatmap is that of the replay's player up to the point being watched
+    /// (see <see cref="VRReplayExtras"/>), not the viewer's. The other periods are always the viewer's own.
     /// </summary>
     public partial class VRMovementCounter : RollingCounter<double>, ISerialisableDrawable, IVRSkinComponent
     {
@@ -42,6 +46,19 @@ namespace osu.Game.Screens.Play.HUD
         /// </summary>
         [Resolved]
         private VRMovementTracker? tracker { get; set; }
+
+        /// <summary>
+        /// Null outside of gameplay (e.g. in the skin editor).
+        /// </summary>
+        [Resolved]
+        private DrawableRuleset? drawableRuleset { get; set; }
+
+        [Resolved]
+        private ReplayExtrasStore? replayExtrasStore { get; set; }
+
+        // What the player of the replay being watched did, if it was a play in VR which saved that.
+        private VRReplayExtras? replayExtras;
+        private bool replayExtrasLoadStarted;
 
         private TextComponent text = null!;
 
@@ -88,25 +105,37 @@ namespace osu.Game.Screens.Play.HUD
         {
             base.Update();
 
-            if (tracker == null)
-                return;
+            if (watchingReplay)
+            {
+                if (!replayExtrasLoadStarted && replayExtrasStore != null)
+                {
+                    replayExtrasLoadStarted = true;
+                    VRReplayExtrasEncoder.LoadAsync(replayExtrasStore, drawableRuleset?.ReplayScore?.ScoreInfo.Hash, Scheduler, loaded => replayExtras = loaded);
+                }
+            }
+            else if (tracker != null)
+            {
+                double sessionDistance = tracker.SessionDistance;
 
-            double sessionDistance = tracker.SessionDistance;
+                if (!gameplayClock.IsPaused.Value)
+                    beatmapDistance += sessionDistance - lastSessionDistance;
+            }
 
-            if (!gameplayClock.IsPaused.Value)
-                beatmapDistance += sessionDistance - lastSessionDistance;
-
-            lastSessionDistance = sessionDistance;
+            // Kept up while a replay is watched too, so that the viewer's movement isn't counted should the replay end.
+            lastSessionDistance = tracker?.SessionDistance ?? 0;
 
             updateCurrent();
         }
+
+        private bool watchingReplay => drawableRuleset?.HasReplayLoaded.Value == true;
 
         private void updateCurrent() => Current.Value = Period.Value switch
         {
             MovementPeriod.Session => tracker?.SessionDistance ?? 0,
             MovementPeriod.Today => tracker?.TodayDistance ?? 0,
             MovementPeriod.AllTime => tracker?.AllTimeDistance ?? 0,
-            _ => beatmapDistance,
+            // A replay of a play not made in VR (or with nothing saved of it) has no movement to show.
+            _ => watchingReplay ? replayExtras?.GetDistanceAt(gameplayClock.CurrentTime) ?? 0 : beatmapDistance,
         };
 
         protected override LocalisableString FormatCount(double count) => count >= 1000 ? $@"{count / 1000:0.00}km" : $@"{count:0.0}m";
