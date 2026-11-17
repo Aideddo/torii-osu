@@ -1,16 +1,15 @@
-name: Local Windows release
+name: Local multiplatform release
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (without v, e.g. 2026.1117.0-nova)'
-        required: false
-        default: '2026.1117.0-nova'
+        description: 'Complete release version without v'
+        required: true
       publish_release:
-        description: 'Publish release assets to GitHub'
+        description: 'Publish only after every platform and hash registration pass'
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
@@ -23,7 +22,7 @@ jobs:
   build:
     if: github.repository == 'ShikkesoraSIM/torii-hiding' && github.actor == 'ShikkesoraSIM'
     runs-on: [self-hosted, Windows, X64, torii-windows-local]
-    timeout-minutes: 60
+    timeout-minutes: 120
     defaults:
       run:
         shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}
@@ -45,306 +44,36 @@ jobs:
           ref: cb1648d8e6aeca89f2691d063d4591bb5c0963df
           path: toriirefresh-resources
           persist-credentials: false
-      - name: Select installed SDK
+      - name: Build and validate every platform
         env:
           TORII_LOCAL_DOTNET11: ${{ vars.TORII_LOCAL_DOTNET11 }}
-        run: |
-          $temp = Join-Path '${{ runner.temp }}' 'build-temp'
-          New-Item -ItemType Directory -Path $temp -Force | Out-Null
-          "TEMP=$temp" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          "TMP=$temp" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          $env:DOTNET_CLI_HOME = Join-Path $temp 'dotnet-home'
-          New-Item -ItemType Directory -Path $env:DOTNET_CLI_HOME -Force | Out-Null
-          "DOTNET_CLI_HOME=$env:DOTNET_CLI_HOME" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          $sdk = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
-          $dotnet = (Get-Command dotnet -ErrorAction Stop).Source
-          if ($sdk.StartsWith('11.')) {
-            $dotnet = Join-Path $env:TORII_LOCAL_DOTNET11 'dotnet.exe'
-          }
-          if (!(Test-Path -LiteralPath $dotnet)) { throw 'Required local SDK is not installed' }
-          $directory = Split-Path -Parent $dotnet
-          $directory | Out-File $env:GITHUB_PATH -Append -Encoding utf8
-          "DOTNET_ROOT=$directory" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          & $dotnet --version
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Publish standalone desktop client
-        run: |
-          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
-          Write-Host "Publishing win-x64 for version $ver..."
-          dotnet publish osu.Desktop/osu.Desktop.csproj `
-            -c Release `
-            --runtime win-x64 `
-            --self-contained `
-            -p:PublishSingleFile=false `
-            -p:PublishTrimmed=false `
-            -p:Version=$ver `
-            -p:FileVersion=2026.1117.0.0 `
-            -p:AssemblyVersion=2026.1117.0.0 `
-            -p:InformationalVersion="v$ver" `
-            -o publish/win-x64
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Attach and verify Satori 11 win-x64
-        run: |
-          $satoriCi = "C:\Users\megablackito\Favorites\toriiserverlocal\.tmp\satori11-win-x64-ci"
-          python .github/scripts/satori_runtime.py overlay win-x64 $satoriCi --output publish/win-x64
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Compute osu.Game.dll MD5 hash
-        run: |
-          $assembly = "publish/win-x64/osu.Game.dll"
-          if (!(Test-Path -LiteralPath $assembly)) { throw "Missing $assembly" }
-          $hash = (Get-FileHash -LiteralPath $assembly -Algorithm MD5).Hash.ToLowerInvariant()
-          "GAME_HASH=$hash" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          Write-Host "Game assembly MD5: $hash"
-      - name: Register client hash with Torii server
-        env:
+          TORII_RELEASE_VERSION: ${{ inputs.version }}
+          TORII_REGISTER_RELEASE: ${{ inputs.publish_release }}
           TORII_SERVER_URL: ${{ vars.TORII_SERVER_URL }}
           TORII_VERSION_WEBHOOK_SECRET: ${{ secrets.TORII_VERSION_WEBHOOK_SECRET }}
-        run: |
-          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
-          $clientName = if ($ver -like "*-nova") { "Torii Nova" } else { "Torii" }
-          if (!$env:TORII_SERVER_URL) { throw "TORII_SERVER_URL variable not configured" }
-          if (!$env:TORII_VERSION_WEBHOOK_SECRET) { throw "TORII_VERSION_WEBHOOK_SECRET secret not configured" }
-          
-          $payload = @{
-            version = $ver
-            client_name = $clientName
-            hashes = @{
-              $env:GAME_HASH = "Windows"
-            }
-          }
-          $json = $payload | ConvertTo-Json -Depth 5
-          Write-Host "Registering hash $env:GAME_HASH for $clientName $ver with $env:TORII_SERVER_URL..."
-          $headers = @{
-            Authorization = "Bearer $env:TORII_VERSION_WEBHOOK_SECRET"
-            "Content-Type" = "application/json"
-          }
-          $res = Invoke-RestMethod -Uri "$env:TORII_SERVER_URL/api/private/client-versions/register" -Method POST -Headers $headers -Body $json
-          Write-Host "Server registration response:" ($res | ConvertTo-Json -Compress)
-      - name: Create Velopack package (win-x64)
-        run: |
-          Get-ChildItem -Path "publish/win-x64" -Filter "*.xml" | Remove-Item -Force -ErrorAction SilentlyContinue
-          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
-          $packTitle = if ($ver -like "*-nova") { "Torii Nova" } else { "Torii" }
-          New-Item -ItemType Directory -Path "Releases" -Force | Out-Null
-          Remove-Item env:DOTNET_ROOT -ErrorAction SilentlyContinue
-          vpk pack -u "torii" -v "$ver" -p "publish/win-x64" -e "torii.exe" --packAuthors "Torii Team" --packTitle "$packTitle" -i "osu.Desktop/torii.ico" -c "win" -o "Releases"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Build Windows ARM64
-        continue-on-error: true
-        run: |
-          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
-          $packTitle = if ($ver -like "*-nova") { "Torii Nova" } else { "Torii" }
-          $env:DOTNET_ROOT = "C:\Users\megablackito\Favorites\toriiserverlocal\.tmp\dotnet-11-rc2"
-          Write-Host "Publishing win-arm64 for version $ver..."
-          dotnet publish osu.Desktop/osu.Desktop.csproj `
-            -c Release `
-            --runtime win-arm64 `
-            --self-contained `
-            -p:PublishSingleFile=false `
-            -p:PublishTrimmed=false `
-            -p:Version=$ver `
-            -p:FileVersion=2026.1117.0.0 `
-            -p:AssemblyVersion=2026.1117.0.0 `
-            -p:InformationalVersion="v$ver" `
-            -o publish/win-arm64
-          Get-ChildItem -Path "publish/win-arm64" -Filter "*.xml" | Remove-Item -Force -ErrorAction SilentlyContinue
-          Remove-Item env:DOTNET_ROOT -ErrorAction SilentlyContinue
-          vpk pack -u "torii" -v "$ver" -p "publish/win-arm64" -e "torii.exe" --packAuthors "Torii Team" --packTitle "$packTitle" -i "osu.Desktop/torii.ico" -c "win-arm64" -o "Releases"
-      - name: Build macOS packages (Intel & Apple Silicon)
-        continue-on-error: true
-        run: |
-          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
-          $env:DOTNET_ROOT = "C:\Users\megablackito\Favorites\toriiserverlocal\.tmp\dotnet-11-rc2"
-          foreach ($rid in @("osx-x64", "osx-arm64")) {
-            Write-Host "Publishing $rid..."
-            dotnet publish osu.Desktop/osu.Desktop.csproj `
-              -c Release `
-              --runtime $rid `
-              --self-contained `
-              -p:PublishSingleFile=false `
-              -p:PublishTrimmed=false `
-              -p:Version=$ver `
-              -p:FileVersion=2026.1117.0.0 `
-              -p:AssemblyVersion=2026.1117.0.0 `
-              -p:InformationalVersion="v$ver" `
-              -o "publish/$rid"
-            Get-ChildItem -Path "publish/$rid" -Filter "*.xml" | Remove-Item -Force -ErrorAction SilentlyContinue
-              --self-contained `
-              -p:PublishSingleFile=false `
-              -p:PublishTrimmed=false `
-              -p:Version=$ver `
-              -p:FileVersion=2026.1117.0.0 `
-              -p:AssemblyVersion=2026.1117.0.0 `
-              -p:InformationalVersion="v$ver" `
-              -o "publish/$rid"
-            Get-ChildItem -Path "publish/$rid" -Filter "*.xml" | Remove-Item -Force -ErrorAction SilentlyContinue
-            
-            tar.exe -a -c -f "Releases/portable-$rid.zip" -C "publish/$rid" .
-            
-            $stage = "bundle-$rid"
-            $app = "$stage/Torii.app"
-            if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
-            New-Item -ItemType Directory -Path "$app/Contents/MacOS" -Force | Out-Null
-            New-Item -ItemType Directory -Path "$app/Contents/Resources" -Force | Out-Null
-            Copy-Item -Path "publish/$rid/*" -Destination "$app/Contents/MacOS" -Recurse -Force
-            if (Test-Path "osu.Desktop/torii.icns") {
-              Copy-Item "osu.Desktop/torii.icns" "$app/Contents/Resources/torii.icns" -Force
-            }
-            
-            $plist = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleName</key><string>Torii</string><key>CFBundleDisplayName</key><string>Torii</string><key>CFBundleIdentifier</key><string>com.shikkesora.torii</string><key>CFBundleExecutable</key><string>torii</string><key>CFBundleIconFile</key><string>torii.icns</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleInfoDictionaryVersion</key><string>6.0</string><key>CFBundleShortVersionString</key><string>' + $ver + '</string><key>CFBundleVersion</key><string>2026.1117.0.0</string><key>LSMinimumSystemVersion</key><string>14.0</string><key>LSApplicationCategoryType</key><string>public.app-category.games</string><key>NSHighResolutionCapable</key><true/><key>NSSupportsAutomaticGraphicsSwitching</key><true/></dict></plist>'
-            [System.IO.File]::WriteAllText((Join-Path $app "Contents/Info.plist"), $plist, [System.Text.Encoding]::UTF8)
-            [System.IO.File]::WriteAllText((Join-Path $app "Contents/PkgInfo"), "APPL????", [System.Text.Encoding]::ASCII)
-            
-            if (Test-Path "osu.Desktop/macos-package/Install Torii.command") {
-              Copy-Item "osu.Desktop/macos-package/Install Torii.command" "$stage/Install Torii.command" -Force
-            }
-            if (Test-Path "osu.Desktop/macos-package/README.txt") {
-              Copy-Item "osu.Desktop/macos-package/README.txt" "$stage/README.txt" -Force
-            }
-            
-            $zipName = if ($rid -eq "osx-arm64") { "Torii-macOS-AppleSilicon.zip" } else { "Torii-macOS-Intel.zip" }
-            tar.exe -a -c -f "Releases/$zipName" -C "$stage" .
-          }
-      - name: Build Linux portable packages
-        continue-on-error: true
-        run: |
-          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
-          $env:DOTNET_ROOT = "C:\Users\megablackito\Favorites\toriiserverlocal\.tmp\dotnet-11-rc2"
-          foreach ($rid in @("linux-x64", "linux-arm64")) {
-            Write-Host "Publishing $rid..."
-            dotnet publish osu.Desktop/osu.Desktop.csproj `
-              -c Release `
-              --runtime $rid `
-              --self-contained `
-              -p:PublishSingleFile=false `
-              -p:PublishTrimmed=false `
-              -p:Version=$ver `
-              -p:FileVersion=2026.1117.0.0 `
-              -p:AssemblyVersion=2026.1117.0.0 `
-              -p:InformationalVersion="v$ver" `
-              -o "publish/$rid"
-            Get-ChildItem -Path "publish/$rid" -Filter "*.xml" | Remove-Item -Force -ErrorAction SilentlyContinue
-            
-            if ($rid -eq "linux-arm64") {
-              $satoriArm = "C:\Users\megablackito\Favorites\toriiserverlocal\.tmp\satori11-linux-arm64-ci"
-              if (Test-Path $satoriArm) {
-                python .github/scripts/satori_runtime.py overlay linux-arm64 $satoriArm --output "publish/$rid"
-              }
-            }
-            
-            tar.exe -czf "Releases/portable-$rid.tar.gz" -C "publish/$rid" .
-          }
-      - name: Build Android APK
-        continue-on-error: true
-        env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
-          $androidSdk = "C:\Program Files (x86)\Android\android-sdk"
-          $javaSdk = "C:\Program Files\Eclipse Adoptium\jdk-21.0.9.10-hotspot"
-          if ((Test-Path $androidSdk) -and (Test-Path $javaSdk)) {
-            Write-Host "Building Android APK for version $ver..."
-            $env:DOTNET_ROOT = "C:\Users\megablackito\Favorites\toriiserverlocal\.tmp\dotnet-11-rc2"
-            $env:ANDROID_SDK_ROOT = $androidSdk
-            $env:JAVA_HOME = $javaSdk
-            $env:PATH = "$javaSdk\bin;$androidSdk\platform-tools;$env:PATH"
-            
-            if ($env:ANDROID_KEYSTORE_BASE64) {
-              [System.IO.File]::WriteAllBytes("osu.keystore", [System.Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
-            } else {
-              & "$javaSdk\bin\keytool.exe" -genkey -v -keystore osu.keystore -keyalg RSA -keysize 2048 -validity 10000 -alias osu -storepass temp123 -keypass temp123 -dname "CN=osu-torii,OU=torii,O=torii,L=Unknown,S=Unknown,C=Unknown"
-            }
-            
-            $keyPass = if ($env:ANDROID_KEYSTORE_PASSWORD) { $env:ANDROID_KEYSTORE_PASSWORD } else { "temp123" }
-            $keyAlias = if ($env:ANDROID_KEY_ALIAS) { $env:ANDROID_KEY_ALIAS } else { "osu" }
-            
-            dotnet publish osu.Android/osu.Android.csproj `
-              -c Release `
-              -p:Version=$ver `
-              -p:ApplicationVersion=1 `
-              -p:ApplicationDisplayVersion=$ver `
-              -p:AndroidSdkDirectory="$androidSdk" `
-              -p:JavaSdkDirectory="$javaSdk" `
-              -p:AndroidKeyStore=true `
-              -p:AndroidSigningKeyStore=osu.keystore `
-              -p:AndroidSigningKeyAlias="$keyAlias" `
-              -p:AndroidSigningKeyPass="$keyPass" `
-              -p:AndroidSigningStorePass="$keyPass" `
-              -p:AndroidPackageFormat=apk
-              
-            $apk = Get-ChildItem -Path "osu.Android/bin/Release" -Recurse -Filter "*.apk" | Select-Object -First 1
-            if ($apk) {
-              $apksigner = Join-Path $androidSdk "build-tools\35.0.0\apksigner.bat"
-              $zipalign = Join-Path $androidSdk "build-tools\35.0.0\zipalign.exe"
-              if (Test-Path $zipalign) {
-                $aligned = Join-Path $apk.DirectoryName "torii-aligned.apk"
-                & $zipalign -p -f -v 4 $apk.FullName $aligned
-                if (Test-Path $aligned) { $apk = Get-Item $aligned }
-              }
-              if (Test-Path $apksigner) {
-                & $apksigner sign --ks osu.keystore --ks-pass "pass:$keyPass" --ks-key-alias "$keyAlias" --key-pass "pass:$keyPass" $apk.FullName
-              }
-              Copy-Item $apk.FullName "Releases/torii.apk" -Force
-              Write-Host "Android APK created: Releases/torii.apk"
-            }
-          }
-      - name: Normalize asset names
-        run: |
-          $setup = Get-ChildItem -Path "Releases" -Filter "*-Setup.exe" | Where-Object { $_.Name -notmatch 'win-arm64' } | Select-Object -First 1
-          if ($setup) { Move-Item -LiteralPath $setup.FullName -Destination "Releases/install-win-x64.exe" -Force }
-          $setupArm = Get-ChildItem -Path "Releases" -Filter "*win-arm64*-Setup.exe" | Select-Object -First 1
-          if ($setupArm) { Move-Item -LiteralPath $setupArm.FullName -Destination "Releases/install-win-arm64.exe" -Force }
-
-          $portable = Get-ChildItem -Path "Releases" -Filter "*-Portable.zip" | Where-Object { $_.Name -notmatch 'win-arm64' } | Select-Object -First 1
-          if ($portable) { Move-Item -LiteralPath $portable.FullName -Destination "Releases/portable-win-x64.zip" -Force }
-          $portableArm = Get-ChildItem -Path "Releases" -Filter "*win-arm64*-Portable.zip" | Select-Object -First 1
-          if ($portableArm) { Move-Item -LiteralPath $portableArm.FullName -Destination "Releases/portable-win-arm64.zip" -Force }
-          
-          $rf = Join-Path $env:GITHUB_WORKSPACE "release-files"
-          New-Item -ItemType Directory -Path $rf -Force | Out-Null
-          Copy-Item -Path "Releases/*" -Destination $rf -Recurse -Force
-          Get-ChildItem -Path $rf | ForEach-Object { Write-Host "$($_.Name) - $($_.Length) bytes" }
-      - name: Create or update GitHub Release
-        if: ${{ inputs.publish_release != false }}
+        run: ./.github/scripts/local_release.ps1
+      - name: Preserve validated packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ inputs.version }}
+          path: release-files/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Publish complete release
+        if: inputs.publish_release
         uses: softprops/action-gh-release@v2
         with:
           repository: ShikkesoraSIM/torii
           token: ${{ secrets.TORII_PUBLIC_RELEASE_TOKEN }}
-          tag_name: v${{ inputs.version || '2026.1117.0-nova' }}
+          tag_name: v${{ inputs.version }}
           target_commitish: master
-          name: ${{ contains(inputs.version, '-nova') && 'Torii Nova ' || 'Torii ' }}v${{ inputs.version || '2026.1117.0-nova' }}
+          name: ${{ contains(inputs.version, '-nova') && 'Torii Nova ' || 'Torii ' }}v${{ inputs.version }}
           files: release-files/*
+          fail_on_unmatched_files: true
           draft: false
           prerelease: ${{ contains(inputs.version, '-nova') }}
-          body: |
-            ## ${{ contains(inputs.version, '-nova') && 'Torii Nova ' || 'Torii ' }}v${{ inputs.version || '2026.1117.0-nova' }}
-
-            ### What's new
-            - Player profiles / personas selector and online switching.
-            - Torii Classic / Stable UI layout (legacy song select, classic theme, Inter font).
-            - Optional NoFail (NF) mod available across player profiles.
-            - High-performance .NET 11 + Satori 11 runtime.
-
-            ---
-            ### Downloads
-            - **Windows (x64) Installer:** `install-win-x64.exe`
-            - **Windows (ARM64) Installer:** `install-win-arm64.exe`
-            - **Windows Portable (x64):** `portable-win-x64.zip`
-            - **Windows Portable (ARM64):** `portable-win-arm64.zip`
-            - **Linux Portable (x64):** `portable-linux-x64.tar.gz`
-            - **Linux Portable (ARM64):** `portable-linux-arm64.tar.gz`
-            - **macOS (Apple Silicon):** `Torii-macOS-AppleSilicon.zip`
-            - **macOS (Intel):** `Torii-macOS-Intel.zip`
-            - **macOS Portable (Intel):** `portable-osx-x64.zip`
-            - **macOS Portable (Apple Silicon):** `portable-osx-arm64.zip`
-            - **Android APK:** `torii.apk`
-      - name: Record release summary
-        run: |
-          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
-          $releaseTitle = if ($ver -like "*-nova") { "Torii Nova" } else { "Torii" }
-          "### $releaseTitle v$ver Published" >> $env:GITHUB_STEP_SUMMARY
-          "Game assembly MD5: $env:GAME_HASH" >> $env:GITHUB_STEP_SUMMARY
-          "Release URL: https://github.com/ShikkesoraSIM/torii/releases/tag/v$ver" >> $env:GITHUB_STEP_SUMMARY
+          body_path: release-files/RELEASE-NOTES.md
