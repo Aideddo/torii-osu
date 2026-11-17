@@ -61,6 +61,7 @@ namespace osu.Game.Skinning.Select
         {
             Size = new Vector2(340, 86);
             Masking = true;
+            CornerRadius = 6;
         }
 
         [BackgroundDependencyLoader]

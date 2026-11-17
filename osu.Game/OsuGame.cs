@@ -289,6 +289,8 @@ namespace osu.Game
         protected readonly Bindable<LocalUserPlayingState> UserPlayingState = new Bindable<LocalUserPlayingState>();
 
         public OsuScreenStack ScreenStack { get; private set; }
+        public bool CanSwitchPlayerProfile => MultiplayerClient?.Room == null
+            && (ScreenStack?.CurrentScreen is MainMenu || ScreenStack?.CurrentScreen is SongSelect);
 
         protected BackButton BackButton => screenStackFooter.BackButton;
         protected ScreenFooter ScreenFooter => screenStackFooter.Footer;
@@ -396,6 +398,15 @@ namespace osu.Game
         }
 
         #region IOverlayManager
+
+        public void OpenProfileModPicker(Overlays.Login.ProfileModPicker picker)
+        {
+            LoadComponentAsync(picker, loaded =>
+            {
+                topMostOverlayContent.Add(loaded);
+                loaded.Show();
+            });
+        }
 
         IBindable<OverlayActivation> IOverlayManager.OverlayActivationMode => OverlayActivationMode;
 

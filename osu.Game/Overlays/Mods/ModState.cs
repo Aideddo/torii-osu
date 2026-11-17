@@ -23,6 +23,7 @@ namespace osu.Game.Overlays.Mods
         public BindableBool Active { get; } = new BindableBool();
 
         public BindableBool Preselected { get; } = new BindableBool();
+        public BindableBool SelectionLocked { get; } = new BindableBool();
 
         /// <summary>
         /// Whether the mod requires further customisation.

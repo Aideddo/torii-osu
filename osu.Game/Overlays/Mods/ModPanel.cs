@@ -67,6 +67,12 @@ namespace osu.Game.Overlays.Mods
         {
             base.LoadComplete();
 
+            modState.SelectionLocked.BindValueChanged(e =>
+            {
+                Enabled.Value = !e.NewValue;
+                Content.FadeColour(e.NewValue ? Colour4.Gray : Colour4.White, 150);
+            }, true);
+
             modState.ValidForSelection.BindValueChanged(_ => updateFilterState());
             modState.MatchingTextFilter.BindValueChanged(_ => updateFilterState(), true);
 
@@ -162,12 +168,14 @@ namespace osu.Game.Overlays.Mods
 
         protected override void Select()
         {
+            if (modState.SelectionLocked.Value) return;
             modState.PendingConfiguration = Mod.RequiresConfiguration;
             Active.Value = true;
         }
 
         protected override void Deselect()
         {
+            if (modState.SelectionLocked.Value) return;
             modState.PendingConfiguration = false;
             Active.Value = false;
         }

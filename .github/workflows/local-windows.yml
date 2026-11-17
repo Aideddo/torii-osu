@@ -32,8 +32,8 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
-          repository: ShikkesoraSIM/torii-resources
-          ref: 052c77623424f3f1a571d8bcbac0d608d458f8f8
+          repository: ShikkesoraSIM/torii-hiding
+          ref: cb1648d8e6aeca89f2691d063d4591bb5c0963df
           path: toriirefresh-resources
           persist-credentials: false
       - name: Select installed SDK

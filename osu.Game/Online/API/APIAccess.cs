@@ -43,6 +43,11 @@ namespace osu.Game.Online.API
         private readonly OAuth authentication;
 
         private readonly Queue<APIRequest> queue = new Queue<APIRequest>();
+        private APIRequest executingRequest;
+        private APISwitchSubProfileResponse switchingProfile;
+        private Action profileSwitchSucceeded;
+        private Action<Exception> profileSwitchFailed;
+        private long identityVersion;
 
         public EndpointConfiguration Endpoints { get; }
 
@@ -152,7 +157,10 @@ namespace osu.Game.Online.API
                 {
                     case @"verified":
                         if (state.Value == APIState.RequiresSecondFactorAuth)
+                        {
                             state.Value = APIState.Online;
+                            completeProfileSwitch();
+                        }
                         break;
 
                     case @"logout":
@@ -387,12 +395,14 @@ namespace osu.Game.Online.API
 
                 lock (queue)
                 {
-                    if (queue.Count == 0) return;
+                    if (queue.Count == 0 || state.Value != APIState.Online) return;
 
                     req = queue.Dequeue();
+                    executingRequest = req;
                 }
 
-                handleRequest(req);
+                try { handleRequest(req); }
+                finally { lock (queue) executingRequest = null; }
             }
         }
 
@@ -409,6 +419,7 @@ namespace osu.Game.Online.API
         /// <returns>Whether the connection attempt was successful.</returns>
         private void attemptConnect()
         {
+            long connectingIdentityVersion = identityVersion;
             if (LocalUser.IsDefault)
                 Scheduler.Add(localUserState.SetPlaceholderLocalUser, ProvidedUsername, false);
 
@@ -460,7 +471,11 @@ namespace osu.Game.Online.API
 
                     var verificationRequest = new VerifySessionRequest(SecondFactorCode);
 
-                    verificationRequest.Success += () => state.Value = APIState.Online;
+                    verificationRequest.Success += () =>
+                    {
+                        state.Value = APIState.Online;
+                        completeProfileSwitch();
+                    };
                     verificationRequest.Failure += ex =>
                     {
                         state.Value = APIState.RequiresSecondFactorAuth;
@@ -541,6 +556,14 @@ namespace osu.Game.Online.API
                     userReq.Success += me =>
                     {
                         Debug.Assert(ThreadSafety.IsUpdateThread);
+                        if (connectingIdentityVersion != identityVersion) return;
+
+                        if (switchingProfile != null && me.Id != switchingProfile.ProfileUserId)
+                        {
+                            LastLoginError = new InvalidOperationException("The server returned a different player profile. Sign in again before playing.");
+                            Logout();
+                            return;
+                        }
 
                         localUserState.SetLocalUser(me);
                         ScoreProcessingNoticeUrl = me.ScoreProcessingNoticeUrl;
@@ -548,6 +571,7 @@ namespace osu.Game.Online.API
                         state.Value = SessionVerificationMethod == null ? APIState.Online : APIState.RequiresSecondFactorAuth;
                         livenessStopwatch.Restart();
                         failureCount = 0;
+                        completeProfileSwitch();
                     };
 
                     if (!handleRequest(userReq))
@@ -563,7 +587,7 @@ namespace osu.Game.Online.API
             // The Success callback event is fired on the main thread, so we should wait for that to run before proceeding.
             // Without this, we will end up circulating this Connecting loop multiple times and queueing up many web requests
             // before actually going online.
-            while (State.Value == APIState.Connecting && !cancellationToken.IsCancellationRequested)
+            while (State.Value == APIState.Connecting && connectingIdentityVersion == identityVersion && !cancellationToken.IsCancellationRequested)
                 Thread.Sleep(500);
         }
 
@@ -796,6 +820,15 @@ namespace osu.Game.Online.API
 
         public void Logout()
         {
+            identityVersion++;
+            if (switchingProfile != null)
+            {
+                var failed = profileSwitchFailed;
+                switchingProfile = null;
+                profileSwitchSucceeded = null;
+                profileSwitchFailed = null;
+                Schedule(() => failed?.Invoke(LastLoginError ?? new InvalidOperationException("The profile switch could not be completed.")));
+            }
             password = null;
             SecondFactorCode = null;
             authentication.Clear();
@@ -816,14 +849,75 @@ namespace osu.Game.Online.API
                 return;
 
             var refreshRequest = new GetMeRequest();
+            long version = identityVersion;
+            int expectedUser = LocalUser.Value.Id;
             refreshRequest.Success += me => Schedule(() =>
             {
-                if (state.Value != APIState.Online)
+                if (state.Value != APIState.Online || version != identityVersion || me.Id != expectedUser)
                     return;
 
                 localUserState.SetLocalUser(me);
             });
             Queue(refreshRequest);
+        }
+
+        private void completeProfileSwitch()
+        {
+            if (switchingProfile == null || state.Value != APIState.Online) return;
+            if (LocalUser.Value.Id != switchingProfile.ProfileUserId)
+            {
+                LastLoginError = new InvalidOperationException("The profile identity could not be verified.");
+                Logout();
+                return;
+            }
+            var completed = profileSwitchSucceeded;
+            switchingProfile = null;
+            profileSwitchSucceeded = null;
+            profileSwitchFailed = null;
+            completed?.Invoke();
+        }
+
+        public void SwitchSubProfile(APISwitchSubProfileResponse session, Action onSuccess = null, Action<Exception> onFailure = null)
+        {
+            Schedule(() =>
+            {
+                if (state.Value != APIState.Online || switchingProfile != null || session.ProfileUserId <= 0
+                    || game is OsuGame client && !client.CanSwitchPlayerProfile)
+                {
+                    onFailure?.Invoke(new InvalidOperationException("Return to the main menu or song select and leave any multiplayer room before switching profiles."));
+                    return;
+                }
+                lock (queue)
+                {
+                    if (executingRequest is osu.Game.Online.Rooms.SubmitScoreRequest || queue.Any(r => r is osu.Game.Online.Rooms.SubmitScoreRequest))
+                    {
+                        onFailure?.Invoke(new InvalidOperationException("Wait for score submission to finish before switching profiles."));
+                        return;
+                    }
+                    identityVersion++;
+                    switchingProfile = session;
+                    profileSwitchSucceeded = onSuccess;
+                    profileSwitchFailed = onFailure;
+                    password = null;
+                    ProvidedUsername = session.Username;
+                    SecondFactorCode = null;
+                    authentication.Token.Value = new OAuthToken
+                    {
+                        AccessToken = session.AccessToken,
+                        RefreshToken = session.RefreshToken,
+                        ExpiresIn = session.ExpiresIn,
+                    };
+                    state.Value = APIState.Connecting;
+                    flushQueue();
+                }
+                Scheduler.AddDelayed(() =>
+                {
+                    if (switchingProfile != session) return;
+                    if (state.Value == APIState.RequiresSecondFactorAuth) return;
+                    LastLoginError = new TimeoutException("The profile switch timed out. Sign in again before playing.");
+                    Logout();
+                }, 30000);
+            });
         }
 
         protected override void Dispose(bool isDisposing)

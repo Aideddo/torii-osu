@@ -38,6 +38,14 @@ namespace osu.Game.Overlays.Mods
         private OverlayColourProvider colourProvider { get; set; } = null!;
 
         public readonly BindableBool Enabled = new BindableBool();
+        public Func<Mod, bool> IsModReadOnly { get; init; } = _ => false;
+
+        public void RefreshReadOnlySettings()
+        {
+            if (sectionsFlow == null) return;
+            foreach (var section in sectionsFlow.Children.OfType<ModCustomisationSection>())
+                section.ReadOnly = IsModReadOnly(section.Mod);
+        }
 
         public readonly Bindable<ModCustomisationPanelState> ExpandedState = new Bindable<ModCustomisationPanelState>();
 
@@ -191,7 +199,7 @@ namespace osu.Game.Overlays.Mods
                 var settings = mod.CreateSettingsControls().ToList();
 
                 if (settings.Count > 0)
-                    sectionsFlow.Add(new ModCustomisationSection(mod, settings));
+                    sectionsFlow.Add(new ModCustomisationSection(mod, settings) { ReadOnly = IsModReadOnly(mod) });
             }
         }
 

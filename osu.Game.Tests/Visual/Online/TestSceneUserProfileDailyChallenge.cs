@@ -81,6 +81,22 @@ namespace osu.Game.Tests.Visual.Online
         }
 
         [Test]
+        public void TestMissingStatistics()
+        {
+            AddStep("profile without daily stats", () => userProfileData.Value = new UserProfileData(
+                new APIUser { DailyChallengeStatistics = null! }, new OsuRuleset().RulesetInfo));
+            AddAssert("daily badge hidden", () => display.Alpha == 0);
+            AddAssert("no stale tooltip", () => display.TooltipContent == null);
+            AddStep("profile with daily stats", () => userProfileData.Value = new UserProfileData(
+                new APIUser { DailyChallengeStatistics = new APIUserDailyChallengeStatistics { PlayCount = 10 } }, new OsuRuleset().RulesetInfo));
+            AddAssert("daily badge visible", () => display.Alpha == 1);
+            AddStep("switch to empty profile", () => userProfileData.Value = new UserProfileData(
+                new APIUser { DailyChallengeStatistics = null! }, new OsuRuleset().RulesetInfo));
+            AddAssert("daily badge hidden again", () => display.Alpha == 0);
+            AddAssert("previous tooltip cleared", () => display.TooltipContent == null);
+        }
+
+        [Test]
         public void TestPlayCountRankingTier()
         {
             AddAssert("1 before silver", () => DailyChallengeStatsTooltip.TierForPlayCount(29) == RankingTier.Bronze);

@@ -335,6 +335,9 @@ namespace osu.Game
             CurrentLanguage.BindValueChanged(val => frameworkLocale.Value = val.NewValue.ToCultureCode());
 
             dependencies.CacheAs(API ??= new APIAccess(this, LocalConfig, endpoints, VersionHash));
+            var profileModPolicy = new ProfileModPolicyController(SelectedMods, Ruleset);
+            dependencies.Cache(profileModPolicy);
+            base.Content.Add(profileModPolicy);
 
             var defaultBeatmap = new DummyWorkingBeatmap(Audio, Textures);
 

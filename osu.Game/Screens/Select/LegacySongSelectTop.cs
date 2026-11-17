@@ -42,6 +42,8 @@ namespace osu.Game.Screens.Select
         // alto de la franja songselect-top de stable en el espacio logico 1366x768 (el art stock es 1366x155).
         private const float panel_height = 155;
 
+        private const float backing_height = 72;
+
         // ancho logico del espacio de la UI legacy (el TargetDrawSize.X del DrawSizePreservingFillContainer).
         private const float top_extension_x = 1365;
 
@@ -227,7 +229,7 @@ namespace osu.Game.Screens.Select
             var decorationTexture = decorationSource?.GetStableTexture("selection-mode");
             bool fullScreenDecoration = decorationTexture != null && Math.Max(decorationTexture.DisplayWidth, decorationTexture.DisplayHeight) > 250;
 
-            // stable mantiene un respaldo oscuro debajo del arte transparente del skin.
+            // el respaldo no debe invadir el recorte inferior del arte del skin.
             topLayers.Add(topLayer(null, depth: 5));
             if (skinTop != null || !fullScreenDecoration)
                 topLayers.Add(topLayer(skinTop ?? skins.DefaultClassicSkin.GetStableTexture("songselect-top"), depth: 4));
@@ -268,7 +270,7 @@ namespace osu.Game.Screens.Select
                 {
                     RelativeSizeAxes = Axes.X,
                     Width = 1,
-                    Height = panel_height,
+                    Height = backing_height,
                     Masking = true,
                     MaskingSmoothness = 0,
                     Depth = depth,

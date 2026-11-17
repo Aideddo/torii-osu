@@ -15,6 +15,18 @@ namespace osu.Game.Overlays.Mods
 {
     public partial class ModCustomisationSection : CompositeDrawable
     {
+        private bool readOnly;
+        public bool ReadOnly
+        {
+            get => readOnly;
+            set
+            {
+                readOnly = value;
+                Colour = value ? Colour4.Gray : Colour4.White;
+            }
+        }
+
+        protected override bool ShouldBeConsideredForInput(Drawable child) => !ReadOnly && base.ShouldBeConsideredForInput(child);
         public readonly Mod Mod;
 
         private readonly IReadOnlyList<Drawable> settings;

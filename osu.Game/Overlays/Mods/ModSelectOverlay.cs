@@ -93,6 +93,8 @@ namespace osu.Game.Overlays.Mods
         /// Whether per-mod customisation controls are visible.
         /// </summary>
         protected virtual bool AllowCustomisation => true;
+        protected virtual bool IsModReadOnly(Mod mod) => false;
+        protected void RefreshReadOnlySettings() => customisationPanel.RefreshReadOnlySettings();
 
         /// <summary>
         /// Whether the column with available mod presets should be shown.
@@ -193,6 +195,7 @@ namespace osu.Game.Overlays.Mods
                                 },
                                 customisationPanel = new ModCustomisationPanel
                                 {
+                                    IsModReadOnly = IsModReadOnly,
                                     Anchor = Anchor.TopRight,
                                     Origin = Anchor.TopRight,
                                     Width = 400,

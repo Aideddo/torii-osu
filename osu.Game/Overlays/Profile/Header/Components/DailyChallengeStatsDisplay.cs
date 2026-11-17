@@ -155,16 +155,10 @@ namespace osu.Game.Overlays.Profile.Header.Components
 
         private void updateDisplay()
         {
-            if (User.Value == null)
+            APIUserDailyChallengeStatistics? stats = User.Value?.User.DailyChallengeStatistics;
+            if (stats == null || stats.PlayCount == 0)
             {
-                Hide();
-                return;
-            }
-
-            APIUserDailyChallengeStatistics stats = User.Value.User.DailyChallengeStatistics;
-
-            if (stats.PlayCount == 0)
-            {
+                TooltipContent = null;
                 Hide();
                 return;
             }

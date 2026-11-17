@@ -20,6 +20,17 @@ namespace osu.Game.Overlays.Mods
         private ModSettingChangeTracker? modSettingChangeTracker;
         private readonly BindableInt ratePitchSettingVersion = new BindableInt();
 
+        public bool UseProfilePolicy { get; init; } = true;
+        public ProfileModPolicy? SelectionPolicy { get; set; }
+
+        [Resolved]
+        private ProfileModPolicyController profilePolicy { get; set; } = null!;
+
+        private ProfileModPolicy? currentPolicy => SelectionPolicy ?? (UseProfilePolicy ? profilePolicy.Current.Value : null);
+
+        private ProfileModPolicy? applicablePolicy => Ruleset.Value?.OnlineID == currentPolicy?.RulesetId ? currentPolicy : null;
+        protected override bool IsModReadOnly(Mod mod) => applicablePolicy?.IsRequired(mod) == true;
+
         public UserModSelectOverlay(OverlayColourScheme colourScheme = OverlayColourScheme.Green)
             : base(colourScheme)
         {
@@ -38,10 +49,13 @@ namespace osu.Game.Overlays.Mods
             base.LoadComplete();
 
             SelectedMods.BindValueChanged(onSelectedModsChanged, true);
+            profilePolicy.Current.BindValueChanged(_ => updateProfileLocks());
+            AvailableMods.BindValueChanged(_ => updateProfileLocks());
         }
 
         private void onSelectedModsChanged(ValueChangedEvent<IReadOnlyList<Mod>> mods)
         {
+            updateProfileLocks();
             modSettingChangeTracker?.Dispose();
             modSettingChangeTracker = new ModSettingChangeTracker(mods.NewValue);
             modSettingChangeTracker.SettingChanged += _ =>
@@ -54,7 +68,12 @@ namespace osu.Game.Overlays.Mods
         }
 
         protected override IReadOnlyList<Mod> ComputeNewModsFromSelection(IReadOnlyList<Mod> oldSelection, IReadOnlyList<Mod> newSelection)
-            => NormalizeSelection(oldSelection, newSelection);
+        {
+            var selection = NormalizeSelection(oldSelection, newSelection);
+            return applicablePolicy is { } policy
+                ? policy.Enforce(selection, Ruleset.Value!.CreateInstance())
+                : selection;
+        }
 
         public static IReadOnlyList<Mod> NormalizeSelection(IReadOnlyList<Mod> oldSelection, IReadOnlyList<Mod> newSelection)
         {
@@ -80,6 +99,18 @@ namespace osu.Game.Overlays.Mods
                 finalMods.RemoveAll(m => m is ModPitchAdjust);
 
             return finalMods.DistinctBy(m => m.GetType()).ToArray();
+        }
+
+        private void updateProfileLocks()
+        {
+            var policy = applicablePolicy;
+            var ruleset = Ruleset.Value?.CreateInstance();
+            foreach (var state in AllAvailableMods)
+            {
+                state.SelectionLocked.Value = policy != null && ruleset != null
+                    && (policy.IsRequired(state.Mod) || !policy.AllowsOptional(state.Mod, ruleset));
+            }
+            RefreshReadOnlySettings();
         }
 
         private void removePitchAdjustIfRatePitchIsOn()
@@ -110,10 +141,10 @@ namespace osu.Game.Overlays.Mods
             switch (e.Action)
             {
                 case GlobalAction.IncreaseModSpeed:
-                    return modSpeedHotkeyHandler.ChangeSpeed(0.05, AllAvailableMods.Where(state => state.ValidForSelection.Value).Select(state => state.Mod));
+                    return modSpeedHotkeyHandler.ChangeSpeed(0.05, AllAvailableMods.Where(state => state.ValidForSelection.Value && !state.SelectionLocked.Value).Select(state => state.Mod));
 
                 case GlobalAction.DecreaseModSpeed:
-                    return modSpeedHotkeyHandler.ChangeSpeed(-0.05, AllAvailableMods.Where(state => state.ValidForSelection.Value).Select(state => state.Mod));
+                    return modSpeedHotkeyHandler.ChangeSpeed(-0.05, AllAvailableMods.Where(state => state.ValidForSelection.Value && !state.SelectionLocked.Value).Select(state => state.Mod));
             }
 
             return base.OnPressed(e);
