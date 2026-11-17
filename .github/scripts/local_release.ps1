@@ -129,6 +129,10 @@ New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
 Copy-Item Releases/* $outputRoot
 $notes = @("# $title v$version",'', 'Player profiles, Torii Classic UI and optional NoFail.', '', 'All six desktop architectures and Android are included. Desktop builds bundle .NET 11 and Satori 11. Android preserves the application ID and original signing identity.', '', 'macOS requires 14 or newer. x64 requires x86-64-v2. These runtime requirements are unchanged from the .NET 11 migration.', '', "Private source commit: $(git rev-parse HEAD)")
 $notes | Out-File (Join-Path $outputRoot RELEASE-NOTES.md) -Encoding utf8
+$checksums = Get-ChildItem -LiteralPath $outputRoot -File | Sort-Object Name | ForEach-Object {
+    "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
+}
+$checksums | Out-File (Join-Path $outputRoot SHA256SUMS.txt) -Encoding ascii
 if ($env:TORII_REGISTER_RELEASE -eq 'true') {
     if (!$env:TORII_VERSION_WEBHOOK_SECRET -or !$env:TORII_SERVER_URL) { throw 'Missing server hash registration configuration' }
     $payload = @{version=$version; client_name=$title; hashes=$hashes} | ConvertTo-Json -Depth 5

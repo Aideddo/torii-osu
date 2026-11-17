@@ -56,11 +56,14 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./.github/scripts/local_release.ps1
-      - name: Preserve validated packages
+      - name: Preserve release verification
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ inputs.version }}
-          path: release-files/
+          path: |
+            release-files/SHA256SUMS.txt
+            release-files/client-hashes.json
+            release-files/RELEASE-NOTES.md
           if-no-files-found: error
           retention-days: 7
       - name: Publish complete release
