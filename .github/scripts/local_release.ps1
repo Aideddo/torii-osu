@@ -106,7 +106,7 @@ try {
     & $dotnet build osu.Android/osu.Android.csproj -t:Package -c Release -f net11.0-android `
         -p:Version=$version -p:ApplicationVersion=$code -p:ApplicationDisplayVersion=$version `
         -p:AndroidSdkDirectory=$androidSdk -p:JavaSdkDirectory=$env:JAVA_HOME `
-        -p:BuildingInsideVisualStudio=true -p:BuildProjectReferences=true -p:AndroidKeyStore=true `
+        -p:ToriiUnsignedAndroid=true -p:AndroidKeyStore=true `
         -p:ApplicationTitle=$title `
         -p:AndroidPackageFormat=apk
     if ($LASTEXITCODE -ne 0) { throw 'Android package build failed' }

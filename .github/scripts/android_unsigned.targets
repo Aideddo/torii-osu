@@ -1,0 +1,4 @@
+<Project>
+  <!-- la firma original se aplica despues de preparar las librerias nativas. -->
+  <Target Name="_Sign" />
+</Project>
