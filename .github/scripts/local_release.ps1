@@ -59,7 +59,7 @@ foreach ($rid in $desktopRids) {
     if ($hashes.ContainsKey($hash) -and $hashes[$hash] -ne $label) {
         $hashes[$hash] = ''
     } else {
-        $hashes[$hash] = $label
+    $hashes[$hash] = if ($hashes.ContainsKey($hash) -and $hashes[$hash] -ne $label) { 'Desktop' } else { $label }
     }
     if ($rid.StartsWith('win')) {
         $channel = if ($rid -eq 'win-x64') { 'win' } else { 'win-arm64' }
@@ -141,7 +141,7 @@ $hashes | ConvertTo-Json | Out-File Releases/client-hashes.json -Encoding utf8
 $outputRoot = Join-Path $workspace 'release-files'
 New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
 Move-Item Releases/* $outputRoot
-$notes = @("# $title v$version",'', 'Player profiles, Torii Classic UI and optional NoFail.', '', 'All six desktop architectures and Android are included. Desktop builds bundle .NET 11 and Satori 11. Android preserves the application ID and original signing identity.', '', 'macOS requires 14 or newer. x64 requires x86-64-v2. These runtime requirements are unchanged from the .NET 11 migration.', '', "Private source commit: $(git rev-parse HEAD)")
+$notes = @("# $title v$version",'', 'Hotfix: disabled the new Aspire/2B rendering that caused ghost circles. Classic UI and player profiles are still included.', '', 'Player profiles, Torii Classic UI and optional NoFail.', '', 'All six desktop architectures and Android are included. Desktop builds bundle .NET 11 and Satori 11. Android preserves the application ID and original signing identity.', '', 'macOS requires 14 or newer. x64 requires x86-64-v2. These runtime requirements are unchanged from the .NET 11 migration.', '', "Private source commit: $(git rev-parse HEAD)")
 $notes | Out-File (Join-Path $outputRoot RELEASE-NOTES.md) -Encoding utf8
 $checksums = Get-ChildItem -LiteralPath $outputRoot -File | Sort-Object Name | ForEach-Object {
     "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
