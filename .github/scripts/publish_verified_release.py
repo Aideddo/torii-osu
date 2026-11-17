@@ -26,7 +26,16 @@ def request(path, payload=None):
         return json.load(response)
 
 
-release = request('/releases/tags/v' + version)
+release = None
+page = 1
+while release is None:
+    releases = request(f'/releases?per_page=100&page={page}')
+    release = next((item for item in releases if item['tag_name'] == 'v' + version), None)
+    if len(releases) < 100:
+        break
+    page += 1
+if release is None:
+    raise ValueError('Release draft not found')
 if not release['draft']:
     raise ValueError('Expected an unpublished draft release')
 uploaded = {asset['name']: asset for asset in release['assets']}
