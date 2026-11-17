@@ -191,27 +191,7 @@ jobs:
               Copy-Item "osu.Desktop/torii.icns" "$app/Contents/Resources/torii.icns" -Force
             }
             
-            $plist = @"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>CFBundleName</key><string>Torii</string>
-  <key>CFBundleDisplayName</key><string>Torii</string>
-  <key>CFBundleIdentifier</key><string>com.shikkesora.torii</string>
-  <key>CFBundleExecutable</key><string>torii</string>
-  <key>CFBundleIconFile</key><string>torii.icns</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-  <key>CFBundleShortVersionString</key><string>$ver</string>
-  <key>CFBundleVersion</key><string>2026.1117.0.0</string>
-  <key>LSMinimumSystemVersion</key><string>14.0</string>
-  <key>LSApplicationCategoryType</key><string>public.app-category.games</string>
-  <key>NSHighResolutionCapable</key><true/>
-  <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
-</dict>
-</plist>
-"@
+            $plist = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleName</key><string>Torii</string><key>CFBundleDisplayName</key><string>Torii</string><key>CFBundleIdentifier</key><string>com.shikkesora.torii</string><key>CFBundleExecutable</key><string>torii</string><key>CFBundleIconFile</key><string>torii.icns</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleInfoDictionaryVersion</key><string>6.0</string><key>CFBundleShortVersionString</key><string>' + $ver + '</string><key>CFBundleVersion</key><string>2026.1117.0.0</string><key>LSMinimumSystemVersion</key><string>14.0</string><key>LSApplicationCategoryType</key><string>public.app-category.games</string><key>NSHighResolutionCapable</key><true/><key>NSSupportsAutomaticGraphicsSwitching</key><true/></dict></plist>'
             [System.IO.File]::WriteAllText((Join-Path $app "Contents/Info.plist"), $plist, [System.Text.Encoding]::UTF8)
             [System.IO.File]::WriteAllText((Join-Path $app "Contents/PkgInfo"), "APPL????", [System.Text.Encoding]::ASCII)
             
