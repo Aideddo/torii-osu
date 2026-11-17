@@ -5,6 +5,7 @@
   </ItemGroup>
   <PropertyGroup>
     <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64'">android-arm64</RuntimeIdentifier>
     <!-- arm64-only: slimmer APK, avoids multi-arch install failures; arm64 covers ~99% of phones. -->
     <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
