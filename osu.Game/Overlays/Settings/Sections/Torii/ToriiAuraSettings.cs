@@ -10,7 +10,7 @@ using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
 using osu.Game.Graphics.UserEffects;
-using osu.Game.Graphics.UserInterfaceV2;
+using osu.Game.Overlays.Settings.Entries;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
@@ -36,7 +36,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
 
-        private FormDropdown<AuraOption> dropdown = null!;
+        private DropdownEntry<AuraOption> dropdown = null!;
         private AuraSettingsPreview preview = null!;
 
         // Bindable for the dropdown — items are swapped in once the
@@ -60,28 +60,24 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
         {
             Children = new Drawable[]
             {
-                new SettingsItemV2(new FormCheckBox
+                CreateItem(new CheckboxEntry
                 {
                     Caption = "Show user auras",
                     HintText = "Render the per-user particle effect behind elite-group usernames "
                                + "everywhere they appear (chat, profile, leaderboards). Disable on "
                                + "weaker hardware if you'd rather skip the GPU work.",
                     Current = config.GetBindable<bool>(OsuSetting.UserAuraEnabled),
-                })
-                {
                     Keywords = new[] { "aura", "particles", "torii", "title", "effect" },
-                },
-                new SettingsItemV2(dropdown = new FormDropdown<AuraOption>
+                }),
+                CreateItem(dropdown = new DropdownEntry<AuraOption>
                 {
                     Caption = "My equipped aura",
                     HintText = "Pick which aura plays behind your username. Other users see "
                                + "your choice everywhere your name shows up.",
                     Items = new[] { AuraOption.DefaultPlaceholder },
                     Current = selectedOption,
-                })
-                {
                     Keywords = new[] { "aura", "title", "torii", "cosmetic", "equip" },
-                },
+                }),
                 preview = new AuraSettingsPreview
                 {
                     // Tiny top margin so the preview isn't flush against

@@ -118,6 +118,9 @@ namespace osu.Game.Skinning
                                     var hitError2 = container.OfType<HitErrorMeter>().LastOrDefault();
 
                                     leaderboard?.Position = new Vector2(36, 115);
+                                    var classicLeaderboard = container.OfType<LegacyGameplayLeaderboard>().FirstOrDefault();
+                                    if (classicLeaderboard != null)
+                                        classicLeaderboard.Position = new Vector2(0, LegacyGameplayLeaderboard.TopFor(containerLookup.Ruleset.ShortName));
 
                                     Vector2 pos = new Vector2(36, -66);
 
@@ -150,7 +153,7 @@ namespace osu.Game.Skinning
                                     RelativeSizeAxes = Axes.Both,
                                     Children = new Drawable[]
                                     {
-                                        new DrawableGameplayLeaderboard(),
+                                        LegacyGameplayLeaderboard.CreateDefault(),
                                         new ArgonComboCounter
                                         {
                                             Anchor = Anchor.BottomLeft,

@@ -5,7 +5,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
-using osu.Game.Graphics.UserInterfaceV2;
+using osu.Game.Overlays.Settings.Entries;
 using osu.Game.Overlays.Dialog;
 
 namespace osu.Game.Overlays.Settings.Sections.Torii
@@ -28,7 +28,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
 
             Children = new Drawable[]
             {
-                new SettingsItemV2(new FormCheckBox
+                CreateItem(new CheckboxEntry
                 {
                     Caption = "Show server pulse on toolbar",
                     HintText = "Live server activity widget (currently playing, plays per minute, top "
@@ -36,10 +36,8 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
                                + "no background work at all, as if it didn't exist. Changing this "
                                + "restarts the game so it takes full effect.",
                     Current = pulseEnabled,
-                })
-                {
                     Keywords = new[] { @"pulse", @"server", @"activity", @"online", @"toolbar", @"playing", @"torii" },
-                },
+                }),
             };
 
             // suppress evita el loop infinito: revertir en Cancel re-dispara este handler.

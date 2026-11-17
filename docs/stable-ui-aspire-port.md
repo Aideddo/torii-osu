@@ -14,12 +14,22 @@ notifications, trusted domains, online settings strings, custom difficulty/PP
 evaluators and source CI workflows are excluded. Existing Torii score notes,
 replay actions and modern mod selection remain available.
 
-No assets were added from the source resources repository. The existing pinned
-Torii resources supply the classic assets and optional fonts.
+The expanded visual port now includes the classic main menu/music controls,
+settings renderer, gameplay loading/pause/fail/skip/break screens, FPS display
+and legacy-skin gameplay leaderboard. Torii networking, PP and custom mods
+remain unchanged. Upstream-only ruleset management and framework-specific
+audio/renderer additions are not imported as part of a visual UI change.
+
+Resources are based on Torii's existing pin plus the original stable UI assets
+from GooGuTeam/g0v0-resources v2026.1101.0-g0v0 (58c455c).
+Most classic textures were already identical. Added Maple Mono with its SIL
+licence, the legacy menu-hit sample and original back-button layer; preserved
+Torii's logo, custom icons and unrelated gameplay sprites.
+Full resource and font notices ship under LICENSES/.
 
 ## Settings
 
-`UIThemeOption.StableUI` uses five independent component preferences:
+`UIThemeOption.StableUI` uses independent startup-snapshotted component preferences:
 
 - `ToriiStableUISongSelect`: retro carousel and classic song select.
 - `ToriiStableUIResults`: classic ranking panel.
@@ -27,6 +37,14 @@ Torii resources supply the classic assets and optional fonts.
   complete modern selector, including custom mods and their settings.
 - `ToriiStableUIFooter`: skinnable footer and buttons.
 - `ToriiStableUIFonts`: existing Aller font option.
+- `ToriiStableUIMainMenu`: classic main menu and music controls.
+- `ToriiStableUISettings`: classic settings renderer.
+- `ToriiStableUIFpsCounter`: classic frame-rate display.
+- `ToriiStableUIGameplayScreens`: loading, pause/fail, skip and break screens.
+- `ToriiStableUIGameplayLeaderboard`: default legacy-skin scoreboard.
+
+Custom skin HUD layouts remain authoritative; enabling the classic scoreboard
+does not overwrite a user's saved skin layout.
 
 The settings subsection stages checkbox edits without writing configuration.
 Apply is enabled only when those edits differ from saved preferences. Apply

@@ -1,5 +1,6 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
+// Ported from ShikkesoraSIM/torii-osu, commit 8d7f1f25b737263dd140bbe59b0d51b999a7fc24.
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,6 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
-using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
@@ -186,7 +186,6 @@ namespace osu.Game.Screens.Select
                 (sortDropdown, ScreenFrontLayer.Depths.TOP_CONTROLS),
                 (infoPanel.StatsLine, ScreenFrontLayer.Depths.TOP_CONTROLS));
 
-            searchBackground.Texture = skins.DefaultClassicSkin.GetStableTexture(@"menu-button-background");
         }
 
         protected override void LoadComplete()
@@ -210,11 +209,7 @@ namespace osu.Game.Screens.Select
         }
 
         /// <summary>
-        /// rearma las dos capas apiladas del songselect-top, como stable:
-        ///   (atras) el top classic "default" bundleado, siempre; su panel opaco a la izquierda banca la
-        ///           info del beatmap asi se lee aunque el top propio del skin sea transparente ahi.
-        ///   (medio) el songselect-top PROPIO del skin, solo si trae uno (muchos skins no traen).
-        /// con su Depth mas alto quedan detras de la decoracion (Depth 2) y del chrome.
+        /// Dark backing, then skin artwork, then the interactive chrome.
         /// </summary>
         private void rebuildTopLayers()
         {
@@ -226,13 +221,19 @@ namespace osu.Game.Screens.Select
                 topLayers.Clear();
             }
 
-            var bundledTop = skins.DefaultClassicSkin.GetStableTexture(@"songselect-top");
-            var skinTop = skins.CurrentSkin.Value.GetStableTexture(@"songselect-top");
+            var provider = skin.FindCustomStableTextureSource("songselect-top");
+            var skinTop = provider?.GetStableTexture("songselect-top");
+            var decorationSource = skin.FindCustomStableTextureSource("selection-mode");
+            var decorationTexture = decorationSource?.GetStableTexture("selection-mode");
+            bool fullScreenDecoration = decorationTexture != null && Math.Max(decorationTexture.DisplayWidth, decorationTexture.DisplayHeight) > 250;
 
-            topLayers.Add(topLayer(bundledTop, depth: 4));
+            // stable mantiene un respaldo oscuro debajo del arte transparente del skin.
+            topLayers.Add(topLayer(null, depth: 5));
+            if (skinTop != null || !fullScreenDecoration)
+                topLayers.Add(topLayer(skinTop ?? skins.DefaultClassicSkin.GetStableTexture("songselect-top"), depth: 4));
 
-            if (skinTop != null && skins.CurrentSkin.Value != skins.DefaultClassicSkin)
-                topLayers.Add(topLayer(skinTop, depth: 3));
+            searchBackground.Texture = skin.GetStableTexture("menu-button-background")
+                                       ?? skins.DefaultClassicSkin.GetStableTexture("menu-button-background");
 
             AddRangeInternal(topLayers);
         }
@@ -260,8 +261,7 @@ namespace osu.Game.Screens.Select
         /// </summary>
         private Drawable topLayer(Texture? tex, float depth)
         {
-            // sin textura (ni la classic bundleada): un gradiente oscuro de fallback asi la info
-            // del beatmap y los controles se leen igual sobre cualquier fondo.
+            // respaldo independiente del skin para que sus zonas transparentes no muestren el beatmap.
             if (tex == null)
             {
                 return new Container
@@ -277,7 +277,7 @@ namespace osu.Game.Screens.Select
                     Child = new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = ColourInfo.GradientVertical(new Color4(0f, 0f, 0f, 0.78f), new Color4(0f, 0f, 0f, 0f)),
+                        Colour = Color4.Black,
                     },
                 };
             }

@@ -464,6 +464,9 @@ namespace osu.Game.Screens.Select
             private OsuGame? game { get; set; }
 
             private Box hoverHighlight = null!;
+            private Sprite skinBackground = null!;
+            private Box fallbackBackground = null!;
+            private ISkinSource skinSource = null!;
 
             public LegacyScoreRow(ScoreInfo score, string displayName, long? scoreDiff)
             {
@@ -475,6 +478,7 @@ namespace osu.Game.Screens.Select
             [BackgroundDependencyLoader]
             private void load(ISkinSource skin)
             {
+                skinSource = skin;
                 RelativeSizeAxes = Axes.X;
                 Height = 50;
 
@@ -509,11 +513,8 @@ namespace osu.Game.Screens.Select
                         Children = new Drawable[]
                         {
                             // mas claro que antes; la fila de stable es ~negro 0.47, desvaneciendose a la derecha.
-                            new Box
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Colour = ColourInfo.GradientHorizontal(new Color4(0f, 0f, 0f, 0.5f), new Color4(0f, 0f, 0f, 0.12f)),
-                            },
+                            fallbackBackground = new Box { RelativeSizeAxes = Axes.Both, Colour = new Color4(24, 24, 24, 225) },
+                            skinBackground = new Sprite { RelativeSizeAxes = Axes.Both },
                             hoverHighlight = new Box
                             {
                                 RelativeSizeAxes = Axes.Both,
@@ -577,6 +578,27 @@ namespace osu.Game.Screens.Select
             {
                 hoverHighlight.FadeOut(250, Easing.OutQuint);
                 base.OnHoverLost(e);
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+                skinSource.SourceChanged += updateSkinBackground;
+                updateSkinBackground();
+            }
+
+            private void updateSkinBackground()
+            {
+                var provider = skinSource.FindCustomStableTextureSource("menu-button-background");
+                skinBackground.Texture = provider?.GetStableTexture("menu-button-background");
+                fallbackBackground.Alpha = skinBackground.Texture == null ? 1 : 0;
+            }
+
+            protected override void Dispose(bool isDisposing)
+            {
+                if (skinSource != null)
+                    skinSource.SourceChanged -= updateSkinBackground;
+                base.Dispose(isDisposing);
             }
 
             ITooltip<ScoreInfo> IHasCustomTooltip<ScoreInfo>.GetCustomTooltip() => new BeatmapLeaderboardScore.LeaderboardScoreTooltip(colourProvider ?? fallback_colour);

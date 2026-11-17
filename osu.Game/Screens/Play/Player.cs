@@ -1,5 +1,5 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 #nullable disable
 
@@ -169,6 +169,10 @@ namespace osu.Game.Screens.Play
         private Bindable<bool> skipBreaksEnabled;
         private Bindable<bool> skipBreaksSingleConfirmation;
         private Bindable<bool> skipBreaksBriefingSeen;
+        /// <summary>
+        /// Whether to show osu!stable's skip button and break display, as chosen when gameplay loads.
+        /// </summary>
+        private bool legacyGameplayScreens;
 
         protected ScoreProcessor ScoreProcessor { get; private set; }
 
@@ -259,6 +263,7 @@ namespace osu.Game.Screens.Play
         {
             // torii: capturado aca porque loadPlayableBeatmap corre adentro de este load.
             constantHitsoundVolume = config.Get<bool>(OsuSetting.ToriiConstantHitsoundVolume);
+            legacyGameplayScreens = ToriiStableUI.GameplayScreens(config);
 
             var gameplayMods = Mods.Value.Select(m => m.DeepClone()).ToArray();
 
@@ -557,22 +562,23 @@ namespace osu.Game.Screens.Play
                         Clock = DrawableRuleset.FrameStableClock,
                         ProcessCustomClock = false,
                         BreakTracker = breakTracker,
-                    },
+                        ShowStandardDisplay = !legacyGameplayScreens,
+                    }.With(o =>
+                    {
+                        if (legacyGameplayScreens)
+                            o.Add(new LegacyBreakOverlay(breakTracker));
+                    }),
                     // display the cursor above some HUD elements.
                     DrawableRuleset.Cursor?.CreateProxy() ?? new Container(),
                     SkipIntroOverlay = CreateSkipOverlay(DrawableRuleset.GameplayStartTime).With(o =>
                     {
                         o.RequestSkip = RequestIntroSkip;
                     }),
-                    skipOutroOverlay = new SkipOverlay(GameplayState.Storyboard.LatestEventTime ?? 0)
+                    skipOutroOverlay = createStandardSkipOverlay(GameplayState.Storyboard.LatestEventTime ?? 0).With(o =>
                     {
-                        RequestSkip = () => progressToResults(false),
-                        Alpha = 0
-                    },
-                    // Torii: mid-map break-skip button. Only created for solo play /
-                    // saved replays (AllowBreakSkipping) when the setting is on — a
-                    // forward seek desyncs synced multiplayer + live spectating. Falls
-                    // back to an empty Container (the array can't hold a null child).
+                        o.RequestSkip = () => progressToResults(false);
+                        o.Alpha = 0;
+                    }),
                     (skipBreakOverlay = skipBreaksEnabled.Value && AllowBreakSkipping
                         ? new SkipBreakOverlay(breakTracker, skipBreaksSingleConfirmation, skipBreaksBriefingSeen)
                         {
@@ -606,7 +612,9 @@ namespace osu.Game.Screens.Play
             return container;
         }
 
-        protected virtual SkipOverlay CreateSkipOverlay(double startTime) => new SkipOverlay(startTime);
+        protected virtual SkipOverlay CreateSkipOverlay(double startTime) => createStandardSkipOverlay(startTime);
+
+        private SkipOverlay createStandardSkipOverlay(double startTime) => legacyGameplayScreens ? new LegacySkipOverlay(startTime) : new SkipOverlay(startTime);
 
         private void onBreakTimeChanged(ValueChangedEvent<bool> isBreakTime)
         {

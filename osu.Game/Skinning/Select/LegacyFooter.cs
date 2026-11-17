@@ -1,11 +1,10 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
+// Ported from ShikkesoraSIM/torii-osu, commit 8d7f1f25b737263dd140bbe59b0d51b999a7fc24.
 
 using System;
 using osu.Framework.Allocation;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
-using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
@@ -26,10 +25,17 @@ namespace osu.Game.Skinning.Select
         private Container components = null!;
         private Container buttonsContainer = null!;
         private Sprite modeDecoration = null!;
+        private Sprite bottomSprite = null!;
+        private Box cleanBar = null!;
+        private Container decorationClip = null!;
+        private ISkinSource skinSource = null!;
+        private SkinManager skinManager = null!;
+        private bool useSkinTextures;
 
         // Torii: osu!stable draws the footer buttons (0.95) and back button (0.9-0.92) above the song select cookie (0.9), and songselect-bottom
         // (0.7) below it. The foreground is drawn through a proxy in the game's front layer, so the logo can sit between the bar and the buttons.
         private Container foreground = null!;
+        private Container footerBackground = null!;
         private ScreenFrontLayer.ProxySet frontProxies = null!;
 
         [Resolved(CanBeNull = true)]
@@ -84,6 +90,8 @@ namespace osu.Game.Skinning.Select
         private void load(ISkinSource skin, OsuConfigManager config, SkinManager skins)
         {
             RelativeSizeAxes = Axes.Both;
+            skinSource = skin;
+            skinManager = skins;
 
             const float mods_button_off = 57.6f * 1.6f;
             const float random_button_off = mods_button_off + 48 * 1.6f;
@@ -95,6 +103,7 @@ namespace osu.Game.Skinning.Select
             // del skin activo + los glyphs selection-* del skin. apagado: una barra limpia y pareja
             // con los botones classic bundleados.
             bool useSkin = ToriiStableUI.Footer(config);
+            useSkinTextures = useSkin;
 
             // null = agarra las texturas del skin actual asi se ven los footers skineados, si no el
             // classic bundleado. el fallback por textura al classic vive en LegacyFooterButton, y cada
@@ -112,7 +121,8 @@ namespace osu.Game.Skinning.Select
             // abajo la dibujamos como cosmetic ENCIMA de la tarjeta de stats (tapa performance/acc/lvl y
             // tiene un circulo transparente para el avatar). ojo: usar el lookup `skin` directo, porque
             // skins.CurrentSkin.Value.GetTexture devuelve null para texturas de skins legacy (no hay transformer).
-            var modeTexture = useSkin ? skin.GetStableTexture(@"selection-mode") : null;
+            var decorationSource = useSkin ? skin.FindCustomStableTextureSource(@"selection-mode") : null;
+            var modeTexture = decorationSource?.GetStableTexture(@"selection-mode");
             bool skinFooterDecoration = modeTexture != null && Math.Max(modeTexture.DisplayWidth, modeTexture.DisplayHeight) > 90;
 
             bool showCleanBar = bottomTexture == null;
@@ -121,24 +131,30 @@ namespace osu.Game.Skinning.Select
             {
                 // barra de fallback limpia, se muestra cuando no hay footer de skin que dibujar
                 // (ni songselect-bottom ni una decoracion selection-mode).
-                new Box
+                footerBackground = new Container
                 {
-                    RelativeSizeAxes = Axes.X,
-                    Height = footer_bar_height,
-                    Anchor = Anchor.BottomLeft,
-                    Origin = Anchor.BottomLeft,
-                    Colour = ColourInfo.GradientVertical(Color4.Black.Opacity(0.5f), Color4.Black.Opacity(0.85f)),
-                    Alpha = showCleanBar ? 1 : 0,
-                },
-                // fondo del footer (capa de ATRAS): el songselect-bottom del skin, si no el classic bundleado.
-                new Sprite
-                {
-                    Texture = bottomTexture,
-                    RelativeSizeAxes = Axes.X,
-                    Width = 1,
-                    Anchor = Anchor.BottomLeft,
-                    Origin = Anchor.BottomLeft,
-                    Alpha = bottomTexture != null ? 1 : 0,
+                    RelativeSizeAxes = Axes.Both,
+                    Children = new Drawable[]
+                    {
+                        cleanBar = new Box
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Height = footer_bar_height,
+                            Anchor = Anchor.BottomLeft,
+                            Origin = Anchor.BottomLeft,
+                            Colour = Color4.Black,
+                            Alpha = showCleanBar ? 1 : 0,
+                        },
+                        bottomSprite = new Sprite
+                        {
+                            Texture = bottomTexture,
+                            RelativeSizeAxes = Axes.X,
+                            Width = 1,
+                            Anchor = Anchor.BottomLeft,
+                            Origin = Anchor.BottomLeft,
+                            Alpha = bottomTexture != null ? 1 : 0,
+                        },
+                    },
                 },
                 foreground = new Container
                 {
@@ -165,14 +181,14 @@ namespace osu.Game.Skinning.Select
                                 Origin = Anchor.BottomLeft,
                                 // where stable's card renders (User.DrawAt at 140 + 249.6, 429), which skins leave their avatar window and label strips for.
                                 X = user_pos_off + 3 * 1.6f,
-                                Y = 2 * 1.6f,
+                                Y = 2 * 1.6f + 5,
                             },
                         },
                         // capa de ADELANTE: el cosmetic selection-mode del skin, encima de la tarjeta de stats
                         // (tapa performance/acc/lvl, el circulo transparente deja ver el avatar). misma textura y
                         // X que la decoracion de arriba asi queda alineado; recortado a la banda del footer para
                         // que su diseño de arriba no se suba por encima del chrome del song-select.
-                        new Container
+                        decorationClip = new Container
                         {
                             RelativeSizeAxes = Axes.X,
                             Width = 1,
@@ -245,6 +261,7 @@ namespace osu.Game.Skinning.Select
             };
 
             frontProxies = new ScreenFrontLayer.ProxySet(
+                (footerBackground, ScreenFrontLayer.Depths.SELECTION_MODE),
                 (foreground, ScreenFrontLayer.Depths.FOREGROUND),
                 // stable draws its mode menu (spriteManagerLow) below everything else in the footer and the top bar (spriteManagerHigh).
                 (modeMenu, ScreenFrontLayer.Depths.MODE_MENU));
@@ -252,9 +269,35 @@ namespace osu.Game.Skinning.Select
 
         protected override void Dispose(bool isDisposing)
         {
+            if (skinSource != null)
+                skinSource.SourceChanged -= updateSkinTextures;
             frontProxies?.Release(frontLayer);
 
             base.Dispose(isDisposing);
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            skinSource.SourceChanged += updateSkinTextures;
+            updateSkinTextures();
+        }
+
+        private void updateSkinTextures()
+        {
+            var decorationSource = useSkinTextures ? skinSource.FindCustomStableTextureSource("selection-mode") : null;
+            var decoration = decorationSource?.GetStableTexture("selection-mode");
+            bool largeDecoration = decoration != null && Math.Max(decoration.DisplayWidth, decoration.DisplayHeight) > 90;
+            var bottomSource = useSkinTextures ? skinSource.FindCustomStableTextureSource("songselect-bottom") : null;
+            var bottom = bottomSource?.GetStableTexture("songselect-bottom");
+            if (useSkinTextures && bottom == null && !largeDecoration)
+                bottom = skinManager.DefaultClassicSkin.GetStableTexture("songselect-bottom");
+
+            bottomSprite.Texture = bottom;
+            bottomSprite.Alpha = bottom != null ? 1 : 0;
+            cleanBar.Alpha = 1;
+            modeDecoration.Texture = decoration;
+            decorationClip.Alpha = largeDecoration ? 1 : 0;
         }
 
         protected override void Update()
@@ -268,7 +311,9 @@ namespace osu.Game.Skinning.Select
             // donde todos parten de la misma x (SongSelection: 140 en widescreen, 120 si no).
             buttonsContainer.X = components.X;
             modeDecoration.X = components.X;
+            logoTrackingContainer.LogoFacade.Y = -36;
         }
+
 
         /// <summary>
         /// Where stable starts the footer buttons and the mode decoration for a song select <paramref name="drawWidth"/> wide in a 768 px tall

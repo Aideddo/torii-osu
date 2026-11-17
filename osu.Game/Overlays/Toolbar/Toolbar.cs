@@ -18,11 +18,15 @@ using System.Linq;
 using osu.Framework.Bindables;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
+using osu.Framework.Screens;
 using osu.Game.Rulesets;
 using osu.Framework.Input.Bindings;
 using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Input.Bindings;
+using osu.Game.Screens;
+using osu.Game.Screens.Select;
+using osuTK.Input;
 
 namespace osu.Game.Overlays.Toolbar
 {
@@ -36,6 +40,8 @@ namespace osu.Game.Overlays.Toolbar
         /// In this state, automatic toggles should not occur, respecting the user's preference to have no toolbar.
         /// </summary>
         private bool hiddenByUser;
+        private bool suppressedByScreen;
+        private readonly BindableBool legacySongSelectEnabled = new BindableBool();
 
         /// <summary>
         /// torii: cuando el auto-hide esta prendido, esta toolbar la maneja el reveal-por-hover de
@@ -508,6 +514,68 @@ namespace osu.Game.Overlays.Toolbar
             }
         }
 
+        private readonly Bindable<bool> legacyMainMenuEnabled = new Bindable<bool>();
+        private readonly Bindable<bool> legacyGameplayScreensEnabled = new Bindable<bool>();
+        private readonly Bindable<bool> legacyResultsEnabled = new Bindable<bool>();
+
+        internal void TrackScreenVisibility(OsuScreenStack stack, OsuConfigManager config)
+        {
+            legacyGameplayScreensEnabled.Value = ToriiStableUI.GameplayScreens(config);
+            config.BindWith(OsuSetting.ToriiStableResults, legacyResultsEnabled);
+            legacyGameplayScreensEnabled.BindValueChanged(_ =>
+            {
+                if (stack.CurrentScreen is osu.Game.Screens.Play.PlayerLoader)
+                    updateScreenVisibility(stack.CurrentScreen);
+            });
+            legacyResultsEnabled.BindValueChanged(_ =>
+            {
+                if (stack.CurrentScreen is osu.Game.Screens.Ranking.ResultsScreen)
+                    updateScreenVisibility(stack.CurrentScreen);
+            });
+            config.BindWith(OsuSetting.ToriiLegacyFooterUseSkin, legacySongSelectEnabled);
+            legacyMainMenuEnabled.Value = ToriiStableUI.MainMenu(config);
+            legacyMainMenuEnabled.BindValueChanged(_ =>
+            {
+                if (stack.CurrentScreen is osu.Game.Screens.Menu.MainMenu)
+                    updateScreenVisibility(stack.CurrentScreen);
+            });
+            legacySongSelectEnabled.BindValueChanged(_ =>
+            {
+                if (stack.CurrentScreen is SongSelect songSelect)
+                    updateScreenVisibility(songSelect);
+            });
+
+            stack.ScreenPushed += (_, screen) => updateScreenVisibility(screen);
+            stack.ScreenExited += (_, screen) => updateScreenVisibility(screen);
+            updateScreenVisibility(stack.CurrentScreen);
+        }
+
+        private void updateScreenVisibility(IScreen screen)
+        {
+            // ScreenPushed may precede dependency loading. Do not infer presentation from child drawables
+            // which do not exist yet: doing so briefly shows the toolbar while the loader is loading.
+            bool legacyLoader = screen is osu.Game.Screens.Play.PlayerLoader
+                                && legacyGameplayScreensEnabled.Value;
+            bool legacyResults = screen is osu.Game.Screens.Ranking.ResultsScreen
+                                 && legacyResultsEnabled.Value;
+            bool legacyMenu = screen is osu.Game.Screens.Menu.MainMenu && legacyMainMenuEnabled.Value;
+            suppressedByScreen = screen is SongSelect && legacySongSelectEnabled.Value || legacyLoader || legacyResults || legacyMenu;
+
+            if (screen is not IOsuScreen osuScreen)
+                return;
+
+            if (suppressedByScreen || osuScreen.HideOverlaysOnEnter)
+                Hide();
+            else
+                Show();
+
+            if (legacyLoader || legacyResults || legacyMenu)
+            {
+                this.FinishTransforms(true);
+                Alpha = 0;
+            }
+        }
+
         protected override void UpdateState(ValueChangedEvent<Visibility> state)
         {
             bool blockShow = (hiddenByUser && !AutoHideActive) || OverlayActivationMode.Value == OverlayActivation.Disabled;
@@ -542,7 +610,7 @@ namespace osu.Game.Overlays.Toolbar
 
             switch (e.Action)
             {
-                case GlobalAction.ToggleToolbar:
+                case GlobalAction.ToggleToolbar when !suppressedByScreen:
                     hiddenByUser = State.Value == Visibility.Visible; // set before toggling to allow the operation to always succeed.
                     toolbarToggleCount.Value++;
                     ToggleVisibility();

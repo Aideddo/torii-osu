@@ -205,11 +205,7 @@ namespace osu.Game.Configuration
         public const string StableResults = "v2026.716.0:stable-results";
 
         /// <summary>
-        /// Marks the "Use stable font (Aller)" toggle in Settings → Torii →
-        /// Song Select. The legacy (stable-style) song-select UI defaults to
-        /// the modern lazer font; this switches it to osu!stable's Aller font
-        /// for a 1:1 stable look. Off by default, applies next time song
-        /// select is opened.
+        /// Marks the alternate classic UI font option (Inter).
         /// </summary>
         public const string LegacyFont = "v2026.722.0:legacy-font";
 

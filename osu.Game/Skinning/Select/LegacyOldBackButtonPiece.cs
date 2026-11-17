@@ -18,15 +18,19 @@ namespace osu.Game.Skinning.Select
         private SkinnableSound clickSound = null!;
 
         [BackgroundDependencyLoader]
-        private void load(ISkinSource skin)
+        private void load(ISkinSource skin, SkinManager skins)
         {
             AutoSizeAxes = Axes.Both;
 
-            sprite = skin.GetAnimation("menu-back", true, true, applyConfigFrameRate: true);
+            var source = skin.FindProvider(s => s.GetStableTexture("menu-back") != null || s.GetStableTexture("menu-back-0") != null)
+                         ?? skins.DefaultClassicSkin;
+            sprite = source.GetAnimation("menu-back", true, true, applyConfigFrameRate: true)
+                     ?? skin.GetAnimation("menu-back", true, true, applyConfigFrameRate: true);
 
             if (sprite != null)
             {
-                glow = skin.GetAnimation("menu-back", true, true, applyConfigFrameRate: true)!;
+                glow = source.GetAnimation("menu-back", true, true, applyConfigFrameRate: true)
+                       ?? skin.GetAnimation("menu-back", true, true, applyConfigFrameRate: true)!;
                 glow.Alpha = 0f;
                 glow.Blending = BlendingParameters.Additive;
 

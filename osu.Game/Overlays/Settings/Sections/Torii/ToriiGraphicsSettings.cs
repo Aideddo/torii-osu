@@ -5,7 +5,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
-using osu.Game.Graphics.UserInterfaceV2;
+using osu.Game.Overlays.Settings.Entries;
 
 namespace osu.Game.Overlays.Settings.Sections.Torii
 {
@@ -23,16 +23,13 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
             Children = new Drawable[]
             {
                 new PotatoModeToggleAndRestart(),
-                new SettingsItemV2(new FormEnumDropdown<ToriiInputAudioHzMode>
+                CreateItem(new EnumDropdownEntry<ToriiInputAudioHzMode>
                 {
                     Caption = "Input/audio thread rate",
                     HintText = "How fast the input, audio and update threads run. Higher rates suit high-polling-rate mice (e.g. 8000 Hz) but cost more CPU. 2000 Hz is a safe default. Applies instantly.",
                     Current = config.GetBindable<ToriiInputAudioHzMode>(OsuSetting.ToriiInputAudioHz),
-                    NewFeatureId = NewFeatureRegistry.InputAudioHz,
-                })
-                {
                     Keywords = new[] { @"hz", @"polling", @"rate", @"input", @"audio", @"thread", @"latency", @"8000", @"performance" },
-                },
+                }),
             };
         }
     }

@@ -230,8 +230,7 @@ namespace osu.Game
         /// song select legacy para que el chrome no se rompa cuando la nav-bar arriba achica el area.
         /// null vuelve al scaling normal.
         /// </summary>
-        public void SetLegacyScreenAspectLock(float? aspectRatio) => ScreenContainer.SetForcedAspectRatio(aspectRatio);
-
+        public void SetLegacyScreenAspectLock(float? aspectRatio) => ScreenContainer.SetFixedAspectRatio(aspectRatio);
         protected Container ScreenOffsetContainer { get; private set; }
 
         /// <summary>
@@ -304,8 +303,36 @@ namespace osu.Game
 
         private OsuLogo osuLogo;
 
-        private MainMenu menuScreen;
+        private Container logoContainer;
         private ScreenFrontLayer screenFrontLayer;
+        private bool logoInFront;
+
+        /// <summary>
+        /// The footer holds the logo in front of everything while it tracks it. Torii: a screen may keep it just below the
+        /// <see cref="ScreenFrontLayer"/> instead (above the footer, under the layer's content).
+        /// </summary>
+        private void updateLegacySongSelectAspectRatio()
+        {
+            bool useFixed = ScreenStack.CurrentScreen is SongSelect && ToriiStableUI.SongSelect(LocalConfig)
+                            || ScreenStack.CurrentScreen is ResultsScreen && ToriiStableUI.Results(LocalConfig)
+                            || ScreenStack.CurrentScreen is PlayerLoader or Player;
+            ScreenContainer.SetFixedAspectRatio(useFixed ? legacySongSelectAspectRatio.Value switch
+            {
+                LegacySongSelectAspectRatio.Widescreen => 16f / 9,
+                LegacySongSelectAspectRatio.WidescreenTall => 16f / 10,
+                _ => null,
+            } : null);
+        }
+
+        private void updateLogoDepth()
+        {
+            float depth = !logoInFront ? 0 : screenFrontLayer.HoldLogoBelow.Value ? -1.5f : float.MinValue;
+
+            if (logoContainer.Depth != depth)
+                ScreenContainer.ChangeChildDepth(logoContainer, depth);
+        }
+
+        private MainMenu menuScreen;
 
         [CanBeNull]
         private DevBuildBanner devBuildBanner;
@@ -322,6 +349,11 @@ namespace osu.Game
         private Bindable<float> uiScale;
 
         private Bindable<UserActivity> configUserActivity;
+        private readonly BindableBool legacySongSelectEnabled = new BindableBool();
+        private readonly BindableBool legacyResultsEnabled = new BindableBool();
+
+        private readonly BindableBool legacyFpsCounter = new BindableBool();
+        private readonly Bindable<LegacySongSelectAspectRatio> legacySongSelectAspectRatio = new Bindable<LegacySongSelectAspectRatio>();
 
         private Bindable<string> configSkin;
 
@@ -1372,15 +1404,6 @@ namespace osu.Game
 
             Add(sessionIdleTracker);
 
-            Container logoContainer = null;
-            bool logoInFront = false;
-
-            void updateLogoDepth()
-            {
-                float depth = !logoInFront ? 0 : screenFrontLayer?.HoldLogoBelow.Value == true ? -1.5f : float.MinValue;
-                ScreenContainer.ChangeChildDepth(logoContainer, depth);
-            }
-
             ScreenContainer = new ScalingContainer(ScalingMode.ExcludeOverlays)
             {
                 RelativeSizeAxes = Axes.Both,
@@ -1458,15 +1481,32 @@ namespace osu.Game
 
             Dependencies.Cache(ScreenFooter);
 
+            LocalConfig.BindWith(OsuSetting.ToriiStableResults, legacyResultsEnabled);
+            legacyResultsEnabled.BindValueChanged(_ => updateLegacySongSelectAspectRatio());
+            LocalConfig.BindWith(OsuSetting.ToriiLegacyFooterUseSkin, legacySongSelectEnabled);
+            LocalConfig.BindWith(OsuSetting.ToriiLegacySongSelectAspectRatio, legacySongSelectAspectRatio);
+            legacySongSelectEnabled.BindValueChanged(_ => updateLegacySongSelectAspectRatio());
+            legacySongSelectAspectRatio.BindValueChanged(_ => updateLegacySongSelectAspectRatio());
+
             ScreenStack.ScreenPushed += screenPushed;
             ScreenStack.ScreenExited += screenExited;
+
+            // GooGuTeam: lazer's counter steps aside while stable's is chosen; both follow the same show/hide setting.
+            var modernFpsCounterHolder = new Container { RelativeSizeAxes = Axes.Both };
+            topMostOverlayContent.Add(modernFpsCounterHolder);
 
             loadComponentSingleFile(fpsCounter = new FPSCounter
             {
                 Anchor = Anchor.BottomRight,
                 Origin = Anchor.BottomRight,
                 Margin = new MarginPadding(5),
-            }, topMostOverlayContent.Add);
+            }, modernFpsCounterHolder.Add);
+
+            loadComponentSingleFile(new LegacyFpsDisplay(), topMostOverlayContent.Add);
+
+            // kept in a field: config bindings are weak, and a bound copy nothing holds stops reacting once it is collected.
+            legacyFpsCounter.Value = ToriiStableUI.FpsCounter(LocalConfig);
+            legacyFpsCounter.BindValueChanged(legacy => modernFpsCounterHolder.Alpha = legacy.NewValue ? 0 : 1, true);
 
             // torii: el badge del flush de audio pre-gameplay vive ACA y no adentro del
             // PlayerLoader: si el mapa carga rapido, la pantalla se va pero el badge
@@ -2429,6 +2469,8 @@ namespace osu.Game
 
         protected virtual void ScreenChanged([CanBeNull] IOsuScreen current, [CanBeNull] IOsuScreen newScreen)
         {
+            updateLegacySongSelectAspectRatio();
+
             SentrySdk.ConfigureScope(scope =>
             {
                 scope.Contexts[@"screen stack"] = new
@@ -2503,9 +2545,7 @@ namespace osu.Game
                 GlobalCursorDisplay.MenuCursor.HideCursorOnNonMouseInput = newScreen.HideMenuCursorOnNonMouseInput;
 
                 if (newScreen.HideOverlaysOnEnter)
-                    CloseAllOverlays();
-                else
-                    Toolbar.Show();
+                    CloseAllOverlays(hideToolbar: false);
 
                 skinEditor.SetTarget(newOsuScreen);
             }

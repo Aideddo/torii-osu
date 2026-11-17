@@ -14,6 +14,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Overlays.Dialog;
 using osu.Game.Overlays.Notifications;
 using osu.Game.Updater;
+using osu.Game.Overlays.Settings.Entries;
 
 namespace osu.Game.Overlays.Settings.Sections.General
 {
@@ -21,8 +22,8 @@ namespace osu.Game.Overlays.Settings.Sections.General
     {
         protected override LocalisableString Header => GeneralSettingsStrings.UpdateHeader;
 
-        private SettingsButtonV2 checkForUpdatesButton = null!;
-        private FormEnumDropdown<ReleaseStream> releaseStreamDropdown = null!;
+        private ButtonEntry checkForUpdatesButton = null!;
+        private EnumDropdownEntry<ReleaseStream> releaseStreamDropdown = null!;
 
         private readonly Bindable<SettingsNote.Data?> releaseStreamDropdownNote = new Bindable<SettingsNote.Data?>();
 
@@ -47,19 +48,18 @@ namespace osu.Game.Overlays.Settings.Sections.General
 
             bool isDesktop = RuntimeInfo.IsDesktop;
 
+
             // For simplicity, hide the concept of release streams from mobile users.
             if (isDesktop)
             {
-                Add(new SettingsItemV2(releaseStreamDropdown = new FormEnumDropdown<ReleaseStream>
+                Add(CreateItem(releaseStreamDropdown = new EnumDropdownEntry<ReleaseStream>
                 {
                     Caption = GeneralSettingsStrings.ReleaseStream,
                     Current = { Value = configReleaseStream.Value },
-                })
-                {
                     Keywords = new[] { @"version" },
                     Note = { BindTarget = releaseStreamDropdownNote },
                     ShowRevertToDefaultButton = updateManager!.FixedReleaseStream == null
-                });
+                }));
 
                 if (updateManager!.FixedReleaseStream != null)
                 {
@@ -82,11 +82,11 @@ namespace osu.Game.Overlays.Settings.Sections.General
                 releaseStreamDropdown.Current.BindValueChanged(releaseStreamChanged);
             }
 
-            Add(checkForUpdatesButton = new SettingsButtonV2
+            Add(CreateItem(checkForUpdatesButton = new ButtonEntry
             {
-                Text = GeneralSettingsStrings.CheckUpdate,
+                Caption = GeneralSettingsStrings.CheckUpdate,
                 Action = () => checkForUpdates().FireAndForget()
-            });
+            }));
         }
 
         private void releaseStreamChanged(ValueChangedEvent<ReleaseStream> stream)

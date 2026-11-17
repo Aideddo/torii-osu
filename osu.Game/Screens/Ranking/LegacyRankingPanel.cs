@@ -2,7 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 // el panel de ranking (results) de osu!stable, layouteado desde el Ranking.cs de stable
 // (LoadScore / InitializeRankingPanel / LoadRanking / LoadMods / InitializeSpecifics) con
-// las coords del espacio 480 de stable x1.6 al espacio legacy de 1366x768. incluye la
+// las coords del espacio 480 de stable x1.6 al espacio legacy de 768 de alto (ver LegacyRankingLayout). incluye la
 // animacion de entrada de stable (elementos staggereados 300ms, grade 2x->1x + ghost
 // aditivo, white flash), los rayos rotativos de fondo, el graph de la play adentro del
 // marco ranking-graph, y los botones retry / watch replay pegados al borde derecho.
@@ -22,6 +22,7 @@ using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osu.Game.Graphics.Containers;
+using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Input.Bindings;
 using osu.Game.Online;
@@ -53,10 +54,10 @@ namespace osu.Game.Screens.Ranking
         private readonly List<EntranceElement> entranceElements = new List<EntranceElement>();
         private Sprite? grade;
         private Sprite? gradeGhost;
-        private readonly List<Sprite> modSprites = new List<Sprite>();
+        private readonly List<Drawable> modSprites = new List<Drawable>();
         private Box? whiteFlash;
         private double gradeTime;
-        private LegacySpriteText? scoreText;
+        private OsuSpriteText? scoreText;
         private string totalScoreString = string.Empty;
         private double scoreRevealStartTime;
         private bool animationFinished;
@@ -79,10 +80,25 @@ namespace osu.Game.Screens.Ranking
             RelativeSizeAxes = Axes.Both;
 
             // stable's TextureManager.LoadFirst: the plain name, then the first animation frame.
-            Texture? tex(string name) => skin.GetStableTexture(name)
-                                         ?? skin.GetStableTexture($"{name}-0")
-                                         ?? skins.DefaultClassicSkin.GetStableTexture(name)
-                                         ?? skins.DefaultClassicSkin.GetStableTexture($"{name}-0");
+            Texture? tex(string name)
+            {
+                var provider = skin.FindProvider(s => s.GetStableTexture(name) != null || s.GetStableTexture($"{name}-0") != null)
+                               ?? skins.DefaultClassicSkin;
+                return provider.GetStableTexture(name) ?? provider.GetStableTexture($"{name}-0");
+            }
+
+            bool bundledLayout = skin.FindCustomStableTextureSource("ranking-panel", true) == null;
+
+            OsuSpriteText number(string value, Vector2 position, float scale = 1)
+            {
+                OsuSpriteText drawable = bundledLayout
+                    ? new OsuSpriteText { Font = OsuFont.GetFont(Typeface.Inter, size: 32, weight: FontWeight.SemiBold), Shadow = false }
+                    : new LegacySpriteText(LegacyFont.Score) { FixedWidth = true };
+                drawable.Text = value;
+                drawable.Position = position * 1.6f;
+                drawable.Scale = new Vector2(scale);
+                return drawable;
+            }
 
             // SkinManager.UseNewLayout: skins of version 1 keep stable's original layout.
             bool newLayout = (skin.GetConfig<SkinConfiguration.LegacySetting, decimal>(SkinConfiguration.LegacySetting.Version)?.Value ?? SkinConfiguration.LATEST_VERSION) > 1;
@@ -97,7 +113,8 @@ namespace osu.Game.Screens.Ranking
 
             // rayos rotativos de fondo (stable: ranking-background-overlay, aditivo, girando
             // una vuelta cada 20s, centrado cerca del grade). detras de todo.
-            var raysTex = tex(@"ranking-background-overlay");
+            var raysTex = skin.FindCustomStableTextureSource(@"ranking-background-overlay")
+                              ?.GetStableTexture(@"ranking-background-overlay");
 
             if (raysTex != null)
             {
@@ -114,19 +131,36 @@ namespace osu.Game.Screens.Ranking
             }
 
             // InitializeRankingPanel.
-            back.Add(new Sprite
-            {
-                Position = new Vector2(0, newLayout ? 64 : 46) * 1.6f,
-                Texture = tex(@"ranking-panel"),
-            });
+            if (!bundledLayout)
+                back.Add(new Sprite
+                {
+                    Position = new Vector2(0, newLayout ? 64 : 46) * 1.6f,
+                    Texture = tex(@"ranking-panel"),
+                });
 
             var graphPosition = new Vector2(160, newLayout ? 380 : 360);
 
-            texts.Add(new Sprite
+            if (bundledLayout)
             {
-                Position = graphPosition * 1.6f,
-                Texture = tex(@"ranking-graph"),
-            });
+                texts.Add(new Container
+                {
+                    Position = (graphPosition + new Vector2(5)) * 1.6f,
+                    Size = new Vector2(186, 86) * 1.6f,
+                    Masking = true,
+                    CornerRadius = 4,
+                    BorderThickness = 1,
+                    BorderColour = new Color4(80, 80, 80, 255),
+                    Child = new Box { RelativeSizeAxes = Axes.Both, Colour = new Color4(20, 20, 20, 220) },
+                });
+            }
+            else
+            {
+                texts.Add(new Sprite
+                {
+                    Position = graphPosition * 1.6f,
+                    Texture = tex(@"ranking-graph"),
+                });
+            }
 
             // stable draws score.HpGraph in a 186 x 86 region inside the frame. lazer no persiste la vida, asi que la simulamos
             // desde los hit events: sube con los aciertos y se desploma con los miss — la misma forma que el graph clasico.
@@ -137,18 +171,22 @@ namespace osu.Game.Screens.Ranking
                     Position = (graphPosition + new Vector2(newLayout ? 5 : 10)) * 1.6f,
                 });
             }
+            else if (bundledLayout)
+            {
+                texts.Add(new OsuSpriteText
+                {
+                    Position = (graphPosition + new Vector2(98, 48)) * 1.6f,
+                    Origin = Anchor.Centre,
+                    Font = OsuFont.GetFont(Typeface.Inter, size: 17),
+                    Text = "No hit event data",
+                });
+            }
 
             // LoadScore: the total score rolls its digits from the start, centred at (220, 94).
             totalScoreString = score.TotalScore <= 9999999 ? $"{score.TotalScore:0000000}" : $"{score.TotalScore:00000000}";
 
-            scoreText = new LegacySpriteText(LegacyFont.Score)
-            {
-                Origin = Anchor.Centre,
-                Position = new Vector2(220, 94) * 1.6f,
-                Scale = new Vector2(newLayout ? 1.3f : 1.05f),
-                Text = animate ? randomDigits(0) : totalScoreString,
-                FixedWidth = true,
-            };
+            scoreText = number(animate ? randomDigits(0) : totalScoreString, new Vector2(220, 94), newLayout ? 1.3f : 1.05f);
+            scoreText.Origin = Anchor.Centre;
             texts.Add(scoreText);
 
             // AddRankingSprites: elements start 300ms apart, 300ms after the screen (startTime) and 300ms after that (their own start).
@@ -157,7 +195,17 @@ namespace osu.Game.Screens.Ranking
 
             foreach (var row in hitRows())
             {
-                var image = new Sprite
+                if (bundledLayout && row.IsOverlay)
+                    continue;
+
+                Drawable image = bundledLayout ? new OsuSpriteText
+                {
+                    Origin = Anchor.Centre,
+                    Position = row.Position * 1.6f,
+                    Font = OsuFont.GetFont(Typeface.Inter, size: 56, weight: FontWeight.Bold),
+                    Text = row.Image == "fruit-orange" && row.Position.X > 200 ? "Miss" : HitLabel(row.Image),
+                    Colour = row.Colour ?? Color4.White,
+                } : new Sprite
                 {
                     Origin = Anchor.Centre,
                     Position = row.Position * 1.6f,
@@ -166,16 +214,16 @@ namespace osu.Game.Screens.Ranking
                     Colour = row.Colour ?? Color4.White,
                 };
 
-                LegacySpriteText? text = null;
+                OsuSpriteText? text = null;
 
                 if (row.Text != null)
                 {
-                    text = new LegacySpriteText(LegacyFont.Score)
+                    text = number(row.Text, new Vector2(row.Position.X + 40, row.Position.Y + textYOffset), 1.12f);
+                    if (bundledLayout)
                     {
-                        Position = new Vector2(row.Position.X + 40, row.Position.Y + textYOffset) * 1.6f,
-                        Scale = new Vector2(1.12f),
-                        Text = row.Text,
-                    };
+                        text.Origin = Anchor.CentreLeft;
+                        text.Y = row.Position.Y * 1.6f;
+                    }
                     texts.Add(text);
                 }
 
@@ -193,17 +241,17 @@ namespace osu.Game.Screens.Ranking
 
             double addLabel(string name, Vector2 position, string value, Vector2 valuePosition, double time)
             {
-                var image = new Sprite
+                Drawable image = bundledLayout ? new OsuSpriteText
+                {
+                    Position = position * 1.6f,
+                    Font = OsuFont.GetFont(Typeface.Inter, size: 24),
+                    Text = name == "ranking-maxcombo" ? "Max Combo" : "Accuracy",
+                } : new Sprite
                 {
                     Position = position * 1.6f,
                     Texture = tex(name),
                 };
-                var text = new LegacySpriteText(LegacyFont.Score)
-                {
-                    Position = valuePosition * 1.6f,
-                    Scale = new Vector2(1.12f),
-                    Text = value,
-                };
+                var text = number(value, valuePosition, 1.12f);
 
                 labels.Add(image);
                 texts.Add(text);
@@ -214,7 +262,14 @@ namespace osu.Game.Screens.Ranking
             if (isPerfect)
             {
                 // starts 300ms after its slot, as the grade does.
-                var perfect = new Sprite
+                Drawable perfect = bundledLayout ? new OsuSpriteText
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.Centre,
+                    Position = new Vector2(-120, 300) * 1.6f,
+                    Font = OsuFont.GetFont(Typeface.Inter, size: 26, weight: FontWeight.Bold),
+                    Text = "Full combo",
+                } : new Sprite
                 {
                     Origin = Anchor.Centre,
                     Position = new Vector2(newLayout ? 260 : 200, 430) * 1.6f,
@@ -231,6 +286,9 @@ namespace osu.Game.Screens.Ranking
 
             var gradeTex = tex($@"ranking-{score.Rank}") ?? tex(@"ranking-D");
             var gradePosition = new Vector2(-120, newLayout ? 200 : 170) * 1.6f;
+            var gradeSize = bundledLayout && gradeTex != null
+                ? new Vector2(220, 220 * gradeTex.DisplayHeight / gradeTex.DisplayWidth)
+                : gradeTex == null ? Vector2.Zero : new Vector2(gradeTex.DisplayWidth, gradeTex.DisplayHeight);
 
             grade = new Sprite
             {
@@ -238,6 +296,7 @@ namespace osu.Game.Screens.Ranking
                 Origin = Anchor.Centre,
                 Position = gradePosition,
                 Texture = gradeTex,
+                Size = gradeSize,
                 Alpha = animate ? 0 : 1,
                 Scale = animate ? new Vector2(2) : Vector2.One,
             };
@@ -251,6 +310,7 @@ namespace osu.Game.Screens.Ranking
                     Origin = Anchor.Centre,
                     Position = gradePosition,
                     Texture = gradeTex,
+                    Size = gradeSize,
                     Blending = BlendingParameters.Additive,
                     Alpha = 0,
                 };
@@ -259,7 +319,7 @@ namespace osu.Game.Screens.Ranking
 
             // LoadMods: field TopRight, y = 260, the first 40 units from the right edge and each next one 20 further left, drawn
             // over the previous ones.
-            int modIndex = 0;
+            float modOffset = 40 * 1.6f;
 
             foreach (var mod in score.Mods)
             {
@@ -269,21 +329,19 @@ namespace osu.Game.Screens.Ranking
                     continue;
 
                 var modTex = tex($@"selection-mod-{mapModTextureName(name[(idx + 3)..].ToLowerInvariant())}");
-                if (modTex == null)
-                    continue;
-
-                var modSprite = new Sprite
+                Drawable modSprite = modTex == null ? new OsuSpriteText
                 {
-                    Anchor = Anchor.TopRight,
-                    Origin = Anchor.Centre,
-                    Position = new Vector2(-(40 + modIndex * 20) * 1.6f, 260 * 1.6f),
-                    Texture = modTex,
-                    Alpha = animate ? 0 : 1,
-                    Scale = animate ? new Vector2(2) : Vector2.One,
-                };
+                    Font = OsuFont.GetFont(Typeface.Inter, size: 24, weight: FontWeight.Bold),
+                    Text = mod.Acronym,
+                } : new Sprite { Texture = modTex };
+                modSprite.Anchor = Anchor.TopRight;
+                modSprite.Origin = modTex == null ? Anchor.CentreRight : Anchor.Centre;
+                modSprite.Position = new Vector2(-modOffset, 260 * 1.6f);
+                modSprite.Alpha = animate ? 0 : 1;
+                modSprite.Scale = animate ? new Vector2(2) : Vector2.One;
                 front.Add(modSprite);
                 modSprites.Add(modSprite);
-                modIndex++;
+                modOffset += (modTex == null ? 58 : 20) * 1.6f;
             }
 
             // InitializeSpecifics: retry and replay on the right edge from y = 360, 60 units apart, at 70% until hovered. skins of
@@ -293,7 +351,7 @@ namespace osu.Game.Screens.Ranking
 
             if (showRetry)
             {
-                front.Add(new LegacyPanelButton((newLayout ? null : tex(@"ranking-retry")) ?? tex(@"pause-retry"), () => player?.Restart())
+                front.Add(new LegacyPanelButton(bundledLayout ? null : (newLayout ? null : tex(@"ranking-retry")) ?? tex(@"pause-retry"), () => player?.Restart(), "Retry")
                 {
                     Anchor = Anchor.TopRight,
                     Origin = Anchor.CentreRight,
@@ -304,7 +362,7 @@ namespace osu.Game.Screens.Ranking
 
             if (resultsScreen?.AllowWatchingReplay != false)
             {
-                front.Add(new LegacyWatchReplayButton(score, (newLayout ? null : tex(@"ranking-replay")) ?? tex(@"pause-replay"))
+                front.Add(new LegacyWatchReplayButton(score, bundledLayout ? null : (newLayout ? null : tex(@"ranking-replay")) ?? tex(@"pause-replay"))
                 {
                     Anchor = Anchor.TopRight,
                     Origin = Anchor.CentreRight,
@@ -504,6 +562,21 @@ namespace osu.Game.Screens.Ranking
 
         private readonly record struct EntranceElement(Drawable Image, float EndScale, Drawable? Text, double Time);
 
+        internal static string HitLabel(string image) => image switch
+        {
+            "hit300" or "taiko-hit300" or "mania-hit300" => "300",
+            "hit100" or "taiko-hit100" or "mania-hit100" => "100",
+            "hit50" or "mania-hit50" => "50",
+            "mania-hit200" => "200",
+            "hit300g" or "taiko-hit300g" => "300G",
+            "mania-hit300g" => "MAX",
+            "hit100k" or "taiko-hit100k" => "100K",
+            "hit0" or "taiko-hit0" or "mania-hit0" => "Miss",
+            "fruit-orange" => "Fruit",
+            "fruit-drop" => "Drop",
+            _ => image,
+        };
+
         /// <param name="Image">the texture, or its first animation frame.</param>
         /// <param name="Position">its centre, in stable's 640 x 480 units.</param>
         /// <param name="Text">the count beside it, or <c>null</c> for none.</param>
@@ -572,15 +645,35 @@ namespace osu.Game.Screens.Ranking
         /// <summary>
         /// boton de sprite estilo stable: idle al 70% de alpha, hover al 100% en 200ms.
         /// </summary>
-        private partial class LegacyPanelButton : OsuClickableContainer
+        internal partial class LegacyPanelButton : OsuClickableContainer
         {
-            public LegacyPanelButton(Texture? texture, Action? action)
+            public LegacyPanelButton(Texture? texture, Action? action, string label)
             {
-                AutoSizeAxes = Axes.Both;
                 Alpha = 0.7f;
                 Action = action;
 
-                Child = new Sprite { Texture = texture };
+                if (texture != null)
+                {
+                    AutoSizeAxes = Axes.Both;
+                    Child = new Sprite { Texture = texture };
+                }
+                else
+                {
+                    Size = new Vector2(230, 64);
+                    Masking = true;
+                    CornerRadius = 4;
+                    Children = new Drawable[]
+                    {
+                        new Box { RelativeSizeAxes = Axes.Both, Colour = new Color4(32, 32, 32, 255) },
+                        new OsuSpriteText
+                        {
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                            Font = OsuFont.GetFont(Typeface.Inter, size: 26),
+                            Text = label,
+                        },
+                    };
+                }
             }
 
             protected override bool OnHover(HoverEvent e)
@@ -618,7 +711,7 @@ namespace osu.Game.Screens.Ranking
             private ScoreModelDownloader scoreDownloader { get; set; } = null!;
 
             public LegacyWatchReplayButton(ScoreInfo score, Texture? texture)
-                : base(texture, null)
+                : base(texture, null, "Watch replay")
             {
                 this.score = score;
             }

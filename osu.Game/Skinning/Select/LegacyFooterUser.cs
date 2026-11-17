@@ -1,6 +1,8 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
+// Ported from ShikkesoraSIM/torii-osu, commit 8d7f1f25b737263dd140bbe59b0d51b999a7fc24.
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -9,6 +11,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
 using osu.Game.Audio;
 using osu.Game.Graphics;
@@ -54,16 +57,25 @@ namespace osu.Game.Skinning.Select
 
         private APIUser? currentUser;
 
+        public LegacyFooterUser()
+        {
+            Size = new Vector2(340, 86);
+            Masking = true;
+        }
+
         [BackgroundDependencyLoader]
         private void load()
         {
-            AutoSizeAxes = Axes.Both;
-
             // reference: https://github.com/peppy/osu-stable-reference/blob/c34a74fb61c17c5667486a12548485d1f03baa2e/osu!/Online/Drawable/User.cs#L622
             // the offsets differ slightly from stable's to make up for our fonts' metrics against its Aller: skins (e.g. ones with label strips over
             // "Performance:" and "Accuracy:") are drawn to where stable's text actually lands, not to its nominal positions.
             InternalChildren = new Drawable[]
             {
+                new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Color4.Black,
+                },
                 usernameText = new OsuSpriteText
                 {
                     Position = new Vector2(50.5f, -2f) * 1.6f,
@@ -76,6 +88,8 @@ namespace osu.Game.Skinning.Select
                 rulesetIcon = new Sprite
                 {
                     Position = new Vector2(176, 0) * 1.6f,
+                    Size = new Vector2(32),
+                    FillMode = FillMode.Fit,
                     Alpha = 70 / 255f,
                 },
                 rankText = new OsuSpriteText
@@ -187,7 +201,9 @@ namespace osu.Game.Skinning.Select
 
                 rulesetIcon.Show();
                 rulesetIcon.Alpha = 70 / 255f;
-                rulesetIcon.Texture = skins.DefaultClassicSkin.GetStableTexture($"mode-{ruleset.Value.ShortName}-small");
+                var iconTexture = skins.DefaultClassicSkin.GetStableTexture($"mode-{ruleset.Value.ShortName}-small");
+                rulesetIcon.Texture = iconTexture != null && Math.Max(iconTexture.DisplayWidth, iconTexture.DisplayHeight) <= 250 ? iconTexture : null;
+                rulesetIcon.Size = new Vector2(32);
 
                 if (statistics.Level.Progress == 0)
                     levelBar.Hide();

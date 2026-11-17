@@ -94,6 +94,9 @@ namespace osu.Game.Skinning
                                     var hitError2 = container.OfType<HitErrorMeter>().LastOrDefault();
 
                                     leaderboard?.Position = new Vector2(40, 60);
+                                    var classicLeaderboard = container.OfType<LegacyGameplayLeaderboard>().FirstOrDefault();
+                                    if (classicLeaderboard != null)
+                                        classicLeaderboard.Position = new Vector2(0, LegacyGameplayLeaderboard.TopFor(containerLookup.Ruleset.ShortName));
 
                                     if (spectatorList != null)
                                     {
@@ -125,7 +128,7 @@ namespace osu.Game.Skinning
                                     RelativeSizeAxes = Axes.Both,
                                     Children = new Drawable[]
                                     {
-                                        new DrawableGameplayLeaderboard(),
+                                        LegacyGameplayLeaderboard.CreateDefault(),
                                         new SpectatorList(),
                                         new BarHitErrorMeter(),
                                         new BarHitErrorMeter(),

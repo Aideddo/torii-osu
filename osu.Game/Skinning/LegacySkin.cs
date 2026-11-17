@@ -395,6 +395,7 @@ namespace osu.Game.Skinning
                                     var combo = container.OfType<LegacyDefaultComboCounter>().FirstOrDefault();
                                     var spectatorList = container.OfType<SpectatorList>().FirstOrDefault();
                                     var leaderboard = container.OfType<DrawableGameplayLeaderboard>().FirstOrDefault();
+                                    var legacyLeaderboard = container.OfType<LegacyGameplayLeaderboard>().FirstOrDefault();
                                     var hitError = container.OfType<HitErrorMeter>().FirstOrDefault();
 
                                     Vector2 pos = new Vector2();
@@ -422,6 +423,13 @@ namespace osu.Game.Skinning
                                         leaderboard.X = 10;
                                     }
 
+                                    if (legacyLeaderboard != null)
+                                    {
+                                        legacyLeaderboard.Anchor = Anchor.TopLeft;
+                                        legacyLeaderboard.Origin = Anchor.TopLeft;
+                                        legacyLeaderboard.Position = new Vector2(0, LegacyGameplayLeaderboard.TopFor(containerLookup.Ruleset.ShortName));
+                                    }
+
                                     if (hitError != null)
                                     {
                                         hitError.Anchor = Anchor.BottomCentre;
@@ -434,7 +442,8 @@ namespace osu.Game.Skinning
                                 {
                                     new LegacyDefaultComboCounter(),
                                     new SpectatorList(),
-                                    new DrawableGameplayLeaderboard(),
+                                    // stable's scoreboard, when enabled; the default layout is rebuilt for every play.
+                                    LegacyGameplayLeaderboard.CreateDefault(),
                                     new LegacyBarHitErrorMeter(),
                                 };
                             }
@@ -459,6 +468,16 @@ namespace osu.Game.Skinning
                                     songProgress.Y = container.ToLocalSpace(accuracy.ScreenSpaceDrawQuad.TopLeft).Y + (accuracy.ScreenSpaceDeltaToParentSpace(accuracy.ScreenSpaceDrawQuad.Size).Y / 2);
                                 }
 
+                                var modDisplay = container.OfType<LegacyModDisplay>().FirstOrDefault();
+
+                                if (modDisplay != null)
+                                {
+                                    // centre the first icon where stable does.
+                                    modDisplay.Anchor = Anchor.TopRight;
+                                    modDisplay.Origin = Anchor.TopRight;
+                                    modDisplay.Position = new Vector2(-LegacyModDisplay.FIRST_ICON_CENTRE.X + modDisplay.IconSize.X / 2, LegacyModDisplay.FIRST_ICON_CENTRE.Y - modDisplay.IconSize.Y / 2);
+                                }
+
                                 foreach (var d in container.OfType<ISerialisableDrawable>())
                                     d.UsesFixedAnchor = true;
                             })
@@ -468,6 +487,7 @@ namespace osu.Game.Skinning
                                     new LegacyScoreCounter(),
                                     new LegacyAccuracyCounter(),
                                     new LegacySongProgress(),
+                                    new LegacyModDisplay(),
 
                                     // to match stable, health bars are in front of everything else
                                     // for the sake of hacky full screen area health bars

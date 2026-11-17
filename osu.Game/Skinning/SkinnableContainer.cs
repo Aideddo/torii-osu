@@ -7,6 +7,10 @@ using System.Threading;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Configuration;
+using osu.Game.Screens.Play.HUD;
+using osu.Framework.Allocation;
+using osuTK;
 
 namespace osu.Game.Skinning
 {
@@ -69,11 +73,40 @@ namespace osu.Game.Skinning
 
             LoadComponentAsync(content, wrapper =>
             {
+                if (Lookup.Lookup == GlobalSkinnableContainers.MainHUDComponents
+                    && Dependencies.Get<OsuConfigManager>() is OsuConfigManager config
+                    && config.Get<UIThemeOption>(OsuSetting.UITheme) == UIThemeOption.StableUI
+                    && ToriiStableUI.GameplayLeaderboard(config))
+                    ApplyClassicLeaderboard(wrapper, Lookup.Ruleset == null);
                 AddInternal(wrapper);
                 components.AddRange(wrapper.Children.OfType<ISerialisableDrawable>());
                 ComponentsLoaded = true;
                 OnComponentsLoaded?.Invoke(this);
             }, (cancellationSource = new CancellationTokenSource()).Token);
+        }
+
+        internal static void ApplyClassicLeaderboard(Container container, bool includeClassic = true)
+        {
+            foreach (var modern in container.Children.OfType<DrawableGameplayLeaderboard>().ToArray())
+                container.Remove(modern, true);
+
+            if (!includeClassic)
+            {
+                foreach (var classic in container.Children.OfType<LegacyGameplayLeaderboard>().ToArray())
+                    container.Remove(classic, true);
+                return;
+            }
+
+            if (container.Children.OfType<LegacyGameplayLeaderboard>().Any())
+                return;
+
+            container.Add(new LegacyGameplayLeaderboard
+            {
+                Position = new Vector2(5.704895f, 45.772842f),
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                UsesFixedAnchor = false,
+            });
         }
 
         /// <inheritdoc cref="ISerialisableDrawableContainer"/>

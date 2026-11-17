@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+
 using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
@@ -175,7 +176,6 @@ namespace osu.Game.Screens.Select
             loadCancellation?.Dispose();
             base.Dispose(isDisposing);
         }
-
         protected override void Update()
         {
             base.Update();

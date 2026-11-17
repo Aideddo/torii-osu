@@ -1,5 +1,5 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
 using osu.Framework.Audio.Track;
@@ -103,6 +103,7 @@ namespace osu.Game.Screens.Select
 
         [Resolved]
         private BeatmapCarousel? carousel { get; set; }
+
 
         protected bool LegacySetsCollapsed => carousel?.LegacySetsCollapsed == true;
 
@@ -302,6 +303,8 @@ namespace osu.Game.Screens.Select
 
                 updateXOffset();
             }, true);
+
+            legacySongSelect.BindValueChanged(_ => updateLegacyAppearance(), true);
         }
 
         private void updateTheme()
@@ -325,6 +328,8 @@ namespace osu.Game.Screens.Select
         protected override void PrepareForUse()
         {
             base.PrepareForUse();
+            Height = item?.DrawHeight ?? Height;
+
             Height = item?.DrawHeight ?? Height;
 
             // Slightly offset the flash animation based on the panel depth.

@@ -1,5 +1,5 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
@@ -548,12 +548,6 @@ namespace osu.Game.Screens.Select
             legacyTopContainer.FadeTo(legacy ? 1 : 0, 200, Easing.OutQuint);
             legacyLeaderboardContainer.FadeTo(legacy ? 1 : 0, 200, Easing.OutQuint);
             legacyModsContainer.FadeTo(legacy ? 1 : 0, 200, Easing.OutQuint);
-
-            // torii: cuando el area es mas ancha que 16:9 (tipico con la nav-bar arriba) letterboxeamos
-            // TODO el screen+footer juntos via el ScalingContainer, asi todo (carousel, chrome, footer,
-            // back button) se achica uniforme y centrado, con el fondo dimmeado del screen-scaling en
-            // los costados. al salir de legacy se limpia (null) y vuelve a full screen.
-            (game as OsuGame)?.SetLegacyScreenAspectLock(legacy ? 1366f / 768f : null);
         }
 
         // torii: el skin cambio. solo reconstruimos si el stable esta activo y seguimos en pantalla
@@ -1056,7 +1050,7 @@ namespace osu.Game.Screens.Select
                            && legacyCollectionDialog.State.Value != Visibility.Visible;
 
             screenFrontLayer.Hold(hudProxy, inFront, hudProxyHome);
-            screenFrontLayer.HoldLogoBelow.Value = inFront && logo?.IsHovered != true;
+            screenFrontLayer.HoldLogoBelow.Value = false;
         }
 
         private void releaseHudLayer()
@@ -1171,7 +1165,6 @@ namespace osu.Game.Screens.Select
         {
             // torii: soltar el letterbox legacy asi el resto del juego no queda achicado.
             (game as OsuGame)?.SetLegacyScreenAspectLock(null);
-
             restoreBackground();
 
             Beatmap.ValueChanged -= updateVariousState;
@@ -1540,7 +1533,7 @@ namespace osu.Game.Screens.Select
                         return true;
 
                     case GlobalAction.ToggleBeatmapOptions:
-                        screenFooter.TriggerFooterButton(2);
+                        ToggleLegacyBeatmapOptions();
                         return true;
                 }
             }

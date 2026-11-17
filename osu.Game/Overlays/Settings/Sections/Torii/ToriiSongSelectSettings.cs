@@ -12,6 +12,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Dialog;
+using osu.Game.Overlays.Settings.Entries;
 
 namespace osu.Game.Overlays.Settings.Sections.Torii
 {
@@ -40,6 +41,10 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
             Children = new Drawable[]
             {
                 checkbox(OsuSetting.ToriiStableUISongSelect, "Classic Song Select, Carousel & Leaderboard"),
+                checkbox(OsuSetting.ToriiStableUISettings, "Classic Settings"),
+                checkbox(OsuSetting.ToriiStableUIGameplayScreens, "Classic Loading, Pause, Fail, Skip & Break Screens"),
+                checkbox(OsuSetting.ToriiStableUIGameplayLeaderboard, "Classic Gameplay Leaderboard"),
+                checkbox(OsuSetting.ToriiStableUIFpsCounter, "Classic FPS Counter"),
                 checkbox(OsuSetting.ToriiStableUIResults, "Stable Results Screen"),
                 checkbox(OsuSetting.ToriiStableUIMods, "Stable Mod Select Screen"),
                 checkbox(OsuSetting.ToriiStableUIFooter, "Stable Footer & Buttons"),
@@ -65,7 +70,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
             updatePendingState();
         }
 
-        private SettingsItemV2 checkbox(OsuSetting setting, string caption)
+        private Drawable checkbox(OsuSetting setting, string caption)
         {
             var value = new BindableBool(config.Get<bool>(setting));
             staged.Add(setting, value);
@@ -81,11 +86,13 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
             var saved = config.GetBindable<bool>(setting);
             persisted.Add(setting, saved);
             saved.BindValueChanged(_ => Schedule(updatePendingState));
-            return new SettingsItemV2(new FormCheckBox { Caption = caption, Current = value })
+            return CreateItem(new CheckboxEntry
             {
+                Caption = caption,
+                Current = value,
                 ShowRevertToDefaultButton = false,
                 Keywords = new[] { "stable", "legacy", "retro", "theme", caption },
-            };
+            });
         }
 
         private void updatePendingState()

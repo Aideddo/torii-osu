@@ -1,5 +1,6 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
+// Ported from ShikkesoraSIM/torii-osu, commit 8d7f1f25b737263dd140bbe59b0d51b999a7fc24.
 
 using System;
 using osu.Framework.Allocation;
@@ -70,7 +71,11 @@ namespace osu.Game.Skinning.Select
                 // classic bundleado en vez de redibujar la decoracion sobre el footer. los iconos
                 // normales van a tamaño natural como stable, aunque sobresalgan un poco del slot.
                 if (tex != null && Math.Max(tex.DisplayWidth, tex.DisplayHeight) > 250)
+                {
                     tex = skins.DefaultClassicSkin.GetStableTexture(name);
+                    if (tex != null && Math.Max(tex.DisplayWidth, tex.DisplayHeight) > 250)
+                        tex = null;
+                }
 
                 modeIcon.Texture = tex;
 

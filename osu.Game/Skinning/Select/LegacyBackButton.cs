@@ -18,11 +18,11 @@ namespace osu.Game.Skinning.Select
         public Action? Action { get; init; }
 
         [BackgroundDependencyLoader]
-        private void load(ISkinSource skin)
+        private void load(ISkinSource skin, SkinManager skins)
         {
             AutoSizeAxes = Axes.Both;
 
-            bool old = skin.GetAnimation("menu-back", true, false) != null;
+            bool old = (skin.GetAnimation("menu-back", true, false) ?? skins.DefaultClassicSkin.GetAnimation("menu-back", true, false)) != null;
 
             if (old)
             {
@@ -30,8 +30,6 @@ namespace osu.Game.Skinning.Select
                 {
                     Anchor = Anchor.BottomLeft,
                     Origin = Anchor.BottomLeft,
-                    // skinned menu-back renders 2px too low otherwise.
-                    Y = -2,
                 };
             }
             else

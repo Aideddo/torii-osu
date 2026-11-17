@@ -1,5 +1,5 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
@@ -444,6 +444,9 @@ namespace osu.Game.Screens.Select
 
             titleText.Text = new RomanisableString(beatmapSet.Metadata.TitleUnicode, beatmapSet.Metadata.Title);
             artistText.Text = new RomanisableString(beatmapSet.Metadata.ArtistUnicode, beatmapSet.Metadata.Artist);
+            legacyTitleText.Text = new RomanisableString(beatmapSet.Metadata.TitleUnicode, beatmapSet.Metadata.Title);
+            legacyArtistText.Text = new RomanisableString(beatmapSet.Metadata.ArtistUnicode, beatmapSet.Metadata.Artist) + $" // {beatmap.Metadata.Author.Username}";
+            legacyDifficultyText.Text = beatmap.DifficultyName;
             updateButton.BeatmapSet = beatmapSet;
             statusPill.Status = beatmap.Status;
 
@@ -580,11 +583,16 @@ namespace osu.Game.Screens.Select
             if (legacyBackground == null || skinSource == null || skins == null)
                 return;
 
-            legacyBackground.Texture = skinSource.GetStableTexture("menu-button-background") ?? skins.DefaultClassicSkin.GetStableTexture("menu-button-background");
+            legacyBackground.Texture = skinSource.GetStableTexture("menu-button-background")
+                                       ?? skins.DefaultClassicSkin.GetStableTexture("menu-button-background");
 
-            // the skin's SongSelectActiveText / SongSelectInactiveText (black and white by default).
-            legacyActiveText = skinSource.GetConfig<SkinCustomColourLookup, Color4>(new SkinCustomColourLookup(@"SongSelectActiveText"))?.Value ?? Color4.Black;
-            legacyInactiveText = skinSource.GetConfig<SkinCustomColourLookup, Color4>(new SkinCustomColourLookup(@"SongSelectInactiveText"))?.Value ?? Color4.White;
+            bool customBackground = skinSource.FindCustomStableTextureSource("menu-button-background") != null;
+            legacyActiveText = customBackground
+                ? skinSource.GetConfig<SkinCustomColourLookup, Color4>(new SkinCustomColourLookup(@"SongSelectActiveText"))?.Value ?? Color4.Black
+                : new Color4(217, 217, 217, 255);
+            legacyInactiveText = customBackground
+                ? skinSource.GetConfig<SkinCustomColourLookup, Color4>(new SkinCustomColourLookup(@"SongSelectInactiveText"))?.Value ?? Color4.White
+                : new Color4(172, 172, 172, 255);
             updateLegacyStarTexture();
 
             // the skin may have its own rank textures.

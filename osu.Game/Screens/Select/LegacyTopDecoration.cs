@@ -1,5 +1,6 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
+// Ported from ShikkesoraSIM/torii-osu, commit 8d7f1f25b737263dd140bbe59b0d51b999a7fc24.
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -25,6 +26,8 @@ namespace osu.Game.Screens.Select
     /// </summary>
     public partial class LegacyTopDecoration : CompositeDrawable
     {
+        public override bool PropagatePositionalInputSubTree => false;
+        public override bool PropagateNonPositionalInputSubTree => false;
         // the mode button's x from the footer (LegacyFooter.ButtonsX), and the mode icon's offset from it.
         private const float icon_offset_x = 57.6f / 2 * 1.6f;
 
@@ -81,8 +84,9 @@ namespace osu.Game.Screens.Select
 
         private void updateTextures()
         {
-            background.Texture = skin.GetStableTexture(@"selection-mode");
-            icon.Texture = skin.GetStableTexture($@"mode-{ruleset.Value.ShortName}-small");
+            var source = skin.FindCustomStableTextureSource(@"selection-mode");
+            background.Texture = source?.GetStableTexture(@"selection-mode");
+            icon.Texture = source?.GetStableTexture($@"mode-{ruleset.Value.ShortName}-small");
         }
 
         protected override void Dispose(bool isDisposing)

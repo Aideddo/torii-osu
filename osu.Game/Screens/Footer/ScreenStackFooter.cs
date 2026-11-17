@@ -46,6 +46,7 @@ namespace osu.Game.Screens.Footer
         private readonly IBindable<ScreenFooterContent> footerContent = new Bindable<ScreenFooterContent>(ScreenFooterContent.None);
 
         private readonly ScreenStackTracker screenTracker;
+        private bool allowLegacyFooterSkinning;
 
         // ─── Torii: legacy (stable-style) song-select footer ────────────────
         // frenzibyte's upstream PRs add the skinnable legacy footer but leave it
@@ -71,7 +72,6 @@ namespace osu.Game.Screens.Footer
         private LegacyFooter? legacyFooter;
         private bool legacyFooterLoading;
         private int legacyFooterGeneration;
-        private bool allowLegacyFooterSkinning;
 
         public ScreenStackFooter(ScreenStack screenStack, ScreenFooter.BackReceptor? backReceptor = null)
         {
@@ -274,12 +274,24 @@ namespace osu.Game.Screens.Footer
             switch (footerContent.Value.Mode)
             {
                 case ScreenFooterContent.FooterMode.None:
+                    updateLegacyFooter();
                     Footer.SetButtons([], [], Direction.Vertical);
                     Footer.Hide();
                     BackButton.Hide();
+
+                    // A stable loading screen owns the whole viewport; do not animate outgoing chrome over it.
+                    if (screenTracker.LeadingScreen is Play.PlayerLoader { UsesLegacyPresentation: true })
+                    {
+                        Footer.FinishTransforms(true);
+                        Footer.Alpha = 0;
+                        BackButton.FinishTransforms(true);
+                        BackButton.Alpha = 0;
+                        legacyFooterContainer?.FadeOut();
+                    }
                     break;
 
                 case ScreenFooterContent.FooterMode.Legacy:
+                    updateLegacyFooter();
                     Footer.SetButtons([], [], Direction.Vertical);
                     Footer.Hide();
                     BackButton.State.Value = footerContent.Value.BackButton ? Visibility.Visible : Visibility.Hidden;
@@ -291,6 +303,9 @@ namespace osu.Game.Screens.Footer
 
                     Debug.Assert(osuScreen != null);
 
+                    // torii: the global footer only hosts the legacy (stable-style) presentation on screens
+                    // which opt in to it.
+                    // Ownership is read directly from the leading screen in updateLegacyFooter().
                     bool anyOldButtons = Footer.HasButtons;
                     // the condition below is slightly indirect.
                     // the point is to check if there are any new buttons to show.

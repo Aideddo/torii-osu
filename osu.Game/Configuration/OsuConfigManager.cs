@@ -167,6 +167,21 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.ToolbarClockDisplayMode, ToolbarClockDisplayMode.Full);
 
             SetDefault(OsuSetting.SongSelectBackgroundBlur, false);
+            SetDefault(OsuSetting.UseV2ResultsScreen, false);
+            SetDefault(OsuSetting.ToriiLegacyMainMenu, false);
+
+            SetDefault(OsuSetting.ToriiLegacyModSelect, false);
+
+            SetDefault(OsuSetting.ToriiLegacyOptions, false);
+            SetDefault(OsuSetting.ToriiLegacyFpsCounter, false);
+            SetDefault(OsuSetting.ToriiLegacyGameplayScreens, false);
+            SetDefault(OsuSetting.ToriiGameplayAspectRatio, LegacySongSelectAspectRatio.FollowWindow);
+            SetDefault(OsuSetting.ToriiLegacyGameplayLeaderboard, false);
+            SetDefault(OsuSetting.ToriiLegacyFooterUseSkin, false);
+            SetDefault(OsuSetting.ToriiLegacySongSelectAspectRatio, LegacySongSelectAspectRatio.FollowWindow);
+            SetDefault(OsuSetting.ToriiLegacySongSelectFooter, false);
+            SetDefault(OsuSetting.ToriiStableResults, false);
+            SetDefault(OsuSetting.ToriiLegacyFont, true);
             SetDefault(OsuSetting.UnslantedSongSelectUI, false);
 
             // Online settings
@@ -400,8 +415,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.UseV2ResultsScreen, true);
             SetDefault(OsuSetting.ToriiResultsNoticeSeen, false);
             SetDefault(OsuSetting.ToriiStableDisclaimerSeen, false);
-            // Torii: la UI legacy usa la fuente moderna de lazer por default; este toggle la
-            // pasa a "Aller" (la fuente real de osu!stable) para un look 1:1 stable.
+            // fuente alternativa de la UI classic: Inter.
             SetDefault(OsuSetting.ToriiLegacyFont, false);
             SetDefault(OsuSetting.ToriiStableModSelect, false);
             SetDefault(OsuSetting.ToriiStableUISongSelect, true);
@@ -412,6 +426,11 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.ToriiStableV2Migrated, false);
             SetDefault(OsuSetting.ToriiStableV2PromoShown, false);
             SetDefault(OsuSetting.ToriiClassicThemePromoShown, false);
+            SetDefault(OsuSetting.ToriiStableUIMainMenu, true);
+            SetDefault(OsuSetting.ToriiStableUISettings, true);
+            SetDefault(OsuSetting.ToriiStableUIFpsCounter, true);
+            SetDefault(OsuSetting.ToriiStableUIGameplayScreens, true);
+            SetDefault(OsuSetting.ToriiStableUIGameplayLeaderboard, true);
 
             SetDefault(OsuSetting.ShowFirstRunSetup, true);
             // torii: el wizard propio de torii corre DESPUES del first-run (o despues del reinicio por
@@ -798,9 +817,21 @@ namespace osu.Game.Configuration
         EnableOboeAudio,
         ToriiLegacyFooterUseSkin,
         ToriiStableOptInMigrated,
+        /// <summary>
+        /// Uses the full-width results layout for solo scores.
+        /// </summary>
+        UseV2ResultsScreen,
+        ToriiLegacyMainMenu,
+        ToriiLegacyModSelect,
+
+        ToriiLegacyOptions,
+        ToriiLegacyFpsCounter,
+        ToriiLegacyGameplayScreens,
+        ToriiGameplayAspectRatio,
+        ToriiLegacyGameplayLeaderboard,
+        ToriiLegacySongSelectAspectRatio,
         ToriiLegacySongSelectFooter,
         ToriiStableResults,
-        UseV2ResultsScreen,
         ToriiResultsNoticeSeen,
         ToriiStableDisclaimerSeen,
         ToriiLegacyFont,
@@ -816,5 +847,10 @@ namespace osu.Game.Configuration
         ToriiAppliedDifficultyVersions,
         ToriiSeenRealmDifficultyVersions,
         ToriiClassicThemePromoShown,
+        ToriiStableUIMainMenu,
+        ToriiStableUISettings,
+        ToriiStableUIFpsCounter,
+        ToriiStableUIGameplayScreens,
+        ToriiStableUIGameplayLeaderboard,
     }
 }

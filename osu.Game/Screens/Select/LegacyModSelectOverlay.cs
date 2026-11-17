@@ -39,7 +39,6 @@ namespace osu.Game.Screens.Select
         public readonly Bindable<IReadOnlyList<Mod>> SelectedMods = new Bindable<IReadOnlyList<Mod>>(Array.Empty<Mod>());
 
         public Action? RequestFullModSelection { get; init; }
-
         protected override string? PopInSampleName => @"UI/overlay-pop-in";
         protected override string? PopOutSampleName => @"UI/overlay-pop-out";
 
@@ -410,7 +409,6 @@ namespace osu.Game.Screens.Select
             Hide();
             RequestFullModSelection?.Invoke();
         }
-
         public override bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
             if (e.Action == GlobalAction.ToggleModSelection || e.Action == GlobalAction.Back || e.Action == GlobalAction.Select)

@@ -1,5 +1,5 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 #nullable disable
 
@@ -66,6 +66,8 @@ namespace osu.Game.Screens.Menu
         private SkinnableSound skinnableSeeya;
         private ISample seeya;
 
+        private Bindable<bool> legacyMainMenu;
+
         protected virtual string SeeyaSampleName => "Intro/seeya";
 
         protected override bool PlayExitSound => false;
@@ -114,6 +116,7 @@ namespace osu.Game.Screens.Menu
             beatmap = Beatmap.BeginLease(false);
 
             MenuVoice = config.GetBindable<bool>(OsuSetting.MenuVoice);
+            legacyMainMenu = new BindableBool(ToriiStableUI.MainMenu(config));
             MenuMusic = config.GetBindable<bool>(OsuSetting.MenuMusic);
 
             if (api.LocalUser.Value.IsSupporter)
@@ -339,6 +342,12 @@ namespace osu.Game.Screens.Menu
 
                 logo.MoveTo(new Vector2(0.5f));
                 logo.ScaleTo(Vector2.One);
+                logo.Hide();
+            }
+            else if (legacyMainMenu.Value)
+            {
+                // the legacy main menu fades out with its own cookie, as stable does; the lazer logo stays hidden.
+                logo.ClearTransforms();
                 logo.Hide();
             }
             else

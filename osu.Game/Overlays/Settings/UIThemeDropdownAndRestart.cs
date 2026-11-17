@@ -10,6 +10,8 @@ using osu.Framework.Graphics.Containers;
 using osu.Game.Configuration;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Dialog;
+using osu.Game.Overlays.Settings.Entries;
+using osu.Game.Overlays.Settings.Rendering;
 
 namespace osu.Game.Overlays.Settings
 {
@@ -58,6 +60,9 @@ namespace osu.Game.Overlays.Settings
         [Resolved(CanBeNull = true)]
         private IDialogOverlay? dialogOverlay { get; set; }
 
+        [Resolved(CanBeNull = true)]
+        private ISettingsRenderer? renderer { get; set; }
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
@@ -74,7 +79,7 @@ namespace osu.Game.Overlays.Settings
             // detached from the control it was meant to flag. The
             // interaction-based tracker dismisses the badge after the
             // user opens the dropdown twice (see NewFeatureTracker).
-            InternalChild = new SettingsItemV2(new FormEnumDropdown<UIThemeOption>
+            InternalChild = new EnumDropdownEntry<UIThemeOption>
             {
                 Caption = "UI theme",
                 Items = ThemeOrder,
@@ -88,10 +93,8 @@ namespace osu.Game.Overlays.Settings
                            + "Skins folder and pick it from the skin dropdown above. Changing this "
                            + "option requires a restart. Torii Classic (Stable) includes configurable classic screens under Torii > Torii Classic (Stable).",
                 Current = themeBindable,
-            })
-            {
                 Keywords = new[] { @"theme", @"palette", @"grayscale", @"greyscale", @"monochrome", @"black", @"white", @"fsyori", @"chrome", @"ui", @"midnight", @"mauve", @"crimson", @"cerulean", @"purple", @"red", @"cyan", @"blue" },
-            };
+            }.CreateDrawable(renderer ?? LazerSettingsRenderer.DEFAULT);
 
             // Register the restart-on-change handler centrally. Each
             // additional instance after the first is a no-op call into

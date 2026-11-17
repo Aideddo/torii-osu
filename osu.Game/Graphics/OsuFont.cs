@@ -77,6 +77,7 @@ namespace osu.Game.Graphics
         public static FontUsage TorusAlternate => GetFont(Typeface.TorusAlternate, weight: FontWeight.Regular);
 
         public static FontUsage Inter => GetFont(Typeface.Inter, weight: FontWeight.Regular);
+        public static FontUsage MapleMono => GetFont(Typeface.MapleMono, weight: FontWeight.Regular);
 
         /// <summary>
         /// Retrieves a <see cref="FontUsage"/>.
@@ -116,10 +117,11 @@ namespace osu.Game.Graphics
                     return @"Nunito";
 
                 case Typeface.Inter:
-                    return @"Inter";
-
                 case Typeface.Aller:
-                    return @"Aller";
+                    return @"Inter";
+                case Typeface.MapleMono:
+                    return @"MapleMono";
+
             }
 
             return null;
@@ -136,15 +138,6 @@ namespace osu.Game.Graphics
             if ((family == GetFamilyString(Typeface.Torus) || family == GetFamilyString(Typeface.TorusAlternate)) && weight == FontWeight.Medium)
                 // torus doesn't have a medium; fallback to regular.
                 weight = FontWeight.Regular;
-
-            if (family == GetFamilyString(Typeface.Aller))
-            {
-                // Aller only ships Light / Regular / Bold; map the others onto those.
-                if (weight == FontWeight.Medium)
-                    weight = FontWeight.Regular;
-                else if (weight == FontWeight.SemiBold || weight == FontWeight.Black)
-                    weight = FontWeight.Bold;
-            }
 
             return weight.ToString();
         }
@@ -179,6 +172,7 @@ namespace osu.Game.Graphics
         [Description("Torus (alternate)")]
         TorusAlternate,
         Inter,
+        MapleMono,
         Aller,
     }
 

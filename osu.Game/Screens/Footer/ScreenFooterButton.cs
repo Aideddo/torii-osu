@@ -1,5 +1,5 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 using System;
 using osu.Framework.Allocation;
@@ -69,6 +69,11 @@ namespace osu.Game.Screens.Footer
             set => text.Text = value;
         }
 
+        /// <summary>
+        /// Optional routing for buttons whose presentation can select a different overlay at runtime.
+        /// </summary>
+        public Action? ToggleOverlay { get; init; }
+
         public new Action? Action
         {
             set
@@ -113,8 +118,6 @@ namespace osu.Game.Screens.Footer
         private readonly Box flashLayer;
 
         public readonly OverlayContainer? Overlay;
-
-        public Action? ToggleOverlay { get; init; }
 
         public ScreenFooterButton(OverlayContainer? overlay = null)
         {

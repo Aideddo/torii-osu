@@ -1,9 +1,10 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
@@ -25,6 +26,7 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
 using osu.Game.Resources.Localisation.Web;
+using osu.Game.Scoring;
 using osu.Game.Skinning;
 using osu.Game.Utils;
 using osuTK;
@@ -96,6 +98,24 @@ namespace osu.Game.Screens.Play
 
         private TextFlowContainer playInfoText = null!;
 
+        /// <summary>
+        /// osu!stable's version of this screen, shown instead of the standard one when the legacy pause screen is enabled.
+        /// </summary>
+        private LegacyGameplayMenu? legacyMenu;
+        protected LegacyGameplayMenu? LegacyMenu => legacyEnabled.Value ? legacyMenu : null;
+        private readonly BindableBool legacyEnabled = new BindableBool();
+        private Container modernContent = null!;
+
+        /// <summary>
+        /// Whether this screen is shown after failing, which stable's version uses to drop its continue button.
+        /// </summary>
+        protected virtual bool IsFailScreen => false;
+
+        /// <summary>
+        /// Saves the failed score so that it can be played back from the legacy fail screen.
+        /// </summary>
+        protected virtual Func<Task<ScoreInfo>>? LegacySaveReplay => null;
+
         [Resolved]
         private GlobalActionContainer globalAction { get; set; } = null!;
 
@@ -111,6 +131,7 @@ namespace osu.Game.Screens.Play
             // wire a config manager. Falls back to "always single-click" if
             // missing — same behaviour as upstream osu!.
             confirmDangerousButtons = config?.GetBindable<bool>(OsuSetting.ToriiConfirmDangerousButtonsOnLongAttempts);
+            legacyEnabled.Value = config != null && ToriiStableUI.GameplayScreens(config);
 
             Children = new Drawable[]
             {
@@ -119,71 +140,89 @@ namespace osu.Game.Screens.Play
                     Looping = true,
                     Volume = { Value = 0 }
                 },
-                new Box
+                // the legacy screen reuses the standard one's buttons and actions without showing them.
+                modernContent = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = Color4.Black,
-                    Alpha = background_alpha,
-                },
-                new GridContainer
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    RowDimensions = new[]
+                    Alpha = legacyEnabled.Value ? 0 : 1,
+                    Children = new Drawable[]
                     {
-                        new Dimension(),
-                        new Dimension(GridSizeMode.AutoSize),
-                        new Dimension(),
-                        new Dimension(GridSizeMode.AutoSize),
-                    },
-                    Content = new[]
-                    {
-                        new Drawable[]
+                        new Box
                         {
-                            new OsuSpriteText
-                            {
-                                Text = Header,
-                                Font = OsuFont.GetFont(typeface: Typeface.TorusAlternate, size: 48, weight: FontWeight.SemiBold),
-                                Spacing = new Vector2(5),
-                                Origin = Anchor.Centre,
-                                Anchor = Anchor.Centre,
-                                Colour = colours.Yellow,
-                            },
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = Color4.Black,
+                            Alpha = background_alpha,
                         },
-                        new Drawable[]
+                        new GridContainer
                         {
-                            InternalButtons = new SelectionCycleFillFlowContainer<DialogButton>
+                            RelativeSizeAxes = Axes.Both,
+                            RowDimensions = new[]
                             {
-                                Origin = Anchor.Centre,
-                                Anchor = Anchor.Centre,
-                                RelativeSizeAxes = Axes.X,
-                                Padding = new MarginPadding { Horizontal = 50 },
-                                AutoSizeAxes = Axes.Y,
-                                Direction = FillDirection.Vertical,
-                                Spacing = new Vector2(2),
-                                Masking = true,
+                                new Dimension(),
+                                new Dimension(GridSizeMode.AutoSize),
+                                new Dimension(),
+                                new Dimension(GridSizeMode.AutoSize),
                             },
-                        },
-                        new Drawable[]
-                        {
-                            playInfoText = new OsuTextFlowContainer(cp => cp.Font = OsuFont.GetFont(size: 18))
+                            Content = new[]
                             {
-                                Anchor = Anchor.Centre,
-                                Origin = Anchor.Centre,
-                                TextAnchor = Anchor.Centre,
-                                AutoSizeAxes = Axes.Both,
+                                new Drawable[]
+                                {
+                                    new OsuSpriteText
+                                    {
+                                        Text = Header,
+                                        Font = OsuFont.GetFont(typeface: Typeface.MapleMono, size: 48, weight: FontWeight.SemiBold),
+                                        Spacing = new Vector2(5),
+                                        Origin = Anchor.Centre,
+                                        Anchor = Anchor.Centre,
+                                        Colour = colours.Yellow,
+                                    },
+                                },
+                                new Drawable[]
+                                {
+                                    InternalButtons = new SelectionCycleFillFlowContainer<DialogButton>
+                                    {
+                                        Origin = Anchor.Centre,
+                                        Anchor = Anchor.Centre,
+                                        RelativeSizeAxes = Axes.X,
+                                        Padding = new MarginPadding { Horizontal = 50 },
+                                        AutoSizeAxes = Axes.Y,
+                                        Direction = FillDirection.Vertical,
+                                        Spacing = new Vector2(2),
+                                        Masking = true,
+                                    },
+                                },
+                                new Drawable[]
+                                {
+                                    playInfoText = new OsuTextFlowContainer(cp => cp.Font = OsuFont.GetFont(size: 18))
+                                    {
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre,
+                                        TextAnchor = Anchor.Centre,
+                                        AutoSizeAxes = Axes.Both,
+                                    }
+                                },
+                                new Drawable[]
+                                {
+                                    FooterContent = new Container
+                                    {
+                                        AutoSizeAxes = Axes.Y,
+                                        RelativeSizeAxes = Axes.X,
+                                    },
+                                }
                             }
-                        },
-                        new Drawable[]
-                        {
-                            FooterContent = new Container
-                            {
-                                AutoSizeAxes = Axes.Y,
-                                RelativeSizeAxes = Axes.X,
-                            },
                         }
                     }
-                }
+                },
             };
+
+            Add(legacyMenu = new LegacyGameplayMenu(IsFailScreen,
+                OnResume == null ? null : () => actAndHide(OnResume),
+                OnRetry == null ? null : () => actAndHide(OnRetry),
+                OnQuit == null ? null : () => actAndHide(OnQuit),
+                LegacySaveReplay)
+            {
+                Alpha = legacyEnabled.Value ? 1 : 0,
+            });
 
             if (OnResume != null)
                 AddButton(GameplayMenuOverlayStrings.Continue, colours.Green, () => OnResume.Invoke());
@@ -232,7 +271,14 @@ namespace osu.Game.Screens.Play
 
         protected override void PopIn()
         {
-            this.FadeIn(TRANSITION_DURATION, Easing.In);
+            if (LegacyMenu != null)
+            {
+                this.FadeIn();
+                LegacyMenu.Appear();
+            }
+            else
+                this.FadeIn(TRANSITION_DURATION, Easing.In);
+
             updateInfoText();
 
             startPauseLoop();
@@ -240,8 +286,22 @@ namespace osu.Game.Screens.Play
 
         protected override void PopOut()
         {
-            this.FadeOut(TRANSITION_DURATION, Easing.In);
+            if (LegacyMenu != null)
+            {
+                // stable fades its dim and overlay out over 800ms, while gameplay resumes beneath them.
+                LegacyMenu.Disappear();
+                this.Delay(800).FadeOut();
+            }
+            else
+                this.FadeOut(TRANSITION_DURATION, Easing.In);
+
             stopPauseLoop();
+        }
+
+        private void actAndHide(Action action)
+        {
+            action.Invoke();
+            Hide();
         }
 
         protected void AddButton(LocalisableString text, Color4 colour, Action? action, bool confirmable = false)
@@ -341,6 +401,24 @@ namespace osu.Game.Screens.Play
 
         public virtual bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
+            if (LegacyMenu != null)
+            {
+                switch (e.Action)
+                {
+                    case GlobalAction.SelectPrevious:
+                        LegacyMenu.PressKey(-1);
+                        return true;
+
+                    case GlobalAction.SelectNext:
+                        LegacyMenu.PressKey(1);
+                        return true;
+
+                    case GlobalAction.Select:
+                        LegacyMenu.PressKey(0);
+                        return true;
+                }
+            }
+
             switch (e.Action)
             {
                 case GlobalAction.SelectPrevious:
@@ -540,6 +618,21 @@ namespace osu.Game.Screens.Play
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            legacyEnabled.BindValueChanged(_ =>
+            {
+                modernContent.FadeTo(legacyEnabled.Value ? 0 : 1);
+                legacyMenu!.FadeTo(legacyEnabled.Value ? 1 : 0);
+                InternalButtons.Deselect();
+
+                if (State.Value == Visibility.Visible)
+                {
+                    // Cancel a pending dismissal from the previous presentation without changing pause state.
+                    this.FadeIn();
+                    if (legacyEnabled.Value)
+                        legacyMenu!.Appear();
+                }
+            });
 
             // Schedule required because host.IsActive doesn't seem to always run on the update thread.
             windowActive.BindValueChanged(_ => Schedule(() => pauseLoop.VolumeTo(targetVolume, 1000, Easing.Out)));

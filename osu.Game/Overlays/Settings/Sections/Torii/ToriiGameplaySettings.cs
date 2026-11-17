@@ -5,7 +5,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
-using osu.Game.Graphics.UserInterfaceV2;
+using osu.Game.Overlays.Settings.Entries;
 using osu.Game.Localisation;
 
 namespace osu.Game.Overlays.Settings.Sections.Torii
@@ -25,46 +25,34 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
         {
             Children = new Drawable[]
             {
-                new SettingsItemV2(new FormCheckBox
+                CreateItem(new CheckboxEntry
                 {
                     Caption = "Confirm Retry/Quit on long attempts",
                     Current = config.GetBindable<bool>(OsuSetting.ToriiConfirmDangerousButtonsOnLongAttempts),
                     HintText = "After ~60 seconds of active gameplay, Retry and Quit on the pause and fail screens require a second click within 5 seconds. Continue is unaffected.",
-                    NewFeatureId = NewFeatureRegistry.ConfirmDangerousButtons,
-                })
-                {
                     Keywords = new[] { @"retry", @"quit", @"confirm", @"pause", @"fail", @"double", @"click", @"misclick", @"torii" },
-                },
-                new SettingsItemV2(new FormCheckBox
+                }),
+                CreateItem(new CheckboxEntry
                 {
                     Caption = ToriiSettingsStrings.ConstantHitsoundVolume,
                     Current = config.GetBindable<bool>(OsuSetting.ToriiConstantHitsoundVolume),
                     HintText = ToriiSettingsStrings.ConstantHitsoundVolumeHint,
-                    NewFeatureId = NewFeatureRegistry.ConstantHitsoundVolume,
-                })
-                {
                     Keywords = new[] { @"hitsound", @"hitsounds", @"volume", @"constant", @"quiet", @"silent", @"mcosu", @"torii" },
-                },
-                new SettingsItemV2(new FormCheckBox
+                }),
+                CreateItem(new CheckboxEntry
                 {
                     Caption = ToriiSettingsStrings.SkipBreaks,
                     Current = config.GetBindable<bool>(OsuSetting.ToriiSkipBreaksEnabled),
                     HintText = ToriiSettingsStrings.SkipBreaksHint,
-                    NewFeatureId = NewFeatureRegistry.SkipBreaks,
-                })
-                {
                     Keywords = new[] { @"skip", @"break", @"breaks", @"mid", @"map", @"fast", @"forward", @"torii" },
-                },
-                new SettingsItemV2(new FormCheckBox
+                }),
+                CreateItem(new CheckboxEntry
                 {
                     Caption = ToriiSettingsStrings.SkipBreaksSingleConfirmation,
                     Current = config.GetBindable<bool>(OsuSetting.ToriiSkipBreaksSingleConfirmation),
                     HintText = ToriiSettingsStrings.SkipBreaksSingleConfirmationHint,
-                    NewFeatureId = NewFeatureRegistry.SkipBreaksSingleConfirmation,
-                })
-                {
                     Keywords = new[] { @"skip", @"break", @"breaks", @"single", @"confirmation", @"double", @"press", @"misclick", @"torii" },
-                },
+                }),
             };
         }
     }

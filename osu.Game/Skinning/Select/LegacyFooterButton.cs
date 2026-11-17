@@ -1,5 +1,6 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
+// Ported from ShikkesoraSIM/torii-osu, commit 8d7f1f25b737263dd140bbe59b0d51b999a7fc24.
 
 using System;
 using osu.Framework.Allocation;
@@ -69,7 +70,11 @@ namespace osu.Game.Skinning.Select
                 // el arte entero del footer en estos slots); caemos al glyph classic bundleado en
                 // vez de dibujarla gigante encima de todo.
                 if (tex != null && Math.Max(tex.DisplayWidth, tex.DisplayHeight) > max_glyph_dimension)
+                {
                     tex = skins.DefaultClassicSkin.GetStableTexture(name);
+                    if (tex != null && Math.Max(tex.DisplayWidth, tex.DisplayHeight) > max_glyph_dimension)
+                        tex = null;
+                }
 
                 return tex;
             }
@@ -93,6 +98,15 @@ namespace osu.Game.Skinning.Select
 
             Children = new Drawable[]
             {
+                new SpriteIcon
+                {
+                    Icon = FontAwesome.Solid.LayerGroup,
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    Position = new Vector2(20, -20),
+                    Size = new Vector2(34),
+                    Alpha = baseTex == null && !SuppressBaseGlyph ? 1 : 0,
+                },
                 new Sprite
                 {
                     Anchor = sprite_anchor,

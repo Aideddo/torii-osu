@@ -104,6 +104,8 @@ namespace osu.Game.Screens.Ranking
         private bool showingV2Layout => v2LayoutEnabled && !showingOriginalLayout;
         private bool shouldFlairForCurrentScore => player != null && Score?.User.IsBot == false && !(useLegacyResults.Value && this is SoloResultsScreen);
 
+        public bool UsesLegacyPresentation => useLegacyResults.Value;
+
         /// <summary>
         /// Whether the user can retry the beatmap from the results screen.
         /// </summary>

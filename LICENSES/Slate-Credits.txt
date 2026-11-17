@@ -1,0 +1,9 @@
+Slate UI artwork by XetThe
+https://github.com/XetThe/osu-slate
+Revision: f29d938d6a6cbf4a1b5d82f7767f91a312076302
+Licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+See Slate-CC-BY-4.0.txt for full terms.
+
+Torii exports cached raster layers from the PSD sources, uses only the Top
+group of ranking-panel, maps main-* digits to score-*, and reuses button
+hover images as their idle variants. Full-screen decorations are excluded.

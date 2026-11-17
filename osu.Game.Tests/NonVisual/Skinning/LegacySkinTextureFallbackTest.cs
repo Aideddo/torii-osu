@@ -148,6 +148,59 @@ namespace osu.Game.Tests.NonVisual.Skinning
             ClassicAssert.AreEqual(texture, twoTimesTexture);
         }
 
+        [Test]
+        public void TestWrappedDefaultDoesNotBecomeCustomResultsSkin()
+        {
+            using var store = new TestTextureStore("ranking-panel");
+            using var skin = new DefaultLegacySkin(new TestLegacySkin.TestResourceProvider(store));
+            using var source = new SkinProvidingContainer(skin);
+
+            Assert.That(source.FindProvider(s => s.GetStableTexture("ranking-panel") != null), Is.SameAs(skin));
+            Assert.That(source.FindCustomStableTextureSource("ranking-panel", true), Is.Null);
+        }
+
+        [Test]
+        public void TestWrappedCustomResultsSkinIsPreserved()
+        {
+            using var store = new TestTextureStore("ranking-panel");
+            using var skin = new TestLegacySkin(store);
+            using var source = new SkinProvidingContainer(skin);
+
+            Assert.That(source.FindCustomStableTextureSource("ranking-panel", true), Is.SameAs(skin));
+        }
+
+        [Test]
+        public void TestNestedDefaultSourceDoesNotBecomeCustomSkin()
+        {
+            using var store = new TestTextureStore("songselect-top");
+            using var skin = new DefaultLegacySkin(new TestLegacySkin.TestResourceProvider(store));
+            using var inner = new SkinProvidingContainer(skin);
+            using var outer = new SkinProvidingContainer(inner);
+            Assert.That(outer.FindCustomStableTextureSource("songselect-top"), Is.Null);
+        }
+
+        [Test]
+        public void TestNestedCustomSourceResolvesToActualSkin()
+        {
+            using var store = new TestTextureStore("songselect-top");
+            using var skin = new TestLegacySkin(store);
+            using var inner = new SkinProvidingContainer(skin);
+            using var outer = new SkinProvidingContainer(inner);
+            Assert.That(outer.FindCustomStableTextureSource("songselect-top"), Is.SameAs(skin));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TestCustomResultsFirstFrameLookup(bool allowFirstFrame)
+        {
+            using var store = new TestTextureStore("ranking-panel-0");
+            using var skin = new TestLegacySkin(store);
+            using var source = new SkinProvidingContainer(skin);
+
+            var provider = source.FindCustomStableTextureSource("ranking-panel", allowFirstFrame);
+            Assert.That(provider, allowFirstFrame ? Is.SameAs(skin) : Is.Null);
+        }
+
         private class TestLegacySkin : LegacySkin
         {
             public bool HighResolutionSprites { get; set; } = true;
@@ -159,7 +212,7 @@ namespace osu.Game.Tests.NonVisual.Skinning
             {
             }
 
-            private class TestResourceProvider : IStorageResourceProvider
+            public class TestResourceProvider : IStorageResourceProvider
             {
                 private readonly IResourceStore<TextureUpload> textureStore;
 
@@ -171,7 +224,7 @@ namespace osu.Game.Tests.NonVisual.Skinning
                 public IRenderer Renderer => new DummyRenderer();
                 public AudioManager AudioManager => null;
                 public IResourceStore<byte[]> Files => null!;
-                public IResourceStore<byte[]> Resources => null!;
+                public IResourceStore<byte[]> Resources { get; } = new ResourceStore<byte[]>();
                 public RealmAccess RealmAccess => null!;
                 public IResourceStore<TextureUpload> CreateTextureLoaderStore(IResourceStore<byte[]> underlyingStore) => textureStore;
             }

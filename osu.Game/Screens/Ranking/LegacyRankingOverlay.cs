@@ -1,8 +1,11 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
+// Ported from ShikkesoraSIM/torii-osu, commit 8d7f1f25b737263dd140bbe59b0d51b999a7fc24.
 
 using System;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
+using osu.Game.Configuration;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -11,7 +14,6 @@ using osu.Framework.Input.Events;
 using osu.Framework.Screens;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
-using osu.Game.Graphics.UserInterface;
 using osu.Game.Scoring;
 using osu.Game.Screens.Ranking.Statistics;
 using osu.Game.Screens.Select;
@@ -27,9 +29,8 @@ namespace osu.Game.Screens.Ranking
     /// va montado encima del <see cref="ResultsScreen"/>: trackea la visibilidad del
     /// <see cref="StatisticsPanel"/> (el estado al que se entra clickeando el score panel expandido)
     /// y muestra el panel legacy en su lugar, escondiendo el contenido stock de abajo. tambien
-    /// re-estiliza el chrome del screen para que quede como stable: la barra de abajo stock (backing
-    /// gris, con altura reservada) pasa a ser una barra transparente flotante con los mismos botones,
-    /// y el back button global pasa a ser el legacy skineado.
+    /// re-estiliza el chrome del screen para que quede como stable: la barra de abajo stock se esconde
+    /// (sin reservar altura) y el back button global pasa a ser el legacy skineado.
     /// </summary>
     public partial class LegacyRankingOverlay : CompositeDrawable
     {
@@ -40,6 +41,7 @@ namespace osu.Game.Screens.Ranking
         private readonly bool autoShowDetails;
 
         private BlockingLayer panelLayer = null!;
+        private DrawSizePreservingFillContainer panelSpace = null!;
         private Container panelContainer = null!;
         private bool toolbarHidden;
 
@@ -64,14 +66,11 @@ namespace osu.Game.Screens.Ranking
         // el espacio DrawSizePreserving puede ser mas alto que 768 (ventanas 16:10, etc) y con
         // altura fija se asomaba el banner de la pagina de abajo sin scrollear.
         private Container? panelPage;
-
-        // la barra flotante de botones (render/nota/coleccion/favorito) estorba al panel stable
-        // arriba de todo: solo se muestra scrolleada la vista (o cuando el panel esta cerrado).
-        private Container floatingBar = null!;
-        private bool floatingBarVisible = true;
+        private LegacyRankingPanel? currentRankingPanel;
+        private LegacyOnlineRanking? currentOnlineRanking;
 
         // los scores ajenos no tienen pagina de abajo (las bandas LOCAL/ONLINE/BEATMAP hablan
-        // del usuario local): sin below-fold el hint no va y la barra flotante queda siempre.
+        // del usuario local): sin below-fold el hint no va.
         private bool hasBelowFold;
 
         [Resolved]
@@ -81,6 +80,7 @@ namespace osu.Game.Screens.Ranking
         private SkinManager skins { get; set; } = null!;
 
         private OsuGame? game;
+        private Bindable<LegacySongSelectAspectRatio> aspectRatio = null!;
 
         public LegacyRankingOverlay(ResultsScreen screen, StatisticsPanel statisticsPanel, Drawable scrollContent, Drawable stockBottomPanel, bool autoShowDetails)
         {
@@ -90,13 +90,16 @@ namespace osu.Game.Screens.Ranking
             this.stockBottomPanel = stockBottomPanel;
             this.autoShowDetails = autoShowDetails;
 
-            pendingEntrance = autoShowDetails;
+            pendingEntrance = ShouldAnimateEntrance(screen, autoShowDetails);
         }
 
+        internal static bool ShouldAnimateEntrance(ResultsScreen screen, bool autoShowDetails) => autoShowDetails && screen.IsLocalPlay;
+
         [BackgroundDependencyLoader(true)]
-        private void load(OsuGame? game)
+        private void load(OsuGame? game, OsuConfigManager config)
         {
             this.game = game;
+            aspectRatio = config.GetBindable<LegacySongSelectAspectRatio>(OsuSetting.ToriiLegacySongSelectAspectRatio);
 
             RelativeSizeAxes = Axes.Both;
 
@@ -142,7 +145,7 @@ namespace osu.Game.Screens.Ranking
                             Colour = Color4.Black,
                             Alpha = 0.8f,
                         },
-                        new DrawSizePreservingFillContainer
+                        panelSpace = new DrawSizePreservingFillContainer
                         {
                             RelativeSizeAxes = Axes.Both,
                             TargetDrawSize = new Vector2(1366, 768),
@@ -152,12 +155,12 @@ namespace osu.Game.Screens.Ranking
                     },
                 },
                 // botones flotantes centrados (visibilidad manejada en Update) + back button skineado.
-                floatingBar = new Container
+                new Container
                 {
                     Anchor = Anchor.BottomLeft,
                     Origin = Anchor.BottomLeft,
                     RelativeSizeAxes = Axes.X,
-                    Height = TwoLayerButton.SIZE_EXTENDED.Y,
+                    Height = 80,
                     Child = buttons,
                 },
                 new DrawSizePreservingFillContainer
@@ -195,10 +198,6 @@ namespace osu.Game.Screens.Ranking
                     rebuildPanel(score);
                     panelLayer.Alpha = 1;
                     scrollContent.Alpha = 0;
-
-                    // arrancamos con el panel a la vista: la barra flotante espera al scroll.
-                    floatingBar.Alpha = 0;
-                    floatingBarVisible = false;
                 }
             }
         }
@@ -207,14 +206,21 @@ namespace osu.Game.Screens.Ranking
         {
             base.Update();
 
-            // la animacion de entrada del screen vuelve a fadear la barra stock; sus hijos
-            // (los botones que recreamos aca) dibujarian a altura cero si no.
+            // la animacion de entrada del screen vuelve a fadear la barra stock, que en modo legacy no se ve.
             if (stockBottomPanel.Alpha > 0)
                 stockBottomPanel.Alpha = 0;
 
             // pagina 1 del scroll = altura real del viewport (ver comentario del campo).
             if (panelPage != null && currentScroll != null && Math.Abs(panelPage.Height - currentScroll.DrawHeight) > 0.1f)
                 panelPage.Height = currentScroll.DrawHeight;
+
+            if (panelPage != null && currentOnlineRanking != null)
+                currentOnlineRanking.Y = panelPage.Height;
+
+            // stable scrolls the online ranking up until its top meets the header (Ranking: ScrollToPosition(HeightScaled * 0.875)), so
+            // the page is as tall as the view below the header and the rest of its dialog is cut off.
+            if (currentOnlineRanking?.IsShown == true && currentScroll != null)
+                currentOnlineRanking.Height = Math.Max(0, currentScroll.DrawHeight - HeaderStrip.HEIGHT);
 
             // si el screen sale con la vista de detalles abierta, dejamos la toolbar en paz:
             // OsuGame la re-muestra solo en los cambios de screen normales, y el song select
@@ -235,18 +241,6 @@ namespace osu.Game.Screens.Ranking
                     detailsHint.FadeTo(shouldShow ? 1 : 0, 200);
                 }
             }
-
-            // la barra flotante de botones tapaba el hint y ensuciaba el panel stable: con el
-            // panel a la vista solo aparece al scrollear a los detalles (complementa al hint);
-            // con el panel cerrado (modo browse sobre el carousel stock) o sin pagina de abajo
-            // (score ajeno) queda siempre.
-            bool barShouldShow = panelLayer.Alpha < 0.5f || !hasBelowFold || (currentScroll != null && currentScroll.Current > 300);
-
-            if (barShouldShow != floatingBarVisible)
-            {
-                floatingBarVisible = barShouldShow;
-                floatingBar.FadeTo(barShouldShow ? 1 : 0, 200);
-            }
         }
 
         /// <summary>
@@ -254,6 +248,20 @@ namespace osu.Game.Screens.Ranking
         /// vuelve arriba (como el Esc de stable cierra el dialog de online ranking); devuelve
         /// false cuando ya esta arriba, y ahi el screen sale de una.
         /// </summary>
+        protected override bool OnKeyDown(KeyDownEvent e)
+        {
+            if (e.Key == osuTK.Input.Key.Space || e.Key == osuTK.Input.Key.Enter || e.Key == osuTK.Input.Key.KeypadEnter)
+            {
+                if (currentRankingPanel?.IsAnimating == true)
+                {
+                    currentRankingPanel.FinishAnimation();
+                    return true;
+                }
+            }
+
+            return base.OnKeyDown(e);
+        }
+
         public bool HandleBackScroll()
         {
             if (currentScroll != null && currentScroll.Current > 32)
@@ -268,6 +276,16 @@ namespace osu.Game.Screens.Ranking
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            aspectRatio.BindValueChanged(_ =>
+            {
+                if (builtScore == null)
+                    return;
+
+                var score = builtScore;
+                builtScore = null;
+                rebuildPanel(score);
+            });
 
             // look de stable: sin el back button rosa de lazer, y la barra stock de abajo ni
             // reserva altura de layout (su fila de grid es auto-size) ni dibuja. va ACA y no en
@@ -371,6 +389,16 @@ namespace osu.Game.Screens.Ranking
             bool animate = pendingEntrance;
             pendingEntrance = false;
 
+            // Stable lays out against the viewport, never a width inferred from skin textures.
+            // A user-selected skin ratio constrains that viewport explicitly.
+            float? designWidth = aspectRatio.Value switch
+            {
+                LegacySongSelectAspectRatio.Widescreen => LegacyRankingLayout.HEIGHT * 16f / 9,
+                LegacySongSelectAspectRatio.WidescreenTall => LegacyRankingLayout.HEIGHT * 16f / 10,
+                _ => null,
+            };
+            panelSpace.TargetDrawSize = new Vector2(designWidth ?? LegacyRankingLayout.MIN_WIDTH, LegacyRankingLayout.HEIGHT);
+
             // primero el skin actual, con el classic bundleado de fallback (para el score font y
             // las texturas ranking-* que el skin no traiga). la vista scrollea como la de stable:
             // el ranking panel es la primera "pagina", scrollear para abajo revela la seccion de
@@ -388,29 +416,37 @@ namespace osu.Game.Screens.Ranking
                         {
                             RelativeSizeAxes = Axes.Both,
                             ScrollbarVisible = false,
-                            Child = new FillFlowContainer
+                            // stable draws the RankingDialog under the results page (pScrollableArea.Draw: its children, then the
+                            // content), so a skin's ranking-panel reaching down the page lies over the dialog. the dialog sits below the
+                            // first page, kept there in Update.
+                            Child = new Container
                             {
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
-                                Direction = FillDirection.Vertical,
                                 Children = new Drawable[]
                                 {
+                                    // la pagina de abajo estilo stable (el RankingDialog con las
+                                    // bandas LOCAL / ONLINE / BEATMAP); vacia para scores ajenos.
+                                    currentOnlineRanking = new LegacyOnlineRanking(score) { Y = 768 },
                                     panelPage = new Container
                                     {
                                         RelativeSizeAxes = Axes.X,
                                         Height = 768,
-                                        Child = new LegacyRankingPanel(score, animate),
+                                        Child = createDesignArea(designWidth, currentRankingPanel = new LegacyRankingPanel(score, animate)),
                                     },
-                                    // la pagina de abajo estilo stable (el RankingDialog con las
-                                    // bandas LOCAL / ONLINE / BEATMAP); vacia para scores ajenos.
-                                    new LegacyOnlineRanking(score),
                                 },
                             },
                         },
-                        new HeaderStrip(score),
-                        detailsHint = new ScrollHintButton(@"v  Online Ranking  v")
+                        new HeaderStrip(score, designWidth, currentScroll),
+                        // Ranking.InitializeSpecifics: a skinnable 200 x 30 BlueViolet pButton at (W / 2 - 100, H - 26), its text 14 * 30 / 18
+                        // units tall.
+                        detailsHint = new LegacyDialogButton(@"▼ Online Ranking ▼", Color4.BlueViolet, () => currentScroll?.ScrollToEnd())
                         {
-                            Action = () => currentScroll?.ScrollToEnd(),
+                            Anchor = Anchor.BottomCentre,
+                            Origin = Anchor.TopCentre,
+                            Y = -26 * 1.6f,
+                            ButtonSize = new Vector2(200, 30) * 1.6f,
+                            LabelSize = 14 * 30 / 18f * 1.6f,
                         },
                     },
                 },
@@ -422,16 +458,34 @@ namespace osu.Game.Screens.Ranking
         }
 
         /// <summary>
+        /// The area a skin's art was drawn for: its design width, centred, or the whole width when it fits any.
+        /// </summary>
+        private static Container createDesignArea(float? designWidth, Drawable content) => new Container
+        {
+            Anchor = Anchor.TopCentre,
+            Origin = Anchor.TopCentre,
+            RelativeSizeAxes = designWidth == null ? Axes.Both : Axes.Y,
+            Width = designWidth ?? 1,
+            Child = content,
+        };
+
+        /// <summary>
         /// mientras esta visible, se traga el input de puntero asi los clicks no llegan al
         /// contenido stock (escondido) de abajo. los botones flotantes y el back button son
         /// hermanos puestos encima, asi que siguen andando.
         /// </summary>
         private partial class BlockingLayer : Container
         {
+            public Action? ClickAction { get; set; }
+
             public override bool ReceivePositionalInputAt(Vector2 screenSpacePos)
                 => Alpha > 0.5f && base.ReceivePositionalInputAt(screenSpacePos);
 
-            protected override bool OnClick(ClickEvent e) => true;
+            protected override bool OnClick(ClickEvent e)
+            {
+                ClickAction?.Invoke();
+                return true;
+            }
             protected override bool OnHover(HoverEvent e) => true;
             protected override bool OnMouseDown(MouseDownEvent e) => true;
             protected override bool OnScroll(ScrollEvent e) => true;
@@ -444,130 +498,85 @@ namespace osu.Game.Screens.Ranking
         /// </summary>
         private partial class HeaderStrip : CompositeDrawable
         {
+            public const float HEIGHT = 60 * 1.6f;
+
             private readonly ScoreInfo score;
+            private readonly float? designWidth;
+            private readonly OsuScrollContainer scroll;
+            private Drawable title = null!;
+            private bool newLayout;
 
             [Resolved]
             private SkinManager skins { get; set; } = null!;
 
-            public HeaderStrip(ScoreInfo score)
+            public HeaderStrip(ScoreInfo score, float? designWidth, OsuScrollContainer scroll)
             {
                 this.score = score;
+                this.designWidth = designWidth;
+                this.scroll = scroll;
+            }
+
+            protected override void Update()
+            {
+                base.Update();
+                // Ranking.Initialize: only the new layout's title is ViewOffsetImmune.
+                title.Y = newLayout ? 0 : -(float)scroll.Current;
             }
 
             [BackgroundDependencyLoader]
             private void load(ISkinSource skin)
             {
                 RelativeSizeAxes = Axes.X;
-                Height = 60 * 1.6f;
+                Height = HEIGHT;
+                newLayout = (skin.GetConfig<SkinConfiguration.LegacySetting, decimal>(SkinConfiguration.LegacySetting.Version)?.Value ?? SkinConfiguration.LATEST_VERSION) > 1;
+                var titleSource = skin.FindCustomStableTextureSource("ranking-title", true);
+                title = titleSource == null ? new OsuSpriteText
+                {
+                    Font = LegacyFonts.Get(26),
+                    Text = "Results",
+                } : new Sprite
+                {
+                    Texture = titleSource.GetStableTexture("ranking-title") ?? titleSource.GetStableTexture("ranking-title-0"),
+                };
+                title.Anchor = Anchor.TopRight;
+                title.Origin = Anchor.TopRight;
+                title.Position = new Vector2(-20 * 1.6f, 0);
 
                 InternalChildren = new Drawable[]
                 {
+                    // the bar spans the window; the text and title sit in the skin's design area.
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = Color4.Black,
                         Alpha = 0.8f,
                     },
-                    new OsuSpriteText
+                    createDesignArea(designWidth, new Container
                     {
-                        Position = new Vector2(0, 0),
-                        Font = LegacyFonts.Get(22 * 1.6f),
-                        Shadow = true,
-                        Text = $"{score.BeatmapInfo?.Metadata.Artist} - {score.BeatmapInfo?.Metadata.Title} [{score.BeatmapInfo?.DifficultyName}]",
-                    },
-                    new OsuSpriteText
-                    {
-                        Position = new Vector2(1.6f, 20 * 1.6f),
-                        Font = LegacyFonts.Get(16 * 1.6f),
-                        Shadow = true,
-                        Text = $"Beatmap by {score.BeatmapInfo?.Metadata.Author.Username}",
-                    },
-                    new OsuSpriteText
-                    {
-                        Position = new Vector2(1.6f, 34 * 1.6f),
-                        Font = LegacyFonts.Get(16 * 1.6f),
-                        Shadow = true,
-                        Text = $"Played by {score.User.Username} on {score.Date.ToLocalTime():g}.",
-                    },
-                    new Sprite
-                    {
-                        Anchor = Anchor.TopRight,
-                        Origin = Anchor.TopRight,
-                        X = -20 * 1.6f,
-                        Texture = skin.GetTexture(@"ranking-title") ?? skins.DefaultClassicSkin.GetTexture(@"ranking-title"),
-                    },
-                };
-            }
-        }
-
-        /// <summary>
-        /// el boton hint de scroll de stable ("v Online Ranking v", centrado abajo): el pButton
-        /// REAL de stable (texturas button-left/middle/right, three-slice, tinte BlueViolet),
-        /// invita a scrollear a la seccion de abajo y desaparece mientras la vista no este arriba.
-        /// </summary>
-        private partial class ScrollHintButton : OsuClickableContainer
-        {
-            private readonly string text;
-
-            [Resolved]
-            private SkinManager skins { get; set; } = null!;
-
-            public ScrollHintButton(string text)
-            {
-                this.text = text;
-
-                Anchor = Anchor.BottomCentre;
-                Origin = Anchor.BottomCentre;
-                Size = new Vector2(200, 30) * 1.6f;
-            }
-
-            [BackgroundDependencyLoader]
-            private void load()
-            {
-                var left = skins.DefaultClassicSkin.GetTexture(@"button-left");
-                var middle = skins.DefaultClassicSkin.GetTexture(@"button-middle");
-                var right = skins.DefaultClassicSkin.GetTexture(@"button-right");
-
-                var tint = Color4.BlueViolet;
-
-                // three-slice como el pButton de stable: caps a tamaño natural + middle
-                // estirado, todo escalado de la altura nativa de la textura (71) a la del boton.
-                float scale = Height / 71f;
-                float texSpaceWidth = Width / scale;
-                float capWidth = left?.DisplayWidth ?? 16;
-
-                Children = new Drawable[]
-                {
-                    new Container
-                    {
-                        Size = new Vector2(texSpaceWidth, 71),
-                        Scale = new Vector2(scale),
-                        Colour = tint,
+                        RelativeSizeAxes = Axes.Both,
                         Children = new Drawable[]
                         {
-                            new Sprite { Texture = left },
-                            new Sprite
+                            new OsuSpriteText
                             {
-                                X = capWidth,
-                                Size = new Vector2(texSpaceWidth - capWidth * 2, 71),
-                                Texture = middle,
+                                Position = new Vector2(0, 0),
+                                Font = LegacyFonts.Get(22 * 1.6f),
+                                Text = $"{score.BeatmapInfo?.Metadata.Artist} - {score.BeatmapInfo?.Metadata.Title} [{score.BeatmapInfo?.DifficultyName}]",
                             },
-                            new Sprite
+                            new OsuSpriteText
                             {
-                                Anchor = Anchor.TopRight,
-                                Origin = Anchor.TopRight,
-                                Texture = right,
+                                Position = new Vector2(1.6f, 20 * 1.6f),
+                                Font = LegacyFonts.Get(16 * 1.6f),
+                                Text = $"Beatmap by {score.BeatmapInfo?.Metadata.Author.Username}",
                             },
+                            new OsuSpriteText
+                            {
+                                Position = new Vector2(1.6f, 34 * 1.6f),
+                                Font = LegacyFonts.Get(16 * 1.6f),
+                                Text = $"Played by {score.User.Username} on {score.Date.ToLocalTime():g}.",
+                            },
+                            title,
                         },
-                    },
-                    new OsuSpriteText
-                    {
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                        Font = LegacyFonts.Get(15 * 1.6f),
-                        Shadow = true,
-                        Text = text,
-                    },
+                    }),
                 };
             }
         }

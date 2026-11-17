@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Screens;
@@ -16,6 +17,8 @@ using osu.Framework.Testing;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
+using osu.Game.Configuration;
+using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Online;
 using osu.Game.Online.API;
@@ -23,7 +26,9 @@ using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Difficulty;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu;
+using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 using osu.Game.Screens;
@@ -91,6 +96,7 @@ namespace osu.Game.Tests.Visual.Ranking
         }
 
         [Test]
+
         public void TestFullyPopulated()
         {
             TestResultsScreen screen = null;
@@ -512,6 +518,9 @@ namespace osu.Game.Tests.Visual.Ranking
             [Cached(typeof(UserStatisticsWatcher))]
             public readonly UserStatisticsWatcher UserStatisticsWatcher;
 
+            [Cached]
+            private readonly LocalUserStatisticsProvider statisticsProvider = new LocalUserStatisticsProvider();
+
             public TestResultsContainer(IScreen screen)
             {
                 RelativeSizeAxes = Axes.Both;
@@ -519,7 +528,8 @@ namespace osu.Game.Tests.Visual.Ranking
 
                 InternalChildren = new Drawable[]
                 {
-                    UserStatisticsWatcher = new UserStatisticsWatcher(new LocalUserStatisticsProvider()),
+                    statisticsProvider,
+                    UserStatisticsWatcher = new UserStatisticsWatcher(statisticsProvider),
                     stack = new OsuScreenStack
                     {
                         RelativeSizeAxes = Axes.Both,

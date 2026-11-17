@@ -1,5 +1,5 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 #nullable disable
 
@@ -247,8 +247,7 @@ namespace osu.Game
 
         private readonly BindableNumber<double> globalTrackVolumeAdjust = new BindableNumber<double>(global_track_volume_adjust);
 
-        // Torii: fuente de la UI legacy (Aller vs lazer). Campo persistente asi el weak-ref del bindable
-        // no lo colecta el GC; empuja el valor al flag estatico LegacyFonts.UseAllerFont en cada cambio.
+        // mantener vivo el bindable de la fuente legacy.
         private readonly Bindable<bool> legacyFontSetting = new BindableBool();
 
         private Bindable<string> frameworkLocale = null!;
@@ -310,6 +309,7 @@ namespace osu.Game
             dependencies.Cache(onlineAssetStore = new OnlineAssetCachingStore(Host, realm));
 
             dependencies.CacheAs(LocalConfig);
+
             dependencies.CacheAs<IGameplaySettings>(LocalConfig);
 
             InitialiseFonts();
@@ -552,10 +552,9 @@ namespace osu.Game
             // captured into the instance at build time). The dropdown prompts a restart on change.
             OsuColour.SetThemeFromConfig(LocalConfig.Get<UIThemeOption>(OsuSetting.UITheme));
 
-            // Torii: la UI legacy (song select estilo stable) usa la fuente moderna de lazer por default;
-            // este setting la pasa a Aller (fuente de osu!stable). Bindeado (no read-once) asi re-entrar al
-            // song select ya toma la fuente nueva sin reiniciar; LegacyFonts.Get lo lee en construccion.
-            Screens.Select.LegacyFonts.UseAllerFont = ToriiStableUI.Fonts(LocalConfig);
+            // la fuente classic usa Inter; se aplica junto con el resto del tema al arrancar.
+            Screens.Select.LegacyFonts.UseClassicFont = ToriiStableUI.Fonts(LocalConfig);
+            Screens.Play.HUD.LegacyGameplayLeaderboard.UseInLegacySkins = ToriiStableUI.GameplayLeaderboard(LocalConfig);
 
             // Torii: Potato Mode read-once flag (heavy visuals check it at construction). Restart-gated.
             Performance.PotatoMode.SetFromConfig(LocalConfig.Get<bool>(OsuSetting.ToriiPotatoMode));
@@ -806,6 +805,9 @@ namespace osu.Game
             AddFont(Resources, @"Fonts/Nunito/Nunito-Bold");
 
             AddFont(Resources, @"Fonts/Inter/Inter-Regular");
+            AddFont(Resources, @"Fonts/MapleMono/MapleMono-Regular");
+            AddFont(Resources, @"Fonts/MapleMono/MapleMono-Medium");
+            AddFont(Resources, @"Fonts/MapleMono/MapleMono-Bold");
             AddFont(Resources, @"Fonts/Inter/Inter-RegularItalic");
             AddFont(Resources, @"Fonts/Inter/Inter-Light");
             AddFont(Resources, @"Fonts/Inter/Inter-LightItalic");
@@ -822,10 +824,6 @@ namespace osu.Game
             AddFont(Resources, @"Fonts/Noto/Noto-Thai");
 
 
-            // Torii: osu!stable's "Aller" UI font, for the legacy (stable-style) song-select UI.
-            AddFont(Resources, @"Fonts/Aller/Aller-Regular");
-            AddFont(Resources, @"Fonts/Aller/Aller-Light");
-            AddFont(Resources, @"Fonts/Aller/Aller-Bold");
 
             Fonts.AddStore(new OsuIcon.OsuIconStore(Textures));
         }

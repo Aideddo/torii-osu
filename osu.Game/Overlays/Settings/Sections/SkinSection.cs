@@ -29,12 +29,21 @@ using osu.Game.Skinning;
 using osuTK;
 using Realms;
 using WebCommonStrings = osu.Game.Resources.Localisation.Web.CommonStrings;
+using osu.Game.Overlays.Settings.Entries;
 
 namespace osu.Game.Overlays.Settings.Sections
 {
     public partial class SkinSection : SettingsSection
     {
         private SkinDropdown skinDropdown;
+
+        // the stable layout's controls (see ISettingsRenderer.UseStableLayouts).
+        private DropdownEntry<Live<SkinInfo>> skinEntry;
+        private ButtonEntry[] skinButtonEntries;
+        private Bindable<Skin> currentSkin;
+
+        [Resolved(CanBeNull = true)]
+        private IDialogOverlay dialogOverlay { get; set; }
 
         public override LocalisableString Header => SkinSettingsStrings.SkinSectionHeader;
 
@@ -58,8 +67,15 @@ namespace osu.Game.Overlays.Settings.Sections
         [BackgroundDependencyLoader(permitNulls: true)]
         private void load(OsuConfigManager config, [CanBeNull] SkinEditorOverlay skinEditor)
         {
+            if (Renderer.UseStableLayouts)
+            {
+                loadStable(skinEditor, config);
+                return;
+            }
+
             Children = new Drawable[]
             {
+
                 new SettingsItemV2(skinDropdown = new SkinDropdown
                 {
                     AlwaysShowSearchBar = true,
@@ -81,30 +97,97 @@ namespace osu.Game.Overlays.Settings.Sections
                         new DeleteSkinButton { Padding = new MarginPadding { Left = 2.5f }, RelativeSizeAxes = Axes.X, Width = 1 / 3f },
                     }
                 },
-                new SkinFavouriteButton(),
-                new SettingsButtonV2
+                CreateItem(new ButtonEntry
                 {
-                    Text = SkinSettingsStrings.SkinLayoutEditor,
+                    Caption = SkinSettingsStrings.SkinLayoutEditor,
                     Action = () => skinEditor?.ToggleVisibility(),
+                }),
+            };
+        }
+
+        /// <summary>
+        /// The skin controls as stable elements: the current skin as a dropdown, and rename / export / delete as option buttons.
+        /// </summary>
+        private void loadStable(SkinEditorOverlay skinEditor, OsuConfigManager config)
+        {
+            skinEntry = new DropdownEntry<Live<SkinInfo>>
+            {
+                Caption = SkinSettingsStrings.CurrentSkin,
+                Current = skins.CurrentSkinInfo,
+                AlwaysShowSearchBar = true,
+                AllowNonContiguousMatching = true,
+                ItemLabel = item => item.ToString(),
+            };
+
+            // the dropdown must start with the skins in it: binding it to an empty list would reset the current skin.
+            skinEntry.SetItems(skins.GetAllUsableSkins());
+
+            skinButtonEntries = new[]
+            {
+                new ButtonEntry
+                {
+                    Caption = CommonStrings.Rename,
+                    Popover = () => new RenameSkinPopover(),
                 },
-                new SettingsItemV2(new FormCheckBox
+                new ButtonEntry
+                {
+                    Caption = CommonStrings.Export,
+                    Action = exportCurrentSkin,
+                },
+                new ButtonEntry
+                {
+                    Caption = WebCommonStrings.ButtonsDelete,
+                    Dangerous = true,
+                    Action = () => dialogOverlay?.Push(new SkinDeleteDialog(currentSkin.Value)),
+                },
+            };
+
+            Children = new Drawable[]
+            {
+                CreateItem(skinEntry),
+                CreateItem(skinButtonEntries[0]),
+                CreateItem(skinButtonEntries[1]),
+                CreateItem(skinButtonEntries[2]),
+                CreateItem(new ButtonEntry
+                {
+                    Caption = SkinSettingsStrings.SkinLayoutEditor,
+                    Action = () => skinEditor?.ToggleVisibility(),
+                }),
+                new SkinFavouriteButton(),
+                CreateItem(new CheckboxEntry
                 {
                     Caption = SkinSettingsStrings.CycleSkinsThroughFavoritesOnly,
                     HintText = SkinSettingsStrings.CycleSkinsThroughFavoritesOnlyDescription,
                     Current = config.GetBindable<bool>(OsuSetting.CycleSkinsThroughFavoritesOnly),
-                })
-                {
                     Keywords = new[] { "skin", "cycle", "favourite", "favorite", "pin", "hotkey", "keybind" },
-                },
-                // torii: el dropdown del UI theme cosmetico, mirroreado aca (tambien vive en Torii >
-                // Interface, mismo key) porque quien navega skins espera el switch de paleta cerca.
+                }),
                 new UIThemeDropdownAndRestart(),
             };
+        }
+
+        private void exportCurrentSkin()
+        {
+            try
+            {
+                skins.ExportCurrentSkin();
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"Could not export current skin: {e.Message}", level: LogLevel.Error);
+            }
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            if (skinButtonEntries != null)
+            {
+                // protected skins can't be renamed, exported or deleted, as with the lazer buttons.
+                currentSkin = skins.CurrentSkin.GetBoundCopy();
+                currentSkin.BindValueChanged(_ => updateSkinButtons());
+                currentSkin.BindDisabledChanged(_ => updateSkinButtons(), true);
+            }
 
             realmSubscription = realm.RegisterForNotifications(_ => realm.Realm.All<SkinInfo>()
                                                                          .Where(s => !s.DeletePending)
@@ -115,7 +198,7 @@ namespace osu.Game.Overlays.Settings.Sections
             // el dropdown reordene + refresque el prefijo corazon despues de un pin/unpin.
             skins.PinnedSkins.Changed += refreshSkinList;
 
-            skinDropdown.Current.BindValueChanged(skin =>
+            (skinDropdown?.Current ?? skinEntry.Current).BindValueChanged(skin =>
             {
                 if (skin.NewValue.ID == SkinInfo.RANDOM_SKIN)
                 {
@@ -138,7 +221,21 @@ namespace osu.Game.Overlays.Settings.Sections
             dropdownItems.Clear();
             dropdownItems.AddRange(skins.GetAllUsableSkins());
 
-            Schedule(() => skinDropdown.Items = dropdownItems);
+            Schedule(() =>
+            {
+                if (skinDropdown != null)
+                    skinDropdown.Items = dropdownItems;
+                else
+                    skinEntry.SetItems(dropdownItems);
+            });
+        }
+
+        private void updateSkinButtons()
+        {
+            bool canModify = !currentSkin.Disabled && currentSkin.Value.SkinInfo.PerformRead(s => !s.Protected);
+
+            foreach (var entry in skinButtonEntries)
+                entry.Enabled.Value = canModify;
         }
 
         // torii: rebuild del dropdown desde la lista ordenada (pinneadas primero). lo marshaleamos al
