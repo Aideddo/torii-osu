@@ -124,7 +124,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Incomplete release; publication blocked' }
 $hashes | ConvertTo-Json | Out-File Releases/client-hashes.json -Encoding utf8
 $outputRoot = Join-Path $workspace 'release-files'
 New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
-Copy-Item Releases/* $outputRoot
+Move-Item Releases/* $outputRoot
 $notes = @("# $title v$version",'', 'Player profiles, Torii Classic UI and optional NoFail.', '', 'All six desktop architectures and Android are included. Desktop builds bundle .NET 11 and Satori 11. Android preserves the application ID and original signing identity.', '', 'macOS requires 14 or newer. x64 requires x86-64-v2. These runtime requirements are unchanged from the .NET 11 migration.', '', "Private source commit: $(git rev-parse HEAD)")
 $notes | Out-File (Join-Path $outputRoot RELEASE-NOTES.md) -Encoding utf8
 $checksums = Get-ChildItem -LiteralPath $outputRoot -File | Sort-Object Name | ForEach-Object {

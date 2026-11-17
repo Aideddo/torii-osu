@@ -77,6 +77,11 @@ jobs:
           name: ${{ contains(inputs.version, '-nova') && 'Torii Nova ' || 'Torii ' }}v${{ inputs.version }}
           files: release-files/*
           fail_on_unmatched_files: true
-          draft: false
+          draft: true
           prerelease: ${{ contains(inputs.version, '-nova') }}
           body_path: release-files/RELEASE-NOTES.md
+      - name: Publish verified uploaded release
+        if: inputs.publish_release
+        env:
+          TORII_RELEASE_TOKEN: ${{ secrets.TORII_PUBLIC_RELEASE_TOKEN }}
+        run: python .github/scripts/publish_verified_release.py ../release-files '${{ inputs.version }}'
