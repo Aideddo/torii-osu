@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-if (Environment.Version.Major != 10)
+if (Environment.Version.Major != 11)
     throw new InvalidOperationException($"Unexpected runtime: {RuntimeInformation.FrameworkDescription}");
 
 Console.WriteLine($"Runtime: {RuntimeInformation.FrameworkDescription}; architecture: {RuntimeInformation.ProcessArchitecture}");

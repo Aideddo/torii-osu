@@ -2,10 +2,10 @@ name: Build Torii Nova
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ main, master, develop, nova ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, nova ]
   workflow_dispatch:
     inputs:
       version:
@@ -13,7 +13,7 @@ on:
         required: false
         default: '1.0.0-dev'
       publish_release:
-        description: 'Publish only after all platforms and hash registration pass'
+        description: 'Publish after all platforms pass'
         type: boolean
         default: false
   release:
@@ -33,12 +33,12 @@ env:
 
 jobs:
   satori:
-    uses: ./.github/workflows/satori-net10.yml
+    uses: ./.github/workflows/satori-net11.yml
     permissions:
       contents: read
       actions: read
     with:
-      prebuilt_run_id: '41951476509'
+      prebuilt_run_id: ''
 
   version:
     name: Compute version
@@ -202,30 +202,30 @@ jobs:
         rm -rf toriirefresh-framework toriirefresh-resources
 
     - name: Setup .NET
-      # Install both .NET 10 (required by global.json + net10.0-android
-      # + CoreCLR runtime) and .NET 8 (kept around so any tooling that
-      # still hard-codes 8.x — e.g. legacy MSBuild tasks during the
-      # transition — keeps working).
+      # 8 y 10 quedan para las tools y dependencias que todavia los usan.
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
           8.0.x
           10.0.x
+          11.0.100-rc.2.26504.105
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
 
     - name: Setup Java for Android (Android only)
       if: matrix.runtime == 'android'
       uses: actions/setup-java@v4
       with:
         distribution: 'microsoft'
-        java-version: '17'
+        java-version: '21'
 
     - name: Setup Android SDK (Android only)
       if: matrix.runtime == 'android'
       uses: android-actions/setup-android@v3
       with:
-        cmdline-tools-version: 8512546
-        # the default also asks for 'tools', which google removed from the sdk repo (2026-10) and
-        # makes sdkmanager exit 1. the runner image already has platforms and build-tools.
+        # 'tools' ya no existe en el repo de Google.
         packages: platform-tools
 
     - name: Accept Android SDK licenses (Android only)
@@ -238,7 +238,7 @@ jobs:
       if: matrix.runtime == 'android'
       shell: bash
       run: |
-        dotnet workload install android --version 10.0.402
+        dotnet workload install android --version 11.0.100-rc.2.26509.2
         dotnet workload list
         echo "Android SDK Root: $ANDROID_SDK_ROOT"
         echo "Java Home: $JAVA_HOME"
@@ -347,6 +347,16 @@ jobs:
             --no-cache \
             --force
         fi
+
+    - name: Install Android SDK dependencies (Android only)
+      if: matrix.runtime == 'android'
+      shell: bash
+      run: |
+        dotnet build osu.Android/osu.Android.csproj --no-restore \
+          -t:InstallAndroidDependencies -f net11.0-android \
+          -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT" \
+          -p:JavaSdkDirectory="$JAVA_HOME" \
+          -p:AcceptAndroidSdkLicenses=true
 
     - name: Setup Android signing (Android only)
       if: matrix.runtime == 'android'
@@ -493,6 +503,7 @@ jobs:
             PATCH_DIR="$(mktemp -d)"
             echo "Patching APK native libs from $BIONIC_LIBS_SRC into $PATCH_DIR"
             ( cd "$PATCH_DIR" && unzip -q "$GITHUB_WORKSPACE/$APK_FILE" )
+            chmod -R u+rwX "$PATCH_DIR"
             mkdir -p "$PATCH_DIR/lib/arm64-v8a"
             for so in "$BIONIC_LIBS_SRC"/*.so; do
               name=$(basename "$so")
@@ -605,14 +616,14 @@ jobs:
             -p:InformationalVersion=${{ needs.version.outputs.version }}
         fi
 
-    - name: Download Satori 10
+    - name: Download Satori 11
       if: matrix.runtime != 'android'
       uses: actions/download-artifact@v4
       with:
-        name: satori-net10-${{ matrix.runtime }}
+        name: satori-net11-${{ matrix.runtime }}
         path: satori-payload
 
-    - name: Attach and verify Satori 10
+    - name: Attach and verify Satori 11
       if: matrix.runtime != 'android'
       shell: bash
       run: |
@@ -769,7 +780,7 @@ jobs:
           # terminal help to get it running.
           mkdir -p Releases
           ZIP_NAME="Torii-macOS-Intel.zip"
-            MIN_OS="12.0"
+          MIN_OS="14.0"
           if [[ "${{ matrix.runtime }}" == "osx-arm64" ]]; then
             ZIP_NAME="Torii-macOS-AppleSilicon.zip"
           fi
@@ -1084,6 +1095,7 @@ jobs:
         dotnet-version: |
           8.0.x
           10.0.x
+          11.0.100-rc.2.26504.105
     - name: Cache NuGet packages
       uses: actions/cache@v4
       with:
@@ -1116,10 +1128,24 @@ jobs:
     permissions:
       contents: write
     steps:
+    - name: Checkout release notes
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
+
+    - name: Check Nova release stream
+      env:
+        VERSION: ${{ needs.version.outputs.version }}
+      run: |
+        if [[ "$VERSION" != *-nova ]]; then
+          echo "::error::This runtime migration is Nova-only."
+          exit 1
+        fi
+
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        pattern: '*'
+        pattern: 'torii-*-${{ needs.version.outputs.version }}'
         merge-multiple: true
         path: artifacts
 
@@ -1277,11 +1303,11 @@ jobs:
 
         ### Installation Notes
         1. Download the installer or portable archive for your platform.
-        2. Desktop builds use their own isolated data directory, separate from any other client.
+        2. Existing Nova profiles, beatmaps, skins and settings are preserved.
         3. First launch may take longer due to initial setup.
 
         ### Upgrading from a previous Torii build
-        This release changes the application identity, so it installs alongside your old copy instead of updating it. Install it, check everything works, then uninstall the old one. Your beatmaps, skins, scores and settings are untouched: they live in a separate folder that both builds share.
+        Update normally from the Nova stream. The application identity and data directory are unchanged. Runtime files are bundled; installing .NET separately is not required.
 
         ### Platform Notes
         - **macOS:** if needed, allow the app in System Settings because it is not notarized.
@@ -1294,7 +1320,7 @@ jobs:
         echo "::endgroup::"
 
     - name: Create or update GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         repository: ShikkesoraSIM/torii
         token: ${{ secrets.TORII_PUBLIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}

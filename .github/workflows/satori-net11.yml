@@ -1,4 +1,4 @@
-name: Satori .NET 10
+name: Satori .NET 11
 
 on:
   workflow_call:
@@ -38,7 +38,7 @@ jobs:
         id: pin
         shell: pwsh
         run: |
-          $pin = Get-Content .github/satori-net10.json -Raw | ConvertFrom-Json
+          $pin = Get-Content .github/satori-net11.json -Raw | ConvertFrom-Json
           "repository=$($pin.repository)" >> $env:GITHUB_OUTPUT
           "commit=$($pin.commit)" >> $env:GITHUB_OUTPUT
           "sdk=$($pin.sdk)" >> $env:GITHUB_OUTPUT
@@ -46,15 +46,15 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            ${{ steps.pin.outputs.sdk }}
             10.0.x
+            ${{ steps.pin.outputs.sdk }}
 
       - name: Cache compiled runtime
         id: cache
         uses: actions/cache@v4
         with:
           path: satori-payload
-          key: satori10-${{ matrix.os }}-${{ matrix.rid }}-${{ steps.pin.outputs.commit }}-${{ hashFiles('.github/satori-net10.json', '.github/workflows/satori-net10.yml', '.github/scripts/satori_runtime.py') }}
+          key: satori11-${{ matrix.os }}-${{ matrix.rid }}-${{ steps.pin.outputs.commit }}-${{ hashFiles('.github/satori-net11.json', '.github/workflows/satori-net11.yml', '.github/scripts/satori_runtime.py') }}
 
       - name: Download previously validated runtime
         id: prebuilt
@@ -62,7 +62,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: satori-net10-${{ matrix.rid }}
+          name: satori-net11-${{ matrix.rid }}
           path: satori-payload
           run-id: ${{ inputs.prebuilt_run_id }}
           github-token: ${{ github.token }}
@@ -147,7 +147,7 @@ jobs:
       - name: Upload runtime
         uses: actions/upload-artifact@v4
         with:
-          name: satori-net10-${{ matrix.rid }}
+          name: satori-net11-${{ matrix.rid }}
           path: satori-payload/
           if-no-files-found: error
           retention-days: 90
