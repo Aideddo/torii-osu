@@ -1,5 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $version = $env:TORII_RELEASE_VERSION
+$androidOnly = $env:TORII_ANDROID_ONLY -eq 'true'
+if ($androidOnly -and $env:TORII_REGISTER_RELEASE -eq 'true') { throw 'Android preflight cannot publish a release' }
 if ($version -notmatch '^\d{4}\.\d+\.\d+-(nova|torii)$') { throw 'Invalid release version' }
 $numeric = ($version -split '-')[0] + '.0'
 $sdk = $env:TORII_LOCAL_DOTNET11
@@ -39,7 +41,8 @@ python -m unittest discover -s .github/scripts -p 'test_release_contract.py' -v
 if ($LASTEXITCODE -ne 0) { throw 'Release contract tests failed' }
 $hashes = @{}
 $title = if ($version.EndsWith('-nova')) { 'Torii Nova' } else { 'Torii' }
-foreach ($rid in $rids) {
+$desktopRids = if ($androidOnly) { @() } else { $rids }
+foreach ($rid in $desktopRids) {
     $output = "publish/$rid"
     & $dotnet publish osu.Desktop/osu.Desktop.csproj -c Release -r $rid --self-contained true `
         -p:PublishSingleFile=false -p:PublishTrimmed=false -p:Version=$version `
@@ -96,6 +99,8 @@ try {
     & $dotnet build osu.Android/osu.Android.csproj -t:Package -c Release -f net11.0-android `
         -p:Version=$version -p:ApplicationVersion=$code -p:ApplicationDisplayVersion=$version `
         -p:AndroidSdkDirectory=$androidSdk -p:JavaSdkDirectory=$env:JAVA_HOME `
+        -p:BuildingInsideVisualStudio=true -p:BuildProjectReferences=true -p:AndroidKeyStore=true `
+        -p:ApplicationTitle=$title `
         -p:AndroidPackageFormat=apk
     if ($LASTEXITCODE -ne 0) { throw 'Android package build failed' }
     New-Item -ItemType Directory -Path publish/android -Force | Out-Null
@@ -118,6 +123,10 @@ try {
     $hashes[$androidHash.Trim()] = 'Android'
 } finally {
     if (Test-Path -LiteralPath $keystore) { Remove-Item -LiteralPath $keystore -Force }
+}
+if ($androidOnly) {
+    'Android signature and upgrade checks passed; no release published.' | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+    exit 0
 }
 python .github/scripts/release_contract.py validate Releases $version
 if ($LASTEXITCODE -ne 0) { throw 'Incomplete release; publication blocked' }

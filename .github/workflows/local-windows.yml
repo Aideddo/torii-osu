@@ -10,6 +10,10 @@ on:
         description: 'Publish only after every platform and hash registration pass'
         type: boolean
         default: false
+      android_only:
+        description: 'Build and verify only Android, without publishing'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -49,6 +53,7 @@ jobs:
           TORII_LOCAL_DOTNET11: ${{ vars.TORII_LOCAL_DOTNET11 }}
           TORII_RELEASE_VERSION: ${{ inputs.version }}
           TORII_REGISTER_RELEASE: ${{ inputs.publish_release }}
+          TORII_ANDROID_ONLY: ${{ inputs.android_only }}
           TORII_SERVER_URL: ${{ vars.TORII_SERVER_URL }}
           TORII_VERSION_WEBHOOK_SECRET: ${{ secrets.TORII_VERSION_WEBHOOK_SECRET }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -57,6 +62,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./.github/scripts/local_release.ps1
       - name: Preserve release verification
+        if: ${{ !inputs.android_only }}
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ inputs.version }}
