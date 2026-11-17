@@ -93,16 +93,14 @@ try {
     [IO.File]::WriteAllBytes($keystore, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
     $code = 2040000000 + [long][Math]::Floor([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() / 60)
     if ($code -ge 2100000000) { throw 'Android version code limit reached' }
-    & $dotnet publish osu.Android/osu.Android.csproj -c Release -f net11.0-android `
+    & $dotnet build osu.Android/osu.Android.csproj -t:Package -c Release -f net11.0-android `
         -p:Version=$version -p:ApplicationVersion=$code -p:ApplicationDisplayVersion=$version `
         -p:AndroidSdkDirectory=$androidSdk -p:JavaSdkDirectory=$env:JAVA_HOME `
-        -p:AndroidKeyStore=true -p:AndroidSigningKeyStore=$keystore `
-        -p:AndroidSigningKeyAlias=$env:ANDROID_KEY_ALIAS `
-        -p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD -p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD `
-        -p:AndroidPackageFormat=apk -o publish/android
-    if ($LASTEXITCODE -ne 0) { throw 'Android publish failed' }
-    $apk = @(Get-ChildItem publish/android -Filter '*-Signed.apk')
-    if ($apk.Count -ne 1) { throw 'Expected exactly one signed APK' }
+        -p:AndroidPackageFormat=apk
+    if ($LASTEXITCODE -ne 0) { throw 'Android package build failed' }
+    New-Item -ItemType Directory -Path publish/android -Force | Out-Null
+    $apk = @(Get-ChildItem osu.Android/bin/Release/net11.0-android -Filter 'sh.shikkesora.torii.apk')
+    if ($apk.Count -ne 1) { throw 'Expected exactly one unsigned APK' }
     python .github/scripts/prepare_android_apk.py $apk[0].FullName ../torii-framework/osu.Framework.Android/arm64-v8a publish/android/torii-unsigned.apk
     if ($LASTEXITCODE -ne 0) { throw 'Android bionic packaging failed' }
     & (Join-Path $tools.FullName 'zipalign.exe') -P 16 -p -f 4 publish/android/torii-unsigned.apk publish/android/torii-aligned.apk
