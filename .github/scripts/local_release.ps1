@@ -8,12 +8,13 @@ $sdk = $env:TORII_LOCAL_DOTNET11
 $dotnet = Join-Path $sdk 'dotnet.exe'
 if (!(Test-Path -LiteralPath $dotnet)) { throw 'Local .NET 11 SDK is missing' }
 $cache = Split-Path -Parent $sdk
+$buildCache = Join-Path (Split-Path -Parent $env:RUNNER_TEMP) 'torii-build-cache'
 $env:DOTNET_ROOT = $sdk
 $env:TEMP = Join-Path $env:RUNNER_TEMP 'release-build'
 $env:TMP = $env:TEMP
-$env:DOTNET_CLI_HOME = Join-Path $cache 'release-dotnet-home'
-$env:NUGET_PACKAGES = Join-Path $cache 'release-nuget-packages'
-$env:NUGET_HTTP_CACHE_PATH = Join-Path $cache 'release-nuget-http'
+$env:DOTNET_CLI_HOME = Join-Path $buildCache 'dotnet-home'
+$env:NUGET_PACKAGES = Join-Path $buildCache 'nuget-packages'
+$env:NUGET_HTTP_CACHE_PATH = Join-Path $buildCache 'nuget-http'
 $env:MSBUILDDISABLENODEREUSE = '1'
 $env:DOTNET_CLI_USE_MSBUILD_SERVER = '0'
 New-Item -ItemType Directory -Path $env:TEMP,$env:DOTNET_CLI_HOME -Force | Out-Null
