@@ -83,7 +83,10 @@ def archive(source, output):
                 info.create_system = 3
                 info.external_attr = (0o100755 if executable(path) else 0o100644) << 16
                 info.compress_type = zipfile.ZIP_DEFLATED
-                target.writestr(info, path.read_bytes())
+                data = path.read_bytes()
+                if path.suffix in ('.sh', '.command'):
+                    data = data.replace(b'\r\n', b'\n')
+                target.writestr(info, data)
 
 
 if __name__ == '__main__':

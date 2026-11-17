@@ -54,12 +54,13 @@ class ReleaseContractTests(unittest.TestCase):
         source = self.root / 'source'
         source.mkdir()
         (source / 'torii').write_bytes(b'executable')
-        (source / 'Install Torii.command').write_text('#!/bin/bash\n')
+        (source / 'Install Torii.command').write_bytes(b'#!/bin/bash\r\necho test\r\n')
         (source / 'data.json').write_text('{}')
         archive(source, self.root / 'test.zip')
         with zipfile.ZipFile(self.root / 'test.zip') as packed:
             self.assertEqual((packed.getinfo('torii').external_attr >> 16) & 0o777, 0o755)
             self.assertEqual((packed.getinfo('Install Torii.command').external_attr >> 16) & 0o777, 0o755)
+            self.assertEqual(packed.read('Install Torii.command'), b'#!/bin/bash\necho test\n')
         archive(source, self.root / 'test.tar.gz')
         with tarfile.open(self.root / 'test.tar.gz') as packed:
             self.assertEqual(packed.getmember('torii').mode, 0o755)

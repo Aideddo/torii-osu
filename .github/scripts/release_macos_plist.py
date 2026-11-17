@@ -12,6 +12,10 @@ data = {
     'CFBundleVersion': version, 'LSMinimumSystemVersion': '14.0',
     'LSApplicationCategoryType': 'public.app-category.games',
     'NSHighResolutionCapable': True, 'NSSupportsAutomaticGraphicsSwitching': True,
+    'CFBundleURLTypes': [{
+        'CFBundleURLName': 'Torii game links',
+        'CFBundleURLSchemes': ['osu', 'osump'],
+    }],
 }
 with (app / 'Contents/Info.plist').open('wb') as stream:
     plistlib.dump(data, stream)
