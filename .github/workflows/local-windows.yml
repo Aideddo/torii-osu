@@ -124,9 +124,10 @@ jobs:
         run: |
           Get-ChildItem -Path "publish/win-x64" -Filter "*.xml" | Remove-Item -Force -ErrorAction SilentlyContinue
           $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
+          $packTitle = if ($ver -like "*-nova") { "Torii Nova" } else { "Torii" }
           New-Item -ItemType Directory -Path "Releases" -Force | Out-Null
           Remove-Item env:DOTNET_ROOT -ErrorAction SilentlyContinue
-          vpk pack -u "torii" -v "$ver" -p "publish/win-x64" -e "torii.exe" --packAuthors "Torii Team" --packTitle "Torii Nova" -i "osu.Desktop/torii.ico" -c "win" -o "Releases"
+          vpk pack -u "torii" -v "$ver" -p "publish/win-x64" -e "torii.exe" --packAuthors "Torii Team" --packTitle "$packTitle" -i "osu.Desktop/torii.ico" -c "win" -o "Releases"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Normalize asset names
         run: |
@@ -147,12 +148,12 @@ jobs:
           token: ${{ secrets.TORII_PUBLIC_RELEASE_TOKEN }}
           tag_name: v${{ inputs.version || '2026.1117.0-nova' }}
           target_commitish: master
-          name: Torii Nova v${{ inputs.version || '2026.1117.0-nova' }}
+          name: ${{ contains(inputs.version, '-nova') && 'Torii Nova ' || 'Torii ' }}v${{ inputs.version || '2026.1117.0-nova' }}
           files: release-files/*
           draft: false
-          prerelease: true
+          prerelease: ${{ contains(inputs.version, '-nova') }}
           body: |
-            ## Torii Nova v${{ inputs.version || '2026.1117.0-nova' }}
+            ## ${{ contains(inputs.version, '-nova') && 'Torii Nova ' || 'Torii ' }}v${{ inputs.version || '2026.1117.0-nova' }}
 
             ### What's new
             - Player profiles / personas selector and online switching.
@@ -167,6 +168,7 @@ jobs:
       - name: Record release summary
         run: |
           $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
-          "### Torii Nova v$ver Published" >> $env:GITHUB_STEP_SUMMARY
+          $releaseTitle = if ($ver -like "*-nova") { "Torii Nova" } else { "Torii" }
+          "### $releaseTitle v$ver Published" >> $env:GITHUB_STEP_SUMMARY
           "Game assembly MD5: $env:GAME_HASH" >> $env:GITHUB_STEP_SUMMARY
           "Release URL: https://github.com/ShikkesoraSIM/torii/releases/tag/v$ver" >> $env:GITHUB_STEP_SUMMARY
