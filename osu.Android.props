@@ -1,6 +1,7 @@
 <Project>
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\toriirefresh-framework\osu.Framework.Android\osu.Framework.Android.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\torii-framework\osu.Framework.Android\osu.Framework.Android.csproj" Condition="Exists('$(MSBuildThisFileDirectory)..\torii-framework\osu.Framework.Android\osu.Framework.Android.csproj')" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\toriirefresh-framework\osu.Framework.Android\osu.Framework.Android.csproj" Condition="!Exists('$(MSBuildThisFileDirectory)..\torii-framework\osu.Framework.Android\osu.Framework.Android.csproj')" />
   </ItemGroup>
   <PropertyGroup>
     <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>

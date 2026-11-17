@@ -23,7 +23,7 @@ foreach ($name in 'ANDROID_KEYSTORE_BASE64','ANDROID_KEYSTORE_PASSWORD','ANDROID
 $androidSdk = Join-Path $cache 'android-sdk-local'
 $env:ANDROID_SDK_ROOT = $androidSdk
 $java = Get-ChildItem 'C:/Program Files/Eclipse Adoptium' -Directory -Filter 'jdk-21*' | Sort-Object Name -Descending | Select-Object -First 1
-if (!$java -or !(Test-Path "$androidSdk/platforms/android-37.0/android.jar")) { throw 'Android SDK 37.0 or JDK 21 missing' }
+if (!$java -or !(Test-Path "$androidSdk/platforms/android-37.0/android.jar") -or !(Test-Path "$androidSdk/platforms/android-36/android.jar")) { throw 'Android SDK 36/37.0 or JDK 21 missing' }
 $env:JAVA_HOME = $java.FullName
 $tools = Get-ChildItem "$androidSdk/build-tools" -Directory | Sort-Object Name -Descending | Select-Object -First 1
 $apksigner = Join-Path $tools.FullName 'apksigner.bat'
