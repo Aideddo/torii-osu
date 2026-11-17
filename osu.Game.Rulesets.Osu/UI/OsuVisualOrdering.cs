@@ -32,7 +32,8 @@ namespace osu.Game.Rulesets.Osu.UI
         private IBeatmap? beatmap;
         private bool orderDirty;
 
-        public bool IsActive { get; private set; }
+        // desactivado hasta corregir los ghosts con notas reutilizadas.
+        public bool IsActive => false;
         public bool IsStableRendering => IsActive;
 
         public OsuVisualOrdering()
@@ -45,7 +46,6 @@ namespace osu.Game.Rulesets.Osu.UI
         [BackgroundDependencyLoader]
         private void load(OsuRulesetConfigManager? config, IBeatmap? beatmap)
         {
-            IsActive = config?.Get<bool>(OsuRulesetSetting.KeepOverlapCirclesVisible) == true;
             config?.BindWith(OsuRulesetSetting.ShowHiddenSliders, showHiddenSliders);
             this.beatmap = beatmap;
             RefreshBeatmap();

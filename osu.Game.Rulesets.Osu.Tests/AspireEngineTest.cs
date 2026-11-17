@@ -34,10 +34,20 @@ namespace osu.Game.Rulesets.Osu.Tests
     public class AspireEngineTest
     {
         [Test]
-        public void Test2BEnabledByDefaultWithoutGlobalThemeDependency()
+        public void Test2BRenderingDisabledByDefault()
         {
             using var config = new OsuRulesetConfigManager(null, new OsuRuleset().RulesetInfo);
-            Assert.That(config.Get<bool>(OsuRulesetSetting.KeepOverlapCirclesVisible), Is.True);
+            Assert.That(config.Get<bool>(OsuRulesetSetting.KeepOverlapCirclesVisible), Is.False);
+        }
+
+        [Test]
+        public void TestSaved2BSettingCannotReenableRendering()
+        {
+            using var config = new OsuRulesetConfigManager(null, new OsuRuleset().RulesetInfo);
+            config.SetValue(OsuRulesetSetting.KeepOverlapCirclesVisible, true);
+            using var ordering = new OsuVisualOrdering();
+            Assert.That(ordering.IsActive, Is.False);
+            Assert.That(ordering.IsStableRendering, Is.False);
         }
 
         [TestCase(0)]
