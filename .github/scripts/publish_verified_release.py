@@ -14,6 +14,7 @@ base = 'https://api.github.com/repos/ShikkesoraSIM/torii'
 headers = {
     'Authorization': 'Bearer ' + os.environ['TORII_RELEASE_TOKEN'],
     'Accept': 'application/vnd.github+json',
+    'Content-Type': 'application/json',
     'User-Agent': 'Torii-release-verification',
 }
 
