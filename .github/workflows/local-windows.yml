@@ -62,6 +62,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./.github/scripts/local_release.ps1
       - name: Preserve release verification
+        continue-on-error: true
         if: ${{ !inputs.android_only }}
         uses: actions/upload-artifact@v4
         with:
