@@ -118,7 +118,7 @@ try {
     if ($apk.Count -ne 1) { throw 'Expected exactly one unsigned APK' }
     python .github/scripts/prepare_android_apk.py $apk[0].FullName ../torii-framework/osu.Framework.Android/arm64-v8a publish/android/torii-unsigned.apk
     if ($LASTEXITCODE -ne 0) { throw 'Android bionic packaging failed' }
-    & (Join-Path $tools.FullName 'zipalign.exe') -P 16 -p -f 4 publish/android/torii-unsigned.apk publish/android/torii-aligned.apk
+    & (Join-Path $tools.FullName 'zipalign.exe') -P 16 -f 4 publish/android/torii-unsigned.apk publish/android/torii-aligned.apk
     if ($LASTEXITCODE -ne 0) { throw 'APK alignment failed' }
     & $apksigner sign --ks $keystore --ks-pass env:ANDROID_KEYSTORE_PASSWORD --ks-key-alias $env:ANDROID_KEY_ALIAS --key-pass env:ANDROID_KEY_PASSWORD publish/android/torii-aligned.apk
     if ($LASTEXITCODE -ne 0) { throw 'APK signing failed' }
