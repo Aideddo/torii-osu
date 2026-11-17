@@ -4,10 +4,32 @@ $androidOnly = $env:TORII_ANDROID_ONLY -eq 'true'
 if ($androidOnly -and $env:TORII_REGISTER_RELEASE -eq 'true') { throw 'Android preflight cannot publish a release' }
 if ($version -notmatch '^\d{4}\.\d+\.\d+-(nova|torii)$') { throw 'Invalid release version' }
 $numeric = ($version -split '-')[0] + '.0'
-$sdk = $env:TORII_LOCAL_DOTNET11
-$dotnet = Join-Path $sdk 'dotnet.exe'
-if (!(Test-Path -LiteralPath $dotnet)) { throw 'Local .NET 11 SDK is missing' }
-$cache = Split-Path -Parent $sdk
+
+$isNet10 = $version.EndsWith('-torii') -or (Test-Path '.github/satori-net10.json')
+if ($isNet10) {
+    $runtimeMajor = 10
+    $satoriPrefix = 'satori10'
+    $targetFramework = 'net10.0'
+    $androidTfm = 'net10.0-android'
+    $dotnet = 'C:\Program Files\dotnet\dotnet.exe'
+    if (!(Test-Path -LiteralPath $dotnet)) {
+        $cmd = Get-Command dotnet -ErrorAction SilentlyContinue
+        if ($cmd) { $dotnet = $cmd.Source }
+        else { throw 'Local .NET 10 SDK is missing' }
+    }
+    $sdk = Split-Path -Parent $dotnet
+    $cache = if ($env:TORII_LOCAL_DOTNET11) { Split-Path -Parent $env:TORII_LOCAL_DOTNET11 } else { 'C:\Users\megablackito\Favorites\toriiserverlocal\.tmp' }
+} else {
+    $runtimeMajor = 11
+    $satoriPrefix = 'satori11'
+    $targetFramework = 'net11.0'
+    $androidTfm = 'net11.0-android'
+    $sdk = $env:TORII_LOCAL_DOTNET11
+    $dotnet = Join-Path $sdk 'dotnet.exe'
+    if (!(Test-Path -LiteralPath $dotnet)) { throw 'Local .NET 11 SDK is missing' }
+    $cache = Split-Path -Parent $sdk
+}
+
 $buildCache = Join-Path (Split-Path -Parent $env:RUNNER_TEMP) 'torii-build-cache'
 $env:DOTNET_ROOT = $sdk
 $env:TEMP = Join-Path $env:RUNNER_TEMP 'release-build'
@@ -20,7 +42,7 @@ $env:DOTNET_CLI_USE_MSBUILD_SERVER = '0'
 New-Item -ItemType Directory -Path $env:TEMP,$env:DOTNET_CLI_HOME -Force | Out-Null
 $rids = @('win-x64','win-arm64','linux-x64','linux-arm64','osx-x64','osx-arm64')
 foreach ($rid in $rids) {
-    python .github/scripts/satori_runtime.py verify $rid (Join-Path $cache "satori11-$rid-ci")
+    python .github/scripts/satori_runtime.py verify $rid (Join-Path $cache "$satoriPrefix-$rid-ci")
     if ($LASTEXITCODE -ne 0) { throw "Invalid Satori payload: $rid" }
 }
 foreach ($name in 'ANDROID_KEYSTORE_BASE64','ANDROID_KEYSTORE_PASSWORD','ANDROID_KEY_ALIAS','ANDROID_KEY_PASSWORD') {
@@ -55,7 +77,7 @@ foreach ($rid in $desktopRids) {
         -p:PublishSingleFile=false -p:PublishTrimmed=false -p:Version=$version `
         -p:FileVersion=$numeric -p:AssemblyVersion=$numeric -p:InformationalVersion="v$version" -o $output
     if ($LASTEXITCODE -ne 0) { throw "Publish failed: $rid" }
-    python .github/scripts/satori_runtime.py overlay $rid (Join-Path $cache "satori11-$rid-ci") --output $output
+    python .github/scripts/satori_runtime.py overlay $rid (Join-Path $cache "$satoriPrefix-$rid-ci") --output $output
     if ($LASTEXITCODE -ne 0) { throw "Runtime overlay failed: $rid" }
     Get-ChildItem -LiteralPath $output -Filter '*.xml' | Remove-Item -Force
     $hash = (Get-FileHash "$output/osu.Game.dll" -Algorithm MD5).Hash.ToLowerInvariant()
@@ -107,7 +129,7 @@ try {
     [IO.File]::WriteAllBytes($keystore, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
     $code = 2040000000 + [long][Math]::Floor([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() / 60)
     if ($code -ge 2100000000) { throw 'Android version code limit reached' }
-    & $dotnet build osu.Android/osu.Android.csproj -t:Package -c Release -f net11.0-android `
+    & $dotnet build osu.Android/osu.Android.csproj -t:Package -c Release -f $androidTfm `
         -p:Version=$version -p:ApplicationVersion=$code -p:ApplicationDisplayVersion=$version `
         -p:AndroidSdkDirectory=$androidSdk -p:JavaSdkDirectory=$env:JAVA_HOME `
         -p:ToriiUnsignedAndroid=true -p:AndroidKeyStore=true `
@@ -115,7 +137,7 @@ try {
         -p:AndroidPackageFormat=apk
     if ($LASTEXITCODE -ne 0) { throw 'Android package build failed' }
     New-Item -ItemType Directory -Path publish/android -Force | Out-Null
-    $apk = @(Get-ChildItem osu.Android/bin/Release/net11.0-android -Filter 'sh.shikkesora.torii.apk')
+    $apk = @(Get-ChildItem osu.Android/bin/Release/$androidTfm -Filter 'sh.shikkesora.torii.apk')
     if ($apk.Count -ne 1) { throw 'Expected exactly one unsigned APK' }
     python .github/scripts/prepare_android_apk.py $apk[0].FullName ../torii-framework/osu.Framework.Android/arm64-v8a publish/android/torii-unsigned.apk
     if ($LASTEXITCODE -ne 0) { throw 'Android bionic packaging failed' }
@@ -145,7 +167,17 @@ $hashes | ConvertTo-Json | Out-File Releases/client-hashes.json -Encoding utf8
 $outputRoot = Join-Path $workspace 'release-files'
 New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
 Move-Item Releases/* $outputRoot
-$notes = @("# $title v$version",'', 'Hotfix: disabled the new Aspire/2B rendering that caused ghost circles. Classic UI and player profiles are still included.', '', 'Player profiles, Torii Classic UI and optional NoFail.', '', 'All six desktop architectures and Android are included. Desktop builds bundle .NET 11 and Satori 11. Android preserves the application ID and original signing identity.', '', 'macOS requires 14 or newer. x64 requires x86-64-v2. These runtime requirements are unchanged from the .NET 11 migration.', '', "Private source commit: $(git rev-parse HEAD)")
+$runtimeNote = if ($isNet10) {
+    'All six desktop architectures and Android are included. Desktop builds bundle .NET 10 and Satori 10. Android preserves the application ID and original signing identity.'
+} else {
+    'All six desktop architectures and Android are included. Desktop builds bundle .NET 11 and Satori 11. Android preserves the application ID and original signing identity.'
+}
+$osNote = if ($isNet10) {
+    'macOS requires 12 or newer. x64 requires x86-64-v2. These runtime requirements are unchanged from Torii .NET 10.'
+} else {
+    'macOS requires 14 or newer. x64 requires x86-64-v2. These runtime requirements are unchanged from the .NET 11 migration.'
+}
+$notes = @("# $title v$version",'', 'Hotfix: disabled the new Aspire/2B rendering that caused ghost circles. Classic UI and player profiles are still included.', '', 'Player profiles, Torii Classic UI and optional NoFail.', '', $runtimeNote, '', $osNote, '', "Private source commit: $(git rev-parse HEAD)")
 $notes | Out-File (Join-Path $outputRoot RELEASE-NOTES.md) -Encoding utf8
 $checksums = Get-ChildItem -LiteralPath $outputRoot -File | Sort-Object Name | ForEach-Object {
     "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name

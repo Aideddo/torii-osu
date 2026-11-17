@@ -17,7 +17,7 @@ class PublishVerifiedReleaseTests(unittest.TestCase):
             root = Path(temporary)
             payload = b'package'
             (root / 'test.zip').write_bytes(payload)
-            release = {'id': 1, 'draft': True, 'assets': [{
+            release = {'id': 1, 'draft': True, 'tag_name': 'v2026.1117.1-nova', 'assets': [{
                 'name': 'test.zip', 'size': len(payload),
                 'digest': 'sha256:' + hashlib.sha256(payload).hexdigest(),
             }]}
@@ -27,7 +27,7 @@ class PublishVerifiedReleaseTests(unittest.TestCase):
 
             def respond(request, timeout):
                 calls.append(request)
-                data = release if request.method == 'GET' else {'html_url': 'release-url'}
+                data = [release] if request.method == 'GET' else {'html_url': 'release-url'}
                 return io.BytesIO(json.dumps(data).encode())
 
             with patch.object(sys, 'argv', ['publish', str(root), '2026.1117.1-nova']), \

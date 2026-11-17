@@ -2,7 +2,7 @@
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <Import Project="..\osu.Android.props" />
   <PropertyGroup>
-    <TargetFramework>net11.0-android</TargetFramework>
+    <TargetFramework>net10.0-android</TargetFramework>
     <OutputType>Exe</OutputType>
     <RootNamespace>osu.Android</RootNamespace>
     <AssemblyName>osu.Android</AssemblyName>
@@ -16,7 +16,7 @@
 
     <!-- Android application properties (match proven Torii Nova branding). -->
     <ApplicationId>sh.shikkesora.torii</ApplicationId>
-    <ApplicationTitle>Torii Nova</ApplicationTitle>
+    <ApplicationTitle>Torii</ApplicationTitle>
     <AndroidManifest>AndroidManifest.xml</AndroidManifest>
   </PropertyGroup>
   <ItemGroup>

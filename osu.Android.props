@@ -4,7 +4,7 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\toriirefresh-framework\osu.Framework.Android\osu.Framework.Android.csproj" Condition="!Exists('$(MSBuildThisFileDirectory)..\torii-framework\osu.Framework.Android\osu.Framework.Android.csproj')" />
   </ItemGroup>
   <PropertyGroup>
-    <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
     <!-- arm64-only: slimmer APK, avoids multi-arch install failures; arm64 covers ~99% of phones. -->
     <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
@@ -14,6 +14,7 @@
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <UseMonoRuntime>false</UseMonoRuntime>
     <PublishReadyToRun>false</PublishReadyToRun>
+    <NoWarn>$(NoWarn);XA1040</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Fody does not handle Android build well, and warns when unchanged.
