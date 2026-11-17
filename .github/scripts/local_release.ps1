@@ -136,7 +136,10 @@ $checksums | Out-File (Join-Path $outputRoot SHA256SUMS.txt) -Encoding ascii
 if ($env:TORII_REGISTER_RELEASE -eq 'true') {
     if (!$env:TORII_VERSION_WEBHOOK_SECRET -or !$env:TORII_SERVER_URL) { throw 'Missing server hash registration configuration' }
     $payload = @{version=$version; client_name=$title; hashes=$hashes} | ConvertTo-Json -Depth 5
-    Invoke-RestMethod -Uri "$env:TORII_SERVER_URL/api/private/client-versions/register" -Method POST `
-        -Headers @{Authorization="Bearer $env:TORII_VERSION_WEBHOOK_SECRET"} -ContentType application/json -Body $payload | Out-Null
+    $registration = Invoke-RestMethod -Uri "$env:TORII_SERVER_URL/api/private/client-versions/register" -Method POST `
+        -Headers @{Authorization="Bearer $env:TORII_VERSION_WEBHOOK_SECRET"} -ContentType application/json -Body $payload
+    if ($registration.registered -ne $hashes.Count -or $registration.version -ne $version) {
+        throw 'Server did not register every release hash; publication blocked'
+    }
 }
 "Validated complete $version from $(git rev-parse HEAD)" | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
