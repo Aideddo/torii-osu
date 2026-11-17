@@ -40,6 +40,9 @@ foreach ($relative in 'client/Releases','client/publish','release-files') {
     if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
 }
 New-Item -ItemType Directory -Path Releases -Force | Out-Null
+New-Item -ItemType Directory -Path publish -Force | Out-Null
+& compact.exe /C /Q publish | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Could not enable compression for build staging' }
 python -m unittest discover -s .github/scripts -p 'test_release_contract.py' -v
 if ($LASTEXITCODE -ne 0) { throw 'Release contract tests failed' }
 $hashes = @{}
