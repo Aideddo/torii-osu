@@ -11,8 +11,11 @@ $cache = Split-Path -Parent $sdk
 $env:DOTNET_ROOT = $sdk
 $env:TEMP = Join-Path $env:RUNNER_TEMP 'release-build'
 $env:TMP = $env:TEMP
-$env:DOTNET_CLI_HOME = Join-Path $env:TEMP 'dotnet-home'
-$env:NUGET_HTTP_CACHE_PATH = Join-Path $env:TEMP 'nuget-http'
+$env:DOTNET_CLI_HOME = Join-Path $cache 'release-dotnet-home'
+$env:NUGET_PACKAGES = Join-Path $cache 'release-nuget-packages'
+$env:NUGET_HTTP_CACHE_PATH = Join-Path $cache 'release-nuget-http'
+$env:MSBUILDDISABLENODEREUSE = '1'
+$env:DOTNET_CLI_USE_MSBUILD_SERVER = '0'
 New-Item -ItemType Directory -Path $env:TEMP,$env:DOTNET_CLI_HOME -Force | Out-Null
 $rids = @('win-x64','win-arm64','linux-x64','linux-arm64','osx-x64','osx-arm64')
 foreach ($rid in $rids) {
@@ -53,7 +56,11 @@ foreach ($rid in $desktopRids) {
     Get-ChildItem -LiteralPath $output -Filter '*.xml' | Remove-Item -Force
     $hash = (Get-FileHash "$output/osu.Game.dll" -Algorithm MD5).Hash.ToLowerInvariant()
     $label = if ($rid.StartsWith('win')) { 'Windows' } elseif ($rid.StartsWith('osx')) { 'macOS' } else { 'Linux' }
-    $hashes[$hash] = $label
+    if ($hashes.ContainsKey($hash) -and $hashes[$hash] -ne $label) {
+        $hashes[$hash] = ''
+    } else {
+        $hashes[$hash] = $label
+    }
     if ($rid.StartsWith('win')) {
         $channel = if ($rid -eq 'win-x64') { 'win' } else { 'win-arm64' }
         Remove-Item Env:DOTNET_ROOT -ErrorAction SilentlyContinue
