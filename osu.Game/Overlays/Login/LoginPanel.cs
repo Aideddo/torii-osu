@@ -172,6 +172,7 @@ namespace osu.Game.Overlays.Login
                                 Action = RequestHide
                             },
                             dropdown = new UserDropdown { RelativeSizeAxes = Axes.X },
+                            new SubProfilesSection(),
                         },
                     };
 

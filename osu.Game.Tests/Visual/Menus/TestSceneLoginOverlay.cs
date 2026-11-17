@@ -57,6 +57,13 @@ namespace osu.Game.Tests.Visual.Menus
         }
 
         [Test]
+        public void TestPlayerProfilesVisibleWhenOnline()
+        {
+            AddStep("set online", () => dummyAPI.SetState(APIState.Online));
+            AddUntilStep("profiles section loaded", () => loginOverlay.ChildrenOfType<SubProfilesSection>().Count(), () => Is.EqualTo(1));
+        }
+
+        [Test]
         public void TestLoginSuccess_EmailVerification()
         {
             AddStep("logout", () => API.Logout());
