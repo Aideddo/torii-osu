@@ -1,7 +1,16 @@
-name: Local Windows preflight
+name: Local Windows release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (without v, e.g. 2026.1117.0-nova)'
+        required: false
+        default: '2026.1117.0-nova'
+      publish_release:
+        description: 'Publish release assets to GitHub'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -58,21 +67,105 @@ jobs:
           "DOTNET_ROOT=$directory" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           & $dotnet --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Build candidate source without starting the game
+      - name: Publish standalone desktop client
         run: |
-          dotnet build osu.Desktop/osu.Desktop.csproj -c Release -v minimal
+          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
+          Write-Host "Publishing win-x64 for version $ver..."
+          dotnet publish osu.Desktop/osu.Desktop.csproj `
+            -c Release `
+            --runtime win-x64 `
+            --self-contained `
+            -p:PublishSingleFile=false `
+            -p:PublishTrimmed=false `
+            -p:Version=$ver `
+            -p:FileVersion=2026.1117.0.0 `
+            -p:AssemblyVersion=2026.1117.0.0 `
+            -p:InformationalVersion="v$ver" `
+            -o publish/win-x64
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Record source and framework provenance
+      - name: Attach and verify Satori 11 win-x64
         run: |
-          $source = (git rev-parse HEAD).Trim()
-          $framework = (git -C ../torii-framework rev-parse HEAD).Trim()
-          $resources = (git -C ../toriirefresh-resources rev-parse HEAD).Trim()
-          $dll = Get-ChildItem osu.Desktop/bin/Release -Recurse -Filter osu.Game.dll |
-            Where-Object { $_.FullName -notmatch '[\\/]ref[\\/]' } | Select-Object -First 1
-          if (!$dll) { throw 'Missing compiled game assembly' }
-          $hash = (Get-FileHash -LiteralPath $dll.FullName -Algorithm MD5).Hash.ToLowerInvariant()
-          "Source: $source" >> $env:GITHUB_STEP_SUMMARY
-          "Framework: $framework" >> $env:GITHUB_STEP_SUMMARY
-          "Resources: $resources" >> $env:GITHUB_STEP_SUMMARY
-          "Game assembly MD5: $hash" >> $env:GITHUB_STEP_SUMMARY
-          "Preflight only. Not a release package; Satori overlay and server registration are release gates." >> $env:GITHUB_STEP_SUMMARY
+          $satoriCi = "C:\Users\megablackito\Favorites\toriiserverlocal\.tmp\satori11-win-x64-ci"
+          python .github/scripts/satori_runtime.py overlay win-x64 $satoriCi --output publish/win-x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Compute osu.Game.dll MD5 hash
+        run: |
+          $assembly = "publish/win-x64/osu.Game.dll"
+          if (!(Test-Path -LiteralPath $assembly)) { throw "Missing $assembly" }
+          $hash = (Get-FileHash -LiteralPath $assembly -Algorithm MD5).Hash.ToLowerInvariant()
+          "GAME_HASH=$hash" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Game assembly MD5: $hash"
+      - name: Register client hash with Torii server
+        env:
+          TORII_SERVER_URL: ${{ vars.TORII_SERVER_URL }}
+          TORII_VERSION_WEBHOOK_SECRET: ${{ secrets.TORII_VERSION_WEBHOOK_SECRET }}
+        run: |
+          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
+          $clientName = if ($ver -like "*-nova") { "Torii Nova" } else { "Torii" }
+          if (!$env:TORII_SERVER_URL) { throw "TORII_SERVER_URL variable not configured" }
+          if (!$env:TORII_VERSION_WEBHOOK_SECRET) { throw "TORII_VERSION_WEBHOOK_SECRET secret not configured" }
+          
+          $payload = @{
+            version = $ver
+            client_name = $clientName
+            hashes = @{
+              $env:GAME_HASH = "Windows"
+            }
+          }
+          $json = $payload | ConvertTo-Json -Depth 5
+          Write-Host "Registering hash $env:GAME_HASH for $clientName $ver with $env:TORII_SERVER_URL..."
+          $headers = @{
+            Authorization = "Bearer $env:TORII_VERSION_WEBHOOK_SECRET"
+            "Content-Type" = "application/json"
+          }
+          $res = Invoke-RestMethod -Uri "$env:TORII_SERVER_URL/api/private/client-versions/register" -Method POST -Headers $headers -Body $json
+          Write-Host "Server registration response:" ($res | ConvertTo-Json -Compress)
+      - name: Create Velopack package
+        run: |
+          Get-ChildItem -Path "publish/win-x64" -Filter "*.xml" | Remove-Item -Force -ErrorAction SilentlyContinue
+          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
+          New-Item -ItemType Directory -Path "Releases" -Force | Out-Null
+          vpk pack -u "torii" -v "$ver" -p "publish/win-x64" -e "torii.exe" --packAuthors "Torii Team" --packTitle "Torii Nova" -i "osu.Desktop/torii.ico" -c "win" -o "Releases"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Normalize asset names
+        run: |
+          $setup = Get-ChildItem -Path "Releases" -Filter "*-Setup.exe" | Select-Object -First 1
+          if ($setup) { Move-Item -LiteralPath $setup.FullName -Destination "Releases/install-win-x64.exe" -Force }
+          $portable = Get-ChildItem -Path "Releases" -Filter "*-Portable.zip" | Select-Object -First 1
+          if ($portable) { Move-Item -LiteralPath $portable.FullName -Destination "Releases/portable-win-x64.zip" -Force }
+          
+          $rf = Join-Path $env:GITHUB_WORKSPACE "release-files"
+          New-Item -ItemType Directory -Path $rf -Force | Out-Null
+          Copy-Item -Path "Releases/*" -Destination $rf -Recurse -Force
+          Get-ChildItem -Path $rf | ForEach-Object { Write-Host "$($_.Name) - $($_.Length) bytes" }
+      - name: Create or update GitHub Release
+        if: ${{ inputs.publish_release != false }}
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ShikkesoraSIM/torii
+          token: ${{ secrets.TORII_PUBLIC_RELEASE_TOKEN }}
+          tag_name: v${{ inputs.version || '2026.1117.0-nova' }}
+          target_commitish: master
+          name: Torii Nova v${{ inputs.version || '2026.1117.0-nova' }}
+          files: release-files/*
+          draft: false
+          prerelease: true
+          body: |
+            ## Torii Nova v${{ inputs.version || '2026.1117.0-nova' }}
+
+            ### What's new
+            - Player profiles / personas selector and online switching.
+            - Torii Classic / Stable UI layout (legacy song select, classic theme, Inter font).
+            - Optional NoFail (NF) mod available across player profiles.
+            - High-performance .NET 11 + Satori 11 runtime.
+
+            ---
+            ### Downloads
+            - **Windows (x64) Installer:** `install-win-x64.exe`
+            - **Windows Portable (x64):** `portable-win-x64.zip`
+      - name: Record release summary
+        run: |
+          $ver = "${{ inputs.version || '2026.1117.0-nova' }}"
+          "### Torii Nova v$ver Published" >> $env:GITHUB_STEP_SUMMARY
+          "Game assembly MD5: $env:GAME_HASH" >> $env:GITHUB_STEP_SUMMARY
+          "Release URL: https://github.com/ShikkesoraSIM/torii/releases/tag/v$ver" >> $env:GITHUB_STEP_SUMMARY
