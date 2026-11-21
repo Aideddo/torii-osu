@@ -175,6 +175,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double flashlightValue = computeFlashlightValue(score, osuAttributes);
             double cognitionValue = OsuDifficultyCalculator.SumCognitionDifficulty(readingValue, flashlightValue);
 
+            // nerf de cs bajo (y od bajo sin rx), portado desde el server
+            if (!score.Mods.Any(m => m is OsuModEasy))
+            {
+                bool isRelax = score.Mods.Any(m => m is OsuModRelax);
+                double statFloor = isRelax ? 0.45 : 0.524;
+                double csThreshold = isRelax ? 4.0 : 2.5;
+                double csFactor = statFloor + (1.0 - statFloor) * Math.Clamp(difficulty.CircleSize / csThreshold, 0.0, 1.0);
+                double odFactor = isRelax
+                    ? 1.0
+                    : statFloor + (1.0 - statFloor) * Math.Clamp(difficulty.OverallDifficulty / 4.0, 0.0, 1.0);
+
+                multiplier *= csFactor * odFactor;
+            }
+
             double totalValue = DifficultyCalculationUtils.Norm(PERFORMANCE_NORM_EXPONENT, aimValue, speedValue, accuracyValue, cognitionValue) * multiplier;
 
             return new OsuPerformanceAttributes
