@@ -33,6 +33,8 @@ namespace osu.Game.Configuration
 
         public bool IsRequired(Mod mod) => Required.Any(m => m.Acronym == mod.Acronym);
 
+        public static bool AllowsRateSettings(Mod mod) => mod is ModDoubleTime or ModHalfTime;
+
         public Mod[] CreateRequired(Ruleset ruleset) => Required.Select(m => m.ToMod(ruleset)).ToArray();
 
         public bool AllowsOptional(Mod mod, Ruleset ruleset) =>
@@ -49,6 +51,20 @@ namespace osu.Game.Configuration
         public IReadOnlyList<Mod> Enforce(IReadOnlyList<Mod> selection, Ruleset ruleset)
         {
             var result = CreateRequired(ruleset).ToList();
+            foreach (var required in result.Where(AllowsRateSettings))
+            {
+                var selected = selection.FirstOrDefault(m => m.Acronym == required.Acronym);
+                if (required is ModDoubleTime dt && selected is ModDoubleTime selectedDt)
+                {
+                    dt.SpeedChange.Value = selectedDt.SpeedChange.Value;
+                    dt.AdjustPitch.Value = selectedDt.AdjustPitch.Value;
+                }
+                else if (required is ModHalfTime ht && selected is ModHalfTime selectedHt)
+                {
+                    ht.SpeedChange.Value = selectedHt.SpeedChange.Value;
+                    ht.AdjustPitch.Value = selectedHt.AdjustPitch.Value;
+                }
+            }
             foreach (var mod in selection.Where(m => AllowsOptional(m, ruleset)))
             {
                 if (Compatible(result.Append(mod)))

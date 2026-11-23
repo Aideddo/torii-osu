@@ -65,6 +65,7 @@ namespace osu.Game.Graphics.Cursor
                 return;
 
             gameplayCursor.Hide();
+            gameplayCursor.Alpha = 0;
             AddInternal(new RulesetSkinProvidingContainer(ruleset, new Beatmap(), null)
             {
                 Child = gameplayCursor,
@@ -89,6 +90,8 @@ namespace osu.Game.Graphics.Cursor
             if (!hasValidInput || !ShowCursor)
             {
                 displayedCursor?.Hide();
+                if (gameplayCursor != null)
+                    gameplayCursor.Alpha = 0;
                 displayedCursor = null;
                 currentOverrideProvider = null;
                 return;
@@ -110,6 +113,9 @@ namespace osu.Game.Graphics.Cursor
 
             displayedCursor?.Hide();
             displayedCursor = newOverrideProvider.Cursor;
+            // PopOut del cursor de gameplay deja un 5%; en menus no debe quedar debajo del otro.
+            if (gameplayCursor != null)
+                gameplayCursor.Alpha = displayedCursor == gameplayCursor ? 1 : 0;
             displayedCursor?.Show();
 
             currentOverrideProvider = newOverrideProvider;

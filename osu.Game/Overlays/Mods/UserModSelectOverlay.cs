@@ -29,7 +29,7 @@ namespace osu.Game.Overlays.Mods
         private ProfileModPolicy? currentPolicy => SelectionPolicy ?? (UseProfilePolicy ? profilePolicy.Current.Value : null);
 
         private ProfileModPolicy? applicablePolicy => Ruleset.Value?.OnlineID == currentPolicy?.RulesetId ? currentPolicy : null;
-        protected override bool IsModReadOnly(Mod mod) => applicablePolicy?.IsRequired(mod) == true;
+        protected override bool IsModReadOnly(Mod mod) => applicablePolicy?.IsRequired(mod) == true && !ProfileModPolicy.AllowsRateSettings(mod);
 
         public UserModSelectOverlay(OverlayColourScheme colourScheme = OverlayColourScheme.Green)
             : base(colourScheme)
@@ -141,10 +141,10 @@ namespace osu.Game.Overlays.Mods
             switch (e.Action)
             {
                 case GlobalAction.IncreaseModSpeed:
-                    return modSpeedHotkeyHandler.ChangeSpeed(0.05, AllAvailableMods.Where(state => state.ValidForSelection.Value && !state.SelectionLocked.Value).Select(state => state.Mod));
+                    return modSpeedHotkeyHandler.ChangeSpeed(0.05, AllAvailableMods.Where(state => state.ValidForSelection.Value && (!state.SelectionLocked.Value || applicablePolicy?.IsRequired(state.Mod) == true && ProfileModPolicy.AllowsRateSettings(state.Mod))).Select(state => state.Mod));
 
                 case GlobalAction.DecreaseModSpeed:
-                    return modSpeedHotkeyHandler.ChangeSpeed(-0.05, AllAvailableMods.Where(state => state.ValidForSelection.Value && !state.SelectionLocked.Value).Select(state => state.Mod));
+                    return modSpeedHotkeyHandler.ChangeSpeed(-0.05, AllAvailableMods.Where(state => state.ValidForSelection.Value && (!state.SelectionLocked.Value || applicablePolicy?.IsRequired(state.Mod) == true && ProfileModPolicy.AllowsRateSettings(state.Mod))).Select(state => state.Mod));
             }
 
             return base.OnPressed(e);

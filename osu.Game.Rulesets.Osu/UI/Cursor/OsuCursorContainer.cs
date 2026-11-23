@@ -186,7 +186,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         protected override void PopOut()
         {
-            fadeContainer.FadeTo(0.05f, 450, Easing.OutQuint);
+            fadeContainer.FadeTo(0, 450, Easing.OutQuint);
             ActiveCursor.ScaleTo(0.8f, 450, Easing.OutQuint);
         }
 
