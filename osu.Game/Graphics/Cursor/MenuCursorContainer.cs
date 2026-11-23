@@ -213,6 +213,7 @@ namespace osu.Game.Graphics.Cursor
             {
                 RelativeSizeAxes = Axes.Both,
                 Depth = 1,
+                Alpha = visible ? 1 : 0,
             });
         }
 

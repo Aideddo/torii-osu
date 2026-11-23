@@ -39,17 +39,17 @@ namespace osu.Game.Configuration
             public Snapshot(OsuConfigManager config)
             {
                 bool stable = config.Get<UIThemeOption>(OsuSetting.UITheme) == UIThemeOption.StableUI;
-                SongSelect = config.Get<bool>(stable ? OsuSetting.ToriiStableUISongSelect : OsuSetting.ToriiLegacyFooterUseSkin);
-                Results = config.Get<bool>(stable ? OsuSetting.ToriiStableUIResults : OsuSetting.ToriiStableResults);
-                Mods = config.Get<bool>(stable ? OsuSetting.ToriiStableUIMods : OsuSetting.ToriiStableModSelect);
-                Footer = stable ? config.Get<bool>(OsuSetting.ToriiStableUIFooter) : SongSelect || config.Get<bool>(OsuSetting.ToriiLegacySongSelectFooter);
-                Fonts = config.Get<bool>(stable ? OsuSetting.ToriiStableUIFonts : OsuSetting.ToriiLegacyFont);
+                SongSelect = stable && config.Get<bool>(OsuSetting.ToriiStableUISongSelect);
+                Results = stable && config.Get<bool>(OsuSetting.ToriiStableUIResults);
+                Mods = stable && config.Get<bool>(OsuSetting.ToriiStableUIMods);
+                Footer = stable && config.Get<bool>(OsuSetting.ToriiStableUIFooter);
+                Fonts = stable && config.Get<bool>(OsuSetting.ToriiStableUIFonts);
                 // hasta tener un set completo de assets, la home sigue siendo la moderna.
                 MainMenu = false;
-                Settings = config.Get<bool>(stable ? OsuSetting.ToriiStableUISettings : OsuSetting.ToriiLegacyOptions);
-                FpsCounter = config.Get<bool>(stable ? OsuSetting.ToriiStableUIFpsCounter : OsuSetting.ToriiLegacyFpsCounter);
-                GameplayScreens = config.Get<bool>(stable ? OsuSetting.ToriiStableUIGameplayScreens : OsuSetting.ToriiLegacyGameplayScreens);
-                GameplayLeaderboard = config.Get<bool>(stable ? OsuSetting.ToriiStableUIGameplayLeaderboard : OsuSetting.ToriiLegacyGameplayLeaderboard);
+                Settings = stable && config.Get<bool>(OsuSetting.ToriiStableUISettings);
+                FpsCounter = stable && config.Get<bool>(OsuSetting.ToriiStableUIFpsCounter);
+                GameplayScreens = stable && config.Get<bool>(OsuSetting.ToriiStableUIGameplayScreens);
+                GameplayLeaderboard = stable && config.Get<bool>(OsuSetting.ToriiStableUIGameplayLeaderboard);
             }
         }
     }

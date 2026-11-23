@@ -24,7 +24,7 @@ class ReleaseContractTests(unittest.TestCase):
             (self.root / f'assets.{channel}.json').write_text(json.dumps([{'RelativeFileName': name}]))
 
     def test_complete_release(self):
-        self.assertEqual(len(validate_assets(self.root, self.version)), 19)
+        self.assertEqual(len(validate_assets(self.root, self.version)), 21)
 
     def test_each_platform_is_required(self):
         for name in required_assets(self.version):

@@ -69,6 +69,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not enable compression for build staging
 python -m unittest discover -s .github/scripts -p 'test_release_contract.py' -v
 if ($LASTEXITCODE -ne 0) { throw 'Release contract tests failed' }
 $hashes = @{}
+& $dotnet test osu.Game.Tests/osu.Game.Tests.csproj -c Debug --filter 'FullyQualifiedName~ToriiStableUITest' -v quiet
+if ($LASTEXITCODE -ne 0) { throw 'Classic UI configuration regressions; publication blocked' }
 $title = if ($version.EndsWith('-nova')) { 'Torii Nova' } else { 'Torii' }
 $desktopRids = if ($androidOnly) { @() } else { $rids }
 foreach ($rid in $desktopRids) {
@@ -161,6 +163,8 @@ if ($androidOnly) {
     'Android signature and upgrade checks passed; no release published.' | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
     exit 0
 }
+python .github/scripts/build_appimages.py . (Join-Path $buildCache 'appimage-tools')
+if ($LASTEXITCODE -ne 0) { throw 'AppImage packaging failed; publication blocked' }
 python .github/scripts/release_contract.py validate Releases $version
 if ($LASTEXITCODE -ne 0) { throw 'Incomplete release; publication blocked' }
 $hashes | ConvertTo-Json | Out-File Releases/client-hashes.json -Encoding utf8
@@ -178,6 +182,7 @@ $osNote = if ($isNet10) {
     'macOS requires 14 or newer. x64 requires x86-64-v2. These runtime requirements are unchanged from the .NET 11 migration.'
 }
 $notes = @("# $title v$version",'', 'Hotfix: disabled the new Aspire/2B rendering that caused ghost circles. Classic UI and player profiles are still included.', '', 'Player profiles, Torii Classic UI and optional NoFail.', '', $runtimeNote, '', $osNote, '', "Private source commit: $(git rev-parse HEAD)")
+$notes += @('', 'Fixes: menu cursor trail visibility, toolbar auto-hide coordinates and focus handling, Classic UI isolation from other themes, and preservation of existing settings without a login token.', '', 'Linux AppImages are available for x64 and ARM64 alongside the portable archives.')
 $notes | Out-File (Join-Path $outputRoot RELEASE-NOTES.md) -Encoding utf8
 $checksums = Get-ChildItem -LiteralPath $outputRoot -File | Sort-Object Name | ForEach-Object {
     "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name

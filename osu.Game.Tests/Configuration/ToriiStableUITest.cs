@@ -240,7 +240,7 @@ namespace osu.Game.Tests.Configuration
             using (var config = new OsuConfigManager(storage))
             {
                 Assert.That(config.Get<UIThemeOption>(OsuSetting.UITheme), Is.EqualTo(UIThemeOption.Midnight));
-                Assert.That(ToriiStableUI.SongSelect(config), Is.True);
+                Assert.That(ToriiStableUI.SongSelect(config), Is.False);
                 Assert.That(config.Get<bool>(OsuSetting.ToriiStableUISongSelect), Is.True);
                 Assert.That(config.Get<bool>(OsuSetting.ToriiStableUIResults), Is.False);
                 Assert.That(config.Get<bool>(OsuSetting.ToriiStableUIFonts), Is.True);
@@ -250,7 +250,7 @@ namespace osu.Game.Tests.Configuration
 
             using var restarted = new OsuConfigManager(storage);
             Assert.That(restarted.Get<bool>(OsuSetting.ToriiStableUISongSelect), Is.False);
-            Assert.That(ToriiStableUI.SongSelect(restarted), Is.True);
+            Assert.That(ToriiStableUI.SongSelect(restarted), Is.False);
         }
 
         [Test]

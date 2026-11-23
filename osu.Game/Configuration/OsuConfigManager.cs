@@ -81,8 +81,8 @@ namespace osu.Game.Configuration
             {
                 bool toriiExists = storage.Exists(TORII_CONFIG_FILENAME);
 
-                // ya migrado (torii.ini tiene un Token): no hacemos nada.
-                if (toriiExists && toriiIniContainsToken(storage))
+                // Un perfil sin login tambien tiene preferencias validas.
+                if (toriiExists)
                     return storage;
 
                 // copiamos desde game.ini si existe: el usuario conserva sesion + todas las settings.

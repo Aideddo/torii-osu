@@ -17,6 +17,7 @@ def required_assets(version):
         'install-win-x64.exe', 'install-win-arm64.exe',
         'portable-win-x64.zip', 'portable-win-arm64.zip',
         'portable-linux-x64.tar.gz', 'portable-linux-arm64.tar.gz',
+        'Torii-linux-x64.AppImage', 'Torii-linux-arm64.AppImage',
         'portable-osx-x64.zip', 'portable-osx-arm64.zip',
         'Torii-macOS-Intel.zip', 'Torii-macOS-AppleSilicon.zip', 'torii.apk',
         'assets.win.json', 'assets.win-arm64.json',
