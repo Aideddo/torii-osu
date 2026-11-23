@@ -41,6 +41,25 @@ namespace osu.Game.Tests.Configuration
         }
 
         [Test]
+        public void TestRequiredPitchAdjustCannotBeReplacedByRatePitch()
+        {
+            var ruleset = new OsuRuleset();
+            var policy = new ProfileModPolicy
+            {
+                Required = new[] { new APIMod { Acronym = "DT" }, new APIMod { Acronym = "PA" } },
+            };
+            var mods = policy.CreateRequired(ruleset);
+            var dt = (ModDoubleTime)mods[0];
+            dt.SpeedChange.Value = 1.2;
+            dt.AdjustPitch.Value = true;
+            var corrected = policy.Enforce(mods, ruleset);
+            Assert.That(((ModDoubleTime)corrected[0]).SpeedChange.Value, Is.EqualTo(1.2));
+            Assert.That(((ModDoubleTime)corrected[0]).AdjustPitch.Value, Is.False);
+            Assert.That(corrected.Any(m => m is ModPitchAdjust), Is.True);
+            Assert.That(ProfileModPolicy.Compatible(corrected), Is.True);
+        }
+
+        [Test]
         public void TestDifficultyAdjustStaysLocked()
         {
             var ruleset = new OsuRuleset();
