@@ -13,10 +13,13 @@ namespace osu.Game.Rulesets.Osu.Tests
         [Test]
         public void TestToriiModsAreRegistered()
         {
-            var mods = new OsuRuleset().GetModsFor(ModType.Fun).ToArray();
+            var ruleset = new OsuRuleset();
+            var funMods = ruleset.GetModsFor(ModType.Fun).ToArray();
+            var conversionMods = ruleset.GetModsFor(ModType.Conversion).ToArray();
 
-            Assert.That(mods.Any(mod => mod is OsuModHitSounder), Is.True);
-            Assert.That(mods.Any(mod => mod is ModPitchAdjust), Is.True);
+            Assert.That(funMods.Any(mod => mod is OsuModHitSounder), Is.True);
+            Assert.That(funMods.Any(mod => mod is ModPitchAdjust), Is.True);
+            Assert.That(conversionMods.Any(mod => mod is OsuModAmplify), Is.True);
         }
     }
 }

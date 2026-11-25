@@ -62,6 +62,7 @@ namespace osu.Game.Rulesets.Osu.Scoring
             Single<OsuModClassic>(hasMultiplier: classic => classic.ClassicNoteLock.Value ? 0.985 : 0.96);
             Single<OsuModRandom>(hasMultiplier: 0.7);
             // Mirror (1.0x)
+            // Amplify (1.0x)
             // Alternate (1.0x)
             // Single Tap (1.0x)
 

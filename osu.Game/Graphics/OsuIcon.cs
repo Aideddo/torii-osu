@@ -138,6 +138,7 @@ namespace osu.Game.Graphics
         public static IconUsage ModAccuracyChallenge => get(OsuIconMapping.ModAccuracyChallenge);
         public static IconUsage ModAdaptiveSpeed => get(OsuIconMapping.ModAdaptiveSpeed);
         public static IconUsage ModAlternate => get(OsuIconMapping.ModAlternate);
+        public static IconUsage ModAmplify => get(OsuIconMapping.ModAmplify);
         public static IconUsage ModApproachDifferent => get(OsuIconMapping.ModApproachDifferent);
         public static IconUsage ModAutopilot => get(OsuIconMapping.ModAutopilot);
         public static IconUsage ModAutoplay => get(OsuIconMapping.ModAutoplay);
@@ -532,6 +533,9 @@ namespace osu.Game.Graphics
 
             [Description(@"Mods/mod-alternate")]
             ModAlternate,
+
+            [Description(@"Mods/mod-amplify")]
+            ModAmplify,
 
             [Description(@"Mods/mod-approach-different")]
             ModApproachDifferent,

@@ -44,6 +44,7 @@ namespace osu.Game.Rulesets.Osu.Mods
         {
             typeof(IRequiresApproachCircles),
             typeof(OsuModRandom),
+            typeof(OsuModAmplify),
             typeof(OsuModSpunOut),
             typeof(OsuModStrictTracking),
             typeof(OsuModSuddenDeath),
