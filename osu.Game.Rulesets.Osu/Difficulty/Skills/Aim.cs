@@ -112,8 +112,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             if (Mods.Any(m => m is OsuModRelax))
             {
-                combinedSnapDifficulty *= 0.75;
-                flowDifficulty *= 0.6;
+                combinedSnapDifficulty *= 0.85;
+                flowDifficulty *= 0.68;
             }
 
             double totalDifficulty = combinedSnapDifficulty * pSnap + flowDifficulty * pFlow;

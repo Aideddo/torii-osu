@@ -132,20 +132,37 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             if (score.Mods.Any(m => m is OsuModNoFail))
                 multiplier *= Math.Max(0.90, 1.0 - 0.02 * effectiveMissCount);
-
             if (score.Mods.Any(m => m is OsuModSpunOut) && totalHits > 0)
                 multiplier *= 1.0 - Math.Pow((double)osuAttributes.SpinnerCount / totalHits, 0.85);
 
-            if (score.Mods.Any(h => h is OsuModRelax))
+                if (score.Mods.Any(h => h is OsuModRelax))
             {
-                // https://www.desmos.com/calculator/vspzsop6td
-                // we use OD13.3 as maximum since it's the value at which great hitwidow becomes 0
-                // this is well beyond currently maximum achievable OD which is 12.17 (DTx2 + DA with OD11)
-                double okMultiplier = 0.75 * Math.Max(0.0, overallDifficulty > 0.0 ? 1 - overallDifficulty / 13.33 : 1.0);
-                double mehMultiplier = Math.Max(0.0, overallDifficulty > 0.0 ? 1 - Math.Pow(overallDifficulty / 13.33, 5) : 1.0);
+                // Maximum achievable OD (OD 11 + DTx2 = 12.17, matching the theoretical upper bound in osu!lazer)
+                const double maxAchievableOd = 12.17;
 
-                // As we're adding Oks and Mehs to an approximated number of combo breaks the result can be higher than total hits in specific scenarios (which breaks some calculations) so we need to clamp it.
-                effectiveMissCount = Math.Min(effectiveMissCount + countOk * okMultiplier + countMeh * mehMultiplier, totalHits);
+                // If Easy is active, use the scaled OD directly instead of overallDifficulty
+                double effectiveRelaxOd = score.Mods.Any(m => m is OsuModEasy)
+                    ? Math.Min(difficulty.OverallDifficulty * 1.5, 10.0)
+                    : overallDifficulty;
+
+                // Continuous OD debuff scaling down from the maximum achievable OD (12.17)
+                double clampedOd = Math.Clamp(effectiveRelaxOd, 0.0, maxAchievableOd);
+                double odDeficit = maxAchievableOd - clampedOd;
+                double odFactor = Math.Exp(-0.075 * Math.Pow(odDeficit, 1.55));
+
+                // Continuous accuracy debuff scaling down from 100% (1.0)
+                double accDeficit = (1.0 - Math.Clamp(accuracy, 0.0, 1.0)) * 100.0;
+                double accFactor = Math.Exp(-0.014 * Math.Pow(accDeficit, 1.42));
+
+                // Object count weight: shorter maps amplify the penalty, longer maps slightly mitigate it
+                double objectCountWeight = totalHits > 0
+                    ? Math.Clamp(Math.Pow(1000.0 / totalHits, 0.25), 0.75, 1.45)
+                    : 1.0;
+
+                double rawPenalty = 1.0 - (odFactor * accFactor);
+                double scaledPenalty = Math.Clamp(rawPenalty * objectCountWeight, 0.0, 0.95);
+
+                multiplier *= 1.0 - scaledPenalty;
             }
 
             speedDeviation = calculateSpeedDeviation(osuAttributes);
