@@ -39,9 +39,6 @@ namespace osu.Game.Rulesets
 {
     public abstract class Ruleset
     {
-        /// <summary>Creates a gameplay cursor for use by legacy menus, when supported.</summary>
-        public virtual osu.Framework.Graphics.Cursor.CursorContainer? CreateMenuCursor() => null;
-
         public RulesetInfo RulesetInfo { get; }
 
         private static readonly ConcurrentDictionary<string, IMod[]> mod_reference_cache = new ConcurrentDictionary<string, IMod[]>();

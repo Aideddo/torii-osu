@@ -11,7 +11,6 @@ using osuTK.Graphics;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Skinning;
 using osu.Framework.Graphics.Containers;
-using osu.Game.Rulesets.Osu.UI;
 
 namespace osu.Game.Rulesets.Osu.Objects.Drawables
 {
@@ -24,16 +23,6 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
         protected DrawableSlider DrawableSlider => (DrawableSlider)ParentHitObject;
 
         private SkinnableDrawable scaleContainer;
-
-        [Resolved(CanBeNull = true)]
-        private OsuVisualOrdering visualOrdering { get; set; }
-
-        protected override void LoadComplete()
-        {
-            base.LoadComplete();
-            if (visualOrdering?.IsActive == true)
-                visualOrdering.Register(scaleContainer, this, OsuVisualKind.Tick);
-        }
 
         public DrawableSliderTick()
             : base(null)

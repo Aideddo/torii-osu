@@ -41,7 +41,7 @@ namespace osu.Game.Overlays.Toolbar
         /// </summary>
         private bool hiddenByUser;
         private bool suppressedByScreen;
-        private readonly BindableBool legacySongSelectEnabled = new BindableBool();
+        internal bool SuppressedByScreen => suppressedByScreen;
 
         /// <summary>
         /// torii: cuando el auto-hide esta prendido, esta toolbar la maneja el reveal-por-hover de
@@ -521,29 +521,8 @@ namespace osu.Game.Overlays.Toolbar
         internal void TrackScreenVisibility(OsuScreenStack stack, OsuConfigManager config)
         {
             legacyGameplayScreensEnabled.Value = ToriiStableUI.GameplayScreens(config);
-            config.BindWith(OsuSetting.ToriiStableResults, legacyResultsEnabled);
-            legacyGameplayScreensEnabled.BindValueChanged(_ =>
-            {
-                if (stack.CurrentScreen is osu.Game.Screens.Play.PlayerLoader)
-                    updateScreenVisibility(stack.CurrentScreen);
-            });
-            legacyResultsEnabled.BindValueChanged(_ =>
-            {
-                if (stack.CurrentScreen is osu.Game.Screens.Ranking.ResultsScreen)
-                    updateScreenVisibility(stack.CurrentScreen);
-            });
-            config.BindWith(OsuSetting.ToriiLegacyFooterUseSkin, legacySongSelectEnabled);
+            legacyResultsEnabled.Value = ToriiStableUI.Results(config);
             legacyMainMenuEnabled.Value = ToriiStableUI.MainMenu(config);
-            legacyMainMenuEnabled.BindValueChanged(_ =>
-            {
-                if (stack.CurrentScreen is osu.Game.Screens.Menu.MainMenu)
-                    updateScreenVisibility(stack.CurrentScreen);
-            });
-            legacySongSelectEnabled.BindValueChanged(_ =>
-            {
-                if (stack.CurrentScreen is SongSelect songSelect)
-                    updateScreenVisibility(songSelect);
-            });
 
             stack.ScreenPushed += (_, screen) => updateScreenVisibility(screen);
             stack.ScreenExited += (_, screen) => updateScreenVisibility(screen);
@@ -559,14 +538,14 @@ namespace osu.Game.Overlays.Toolbar
             bool legacyResults = screen is osu.Game.Screens.Ranking.ResultsScreen
                                  && legacyResultsEnabled.Value;
             bool legacyMenu = screen is osu.Game.Screens.Menu.MainMenu && legacyMainMenuEnabled.Value;
-            suppressedByScreen = screen is SongSelect && legacySongSelectEnabled.Value || legacyLoader || legacyResults || legacyMenu;
+            suppressedByScreen = legacyLoader || legacyResults || legacyMenu;
 
             if (screen is not IOsuScreen osuScreen)
                 return;
 
             if (suppressedByScreen || osuScreen.HideOverlaysOnEnter)
                 Hide();
-            else
+            else if (!AutoHideActive)
                 Show();
 
             if (legacyLoader || legacyResults || legacyMenu)

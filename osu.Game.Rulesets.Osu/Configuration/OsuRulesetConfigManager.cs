@@ -23,9 +23,6 @@ namespace osu.Game.Rulesets.Osu.Configuration
             SetDefault(OsuRulesetSetting.ShowCursorTrail, true);
             SetDefault(OsuRulesetSetting.ShowCursorRipples, false);
             SetDefault(OsuRulesetSetting.PlayfieldBorderStyle, PlayfieldBorderStyle.None);
-            SetDefault(OsuRulesetSetting.KeepOverlapCirclesVisible, false);
-            SetDefault(OsuRulesetSetting.ShowHiddenSliders, false);
-            SetDefault(OsuRulesetSetting.SliderViewportSize, 0, 0, 65536);
 
             SetDefault(OsuRulesetSetting.ReplayClickMarkersEnabled, false);
             SetDefault(OsuRulesetSetting.ReplayFrameMarkersEnabled, false);
@@ -50,8 +47,5 @@ namespace osu.Game.Rulesets.Osu.Configuration
         ReplayCursorPathEnabled,
         ReplayCursorHideEnabled,
         ReplayAnalysisDisplayLength,
-        KeepOverlapCirclesVisible,
-        ShowHiddenSliders,
-        SliderViewportSize,
     }
 }

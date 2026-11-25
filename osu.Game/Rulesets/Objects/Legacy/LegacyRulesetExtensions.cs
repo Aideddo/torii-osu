@@ -4,7 +4,6 @@
 using System;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
-using osu.Game.Beatmaps.Formats;
 using osu.Game.Rulesets.Objects.Types;
 
 namespace osu.Game.Rulesets.Objects.Legacy
@@ -36,16 +35,6 @@ namespace osu.Game.Rulesets.Objects.Legacy
 
                 default:
                     throw new ArgumentException("Must be a legacy ruleset", nameof(rulesetShortName));
-            }
-
-            if (rulesetShortName == "osu" && timingControlPoint.LegacyBeatLength is double legacyBeatLength)
-            {
-                // Stable falls back after inherited timing for non-positive redlines.
-                if (legacyBeatLength <= 0)
-                    return TimingControlPoint.DEFAULT_BEAT_LENGTH;
-
-                // Preserve the raw value for export without permitting infinite velocity or duration.
-                return Math.Clamp(legacyBeatLength * bpmMultiplier, 1e-7, Parsing.MAX_PARSE_VALUE);
             }
 
             return timingControlPoint.BeatLength * bpmMultiplier;

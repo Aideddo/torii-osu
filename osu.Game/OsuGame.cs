@@ -317,7 +317,7 @@ namespace osu.Game
         {
             bool useFixed = ScreenStack.CurrentScreen is SongSelect && ToriiStableUI.SongSelect(LocalConfig)
                             || ScreenStack.CurrentScreen is ResultsScreen && ToriiStableUI.Results(LocalConfig)
-                            || ScreenStack.CurrentScreen is PlayerLoader or Player;
+                            || ScreenStack.CurrentScreen is PlayerLoader or Player && ToriiStableUI.GameplayScreens(LocalConfig);
             ScreenContainer.SetFixedAspectRatio(useFixed ? legacySongSelectAspectRatio.Value switch
             {
                 LegacySongSelectAspectRatio.Widescreen => 16f / 9,
@@ -1492,9 +1492,9 @@ namespace osu.Game
 
             Dependencies.Cache(ScreenFooter);
 
-            LocalConfig.BindWith(OsuSetting.ToriiStableResults, legacyResultsEnabled);
+            legacyResultsEnabled.Value = ToriiStableUI.Results(LocalConfig);
             legacyResultsEnabled.BindValueChanged(_ => updateLegacySongSelectAspectRatio());
-            LocalConfig.BindWith(OsuSetting.ToriiLegacyFooterUseSkin, legacySongSelectEnabled);
+            legacySongSelectEnabled.Value = ToriiStableUI.SongSelect(LocalConfig);
             LocalConfig.BindWith(OsuSetting.ToriiLegacySongSelectAspectRatio, legacySongSelectAspectRatio);
             legacySongSelectEnabled.BindValueChanged(_ => updateLegacySongSelectAspectRatio());
             legacySongSelectAspectRatio.BindValueChanged(_ => updateLegacySongSelectAspectRatio());
@@ -1604,6 +1604,7 @@ namespace osu.Game
                         menuScreen.MakeCurrent();
                 },
             }, topMostOverlayContent.Add);
+            Toolbar.TrackScreenVisibility(ScreenStack, LocalConfig);
 
             // torii: popups glass (estilo briefing) de descubrimiento. uno recomienda el auto-hide de la
             // toolbar (lo dispara A: uso frecuente de la toolbar, o C: estar en la stable song select);
@@ -2569,7 +2570,9 @@ namespace osu.Game
                 GlobalCursorDisplay.MenuCursor.HideCursorOnNonMouseInput = newScreen.HideMenuCursorOnNonMouseInput;
 
                 if (newScreen.HideOverlaysOnEnter)
-                    CloseAllOverlays(hideToolbar: false);
+                    CloseAllOverlays();
+                else if (!Toolbar.SuppressedByScreen && !autoHideToolbar.Value)
+                    Toolbar.Show();
 
                 skinEditor.SetTarget(newOsuScreen);
             }

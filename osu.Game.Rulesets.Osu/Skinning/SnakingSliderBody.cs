@@ -50,8 +50,6 @@ namespace osu.Game.Rulesets.Osu.Skinning
         /// </summary>
         private Vector2 snakedPosition;
 
-        protected Vector2 SnakedPathPosition { get; private set; }
-
         /// <summary>
         /// The offset of the path from <see cref="snakedPosition"/> when fully snaked.
         /// </summary>
@@ -118,8 +116,8 @@ namespace osu.Game.Rulesets.Osu.Skinning
             updatePathSize();
 
             snakedPosition = Path.PositionInBoundingBox(Vector2.Zero);
-            snakedPathOffset = Path.PositionInBoundingBox(Path.Vertices.Count > 0 ? Path.Vertices[0] : Vector2.Zero);
-            snakedPathEndOffset = Path.PositionInBoundingBox(Path.Vertices.Count > 0 ? Path.Vertices[^1] : Vector2.Zero);
+            snakedPathOffset = Path.PositionInBoundingBox(Path.Vertices[0]);
+            snakedPathEndOffset = Path.PositionInBoundingBox(Path.Vertices[^1]);
 
             double lastSnakedStart = SnakedStart ?? 0;
             double lastSnakedEnd = SnakedEnd ?? 0;
@@ -162,7 +160,7 @@ namespace osu.Game.Rulesets.Osu.Skinning
             // rather than expanding out from the position of the slider.
             // To remove this effect, the path's position is shifted towards its final snaked position
 
-            Path.Position = SnakedPathPosition = snakedPosition - Path.PositionInBoundingBox(Vector2.Zero);
+            Path.Position = snakedPosition - Path.PositionInBoundingBox(Vector2.Zero);
         }
     }
 }

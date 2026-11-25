@@ -34,7 +34,6 @@ namespace osu.Game.Rulesets.Objects
             tickDistance = Math.Clamp(tickDistance, 0, length);
 
             double minDistanceFromEnd = velocity * 10;
-            int remainingTicks = 10000;
 
             yield return new SliderEventDescriptor
             {
@@ -52,9 +51,9 @@ namespace osu.Game.Rulesets.Objects
                 double spanStartTime = startTime + span * spanDuration;
                 bool reversed = span % 2 == 1;
 
-                if (tickDistance > 0 && double.IsFinite(tickDistance) && remainingTicks > 0)
+                if (tickDistance != 0)
                 {
-                    var ticks = generateTicks(span, spanStartTime, spanDuration, reversed, length, totalDistance, tickDistance, minDistanceFromEnd, remainingTicks, cancellationToken);
+                    var ticks = generateTicks(span, spanStartTime, spanDuration, reversed, length, tickDistance, minDistanceFromEnd, cancellationToken);
 
                     if (reversed)
                     {
@@ -63,10 +62,7 @@ namespace osu.Game.Rulesets.Objects
                     }
 
                     foreach (var e in ticks)
-                    {
-                        remainingTicks--;
                         yield return e;
-                    }
                 }
 
                 if (span < spanCount - 1)
@@ -104,7 +100,7 @@ namespace osu.Game.Rulesets.Objects
             //
             // As a slider gets shorter than 72 ms, the leniency offered falls below the 36 ms `TAIL_LENIENCY` constant.
             double legacyLastTickTime = Math.Max(startTime + totalDuration / 2, (finalSpanStartTime + spanDuration) + TAIL_LENIENCY);
-            double legacyLastTickProgress = spanDuration > 0 ? (legacyLastTickTime - finalSpanStartTime) / spanDuration : 1;
+            double legacyLastTickProgress = (legacyLastTickTime - finalSpanStartTime) / spanDuration;
 
             if (spanCount % 2 == 0) legacyLastTickProgress = 1 - legacyLastTickProgress;
 
@@ -135,16 +131,14 @@ namespace osu.Game.Rulesets.Objects
         /// <param name="spanDuration">The duration of the span.</param>
         /// <param name="reversed">Whether the span is reversed.</param>
         /// <param name="length">The length of the path.</param>
-        /// <param name="totalDistance">The uncapped path length used to position retained ticks.</param>
         /// <param name="tickDistance">The distance between each tick.</param>
         /// <param name="minDistanceFromEnd">The distance from the end of the path at which ticks are not allowed to be added.</param>
-        /// <param name="maxTicks">Remaining tick budget across all spans.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A <see cref="SliderEventDescriptor"/> for each tick. If <paramref name="reversed"/> is true, the ticks will be returned in reverse-StartTime order.</returns>
-        private static IEnumerable<SliderEventDescriptor> generateTicks(int spanIndex, double spanStartTime, double spanDuration, bool reversed, double length, double totalDistance, double tickDistance,
-                                                                        double minDistanceFromEnd, int maxTicks, CancellationToken cancellationToken = default)
+        private static IEnumerable<SliderEventDescriptor> generateTicks(int spanIndex, double spanStartTime, double spanDuration, bool reversed, double length, double tickDistance,
+                                                                        double minDistanceFromEnd, CancellationToken cancellationToken = default)
         {
-            for (double d = tickDistance; d <= length && maxTicks-- > 0; d += tickDistance)
+            for (double d = tickDistance; d <= length; d += tickDistance)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -152,7 +146,7 @@ namespace osu.Game.Rulesets.Objects
                     break;
 
                 // Always generate ticks from the start of the path rather than the span to ensure that ticks in repeat spans are positioned identically to those in non-repeat spans
-                double pathProgress = d / totalDistance;
+                double pathProgress = d / length;
                 double timeProgress = reversed ? 1 - pathProgress : pathProgress;
 
                 yield return new SliderEventDescriptor

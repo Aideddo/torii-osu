@@ -93,7 +93,7 @@ namespace osu.Game.Storyboards.Drawables
 
             lastPlayedSamples.BindValueChanged(val =>
             {
-                if (val.NewValue == null)
+                if (val.NewValue == null || IsDisposed || !drawable.IsLoaded || drawable.Clock == null)
                     return;
 
                 if (!triggerGroup.ActiveAt(drawable.Time.Current))
@@ -214,9 +214,12 @@ namespace osu.Game.Storyboards.Drawables
 
         #endregion
 
-        private static void playTrigger<TDrawable>(TDrawable drawable, StoryboardTriggerGroup triggerGroup)
+        private void playTrigger<TDrawable>(TDrawable drawable, StoryboardTriggerGroup triggerGroup)
             where TDrawable : Drawable, IFlippable, IVectorScalable
         {
+            if (IsDisposed || !drawable.IsLoaded || drawable.Clock == null)
+                return;
+
             if (!triggerGroup.ActiveAt(drawable.Time.Current))
                 return;
 

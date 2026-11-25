@@ -12,7 +12,6 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Utils;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Skinning.Default;
-using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -33,19 +32,6 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
         public SkinnableDrawable Arrow { get; private set; }
 
         private Drawable scaleContainer;
-
-        [Resolved(CanBeNull = true)]
-        private OsuVisualOrdering visualOrdering { get; set; }
-
-        protected override void LoadComplete()
-        {
-            base.LoadComplete();
-            if (visualOrdering?.IsActive == true)
-            {
-                visualOrdering.Register(CirclePiece, this, OsuVisualKind.CircleGroup, localDepth: 1);
-                visualOrdering.Register(Arrow, this, OsuVisualKind.Arrow);
-            }
-        }
 
         public DrawableSliderRepeat()
             : base(null)

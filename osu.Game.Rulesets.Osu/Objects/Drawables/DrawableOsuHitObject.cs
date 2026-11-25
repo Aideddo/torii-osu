@@ -29,9 +29,6 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
         public readonly IBindable<float> ScaleBindable = new BindableFloat();
         public readonly IBindable<int> IndexInCurrentComboBindable = new Bindable<int>();
 
-        internal DrawableOsuHitObject VisualParentHitObject => ParentHitObject as DrawableOsuHitObject;
-        internal bool IsVisualSourceDisposed => IsDisposed;
-
         // torii: mirror local de OsuHitObject.ComboIndexWithOffsetsBindable, mismo patron que
         // IndexInCurrentComboBindable de arriba. lo usa LegacyMainCirclePiece para las variantes de
         // hitcircle por combo-color.

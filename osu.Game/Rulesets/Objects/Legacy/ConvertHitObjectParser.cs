@@ -97,8 +97,7 @@ namespace osu.Game.Rulesets.Objects.Legacy
 
                 if (split.Length > 7)
                 {
-                    // Total length is not a coordinate, but must still be finite and bounded.
-                    length = Math.Max(0, Parsing.ParseDouble(split[7]));
+                    length = Math.Max(0, Parsing.ParseDouble(split[7], Parsing.MAX_COORDINATE_VALUE));
                     if (length == 0)
                         length = null;
                 }

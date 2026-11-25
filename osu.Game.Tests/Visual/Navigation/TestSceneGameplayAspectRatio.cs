@@ -50,7 +50,6 @@ namespace osu.Game.Tests.Visual.Navigation
             });
             PushAndConfirm(() => results = new SoloResultsScreen(TestResources.CreateTestScoreInfo()));
             AddUntilStep("results aspect ratio applied", () => System.Math.Abs(results.DrawWidth / results.DrawHeight - expected) < 0.01f);
-            AddAssert("gameplay cursor selected", () => Game.ChildrenOfType<GlobalCursorDisplay>().Single().UseGameplayCursor);
             AddAssert("toolbar remains hidden", () => Game.Toolbar.State.Value == Visibility.Hidden);
         }
 
@@ -69,10 +68,8 @@ namespace osu.Game.Tests.Visual.Navigation
             AddStep("enable legacy while results are open", () => Game.LocalConfig.SetValue(OsuSetting.ToriiStableResults, true));
             AddUntilStep("fixed ratio applied live", () => System.Math.Abs(results.DrawWidth / results.DrawHeight - 1.6f) < 0.01f);
             AddUntilStep("toolbar hidden live", () => Game.Toolbar.State.Value == Visibility.Hidden && Game.Toolbar.Alpha == 0);
-            AddUntilStep("legacy cursor applied live", () => Game.ChildrenOfType<GlobalCursorDisplay>().Single().UseGameplayCursor);
             AddStep("disable legacy while results are open", () => Game.LocalConfig.SetValue(OsuSetting.ToriiStableResults, false));
             AddUntilStep("window ratio restored", () => System.Math.Abs(results.DrawWidth / results.DrawHeight - windowRatio) < 0.01f);
-            AddUntilStep("modern cursor restored", () => !Game.ChildrenOfType<GlobalCursorDisplay>().Single().UseGameplayCursor);
             AddAssert("same screen retained", () => ReferenceEquals(Game.ScreenStack.CurrentScreen, results));
         }
 
@@ -96,6 +93,7 @@ namespace osu.Game.Tests.Visual.Navigation
 
             AddStep("return to song select", () => songSelect.MakeCurrent());
             AddUntilStep("back at song select", () => songSelect.IsCurrentScreen());
+            AddUntilStep("toolbar visible after gameplay", () => Game.Toolbar.State.Value == Visibility.Visible);
         }
     }
 }

@@ -1,5 +1,5 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
-// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -9,9 +9,6 @@ using osu.Framework.Graphics.Cursor;
 using osu.Framework.Input;
 using osu.Framework.Input.StateChanges;
 using osu.Game.Configuration;
-using osu.Game.Beatmaps;
-using osu.Game.Rulesets;
-using osu.Game.Skinning;
 
 namespace osu.Game.Graphics.Cursor
 {
@@ -26,11 +23,7 @@ namespace osu.Game.Graphics.Cursor
         /// </summary>
         internal bool ShowCursor = true;
 
-        CursorContainer IProvideCursor.Cursor => UseGameplayCursor && gameplayCursor != null ? gameplayCursor : MenuCursor;
-
-        internal bool UseGameplayCursor;
-        private CursorContainer? gameplayCursor;
-        private CursorContainer? displayedCursor;
+        CursorContainer IProvideCursor.Cursor => MenuCursor;
 
         public MenuCursorContainer MenuCursor { get; }
 
@@ -56,22 +49,6 @@ namespace osu.Game.Graphics.Cursor
             });
         }
 
-        [BackgroundDependencyLoader]
-        private void load(RulesetStore rulesets)
-        {
-            var ruleset = rulesets.GetRuleset(0)?.CreateInstance();
-            gameplayCursor = ruleset?.CreateMenuCursor();
-            if (gameplayCursor == null || ruleset == null)
-                return;
-
-            gameplayCursor.Hide();
-            gameplayCursor.Alpha = 0;
-            AddInternal(new RulesetSkinProvidingContainer(ruleset, new Beatmap(), null)
-            {
-                Child = gameplayCursor,
-            });
-        }
-
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -89,10 +66,7 @@ namespace osu.Game.Graphics.Cursor
 
             if (!hasValidInput || !ShowCursor)
             {
-                displayedCursor?.Hide();
-                if (gameplayCursor != null)
-                    gameplayCursor.Alpha = 0;
-                displayedCursor = null;
+                currentOverrideProvider?.Cursor?.Hide();
                 currentOverrideProvider = null;
                 return;
             }
@@ -108,15 +82,11 @@ namespace osu.Game.Graphics.Cursor
                 }
             }
 
-            if (currentOverrideProvider == newOverrideProvider && displayedCursor == newOverrideProvider.Cursor)
+            if (currentOverrideProvider == newOverrideProvider)
                 return;
 
-            displayedCursor?.Hide();
-            displayedCursor = newOverrideProvider.Cursor;
-            // PopOut del cursor de gameplay deja un 5%; en menus no debe quedar debajo del otro.
-            if (gameplayCursor != null)
-                gameplayCursor.Alpha = displayedCursor == gameplayCursor ? 1 : 0;
-            displayedCursor?.Show();
+            currentOverrideProvider?.Cursor?.Hide();
+            newOverrideProvider.Cursor?.Show();
 
             currentOverrideProvider = newOverrideProvider;
         }
