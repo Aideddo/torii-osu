@@ -64,7 +64,6 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
                 {
                     Caption = UserInterfaceStrings.BackgroundSource,
                     Current = config.GetBindable<BackgroundSource>(OsuSetting.MenuBackgroundSource),
-                    Note = { BindTarget = backgroundSourceNote },
                 }),
                 CreateItem(new EnumDropdownEntry<SeasonalBackgroundMode>
                 {
