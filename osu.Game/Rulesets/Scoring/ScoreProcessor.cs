@@ -582,9 +582,6 @@ namespace osu.Game.Rulesets.Scoring
             // Populate total score after everything else.
             score.TotalScoreWithoutMods = TotalScoreWithoutMods.Value;
             score.TotalScore = TotalScore.Value;
-
-            if (ScoreV1Active)
-                score.LegacyTotalScore = TotalScore.Value;
         }
 
         /// <summary>

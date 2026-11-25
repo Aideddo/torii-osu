@@ -504,6 +504,25 @@ namespace osu.Game.Tests.Rulesets.Scoring
             Assert.That(scoreProcessor.GetDisplayScore(ScoringMode.Standardised), Is.EqualTo(1_000_000 * 1.1).Within(0.5d));
         }
 
+        [Test]
+        public void TestPopulateScoreClassicDoesNotSetLegacyTotalScore()
+        {
+            scoreProcessor.Mods.Value = new[] { new OsuModClassic() };
+            scoreProcessor.ApplyBeatmap(beatmap);
+
+            var judgementResult = new JudgementResult(beatmap.HitObjects.Single(), new OsuJudgement())
+            {
+                Type = HitResult.Great
+            };
+            scoreProcessor.ApplyResult(judgementResult);
+
+            var score = new ScoreInfo();
+            scoreProcessor.PopulateScore(score);
+
+            Assert.That(score.TotalScore, Is.GreaterThan(0));
+            Assert.That(score.LegacyTotalScore, Is.Null);
+        }
+
         private class TestJudgement : Judgement
         {
             public override HitResult MaxResult { get; }
