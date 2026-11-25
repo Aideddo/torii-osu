@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
@@ -53,6 +55,11 @@ namespace osu.Game.Graphics.UserInterface
         private double displayedInputTime;
         private double displayedDrawTime;
         private double lastUpdate;
+
+        // OutputLatency notifies from AudioThread every ~200ms; stage the latest sample
+        // lock-free and apply it on the update thread so Drawable layout is never invalidated mid-frame.
+        private long latestAudioLatencyBits = BitConverter.DoubleToInt64Bits(0);
+        private bool audioLatencyDirty = true;
 
         // paleta del modo descapeado: de cyan (todo bien) hacia azul/violeta/purpura
         // a medida que la latencia sube.
@@ -151,7 +158,14 @@ namespace osu.Game.Graphics.UserInterface
             frameSync.BindValueChanged(_ => updateMode());
             noLimits.BindValueChanged(_ => updateMode(), true);
 
-            audioLatency.BindValueChanged(_ => updateAudio(), true);
+            audioLatency.BindValueChanged(onAudioLatencyChanged, true);
+            updateAudio();
+        }
+
+        private void onAudioLatencyChanged(ValueChangedEvent<double> e)
+        {
+            Volatile.Write(ref latestAudioLatencyBits, BitConverter.DoubleToInt64Bits(e.NewValue));
+            Volatile.Write(ref audioLatencyDirty, true);
         }
 
         protected override void PopIn() => this.FadeIn(150, Easing.OutQuint);
@@ -174,7 +188,8 @@ namespace osu.Game.Graphics.UserInterface
 
         private void updateAudio()
         {
-            double latency = audioLatency.Value;
+            Volatile.Write(ref audioLatencyDirty, false);
+            double latency = BitConverter.Int64BitsToDouble(Volatile.Read(ref latestAudioLatencyBits));
 
             audioStat.Value = latency > 0 ? format(latency) : @"--";
             audioStat.Colour = latency <= 0 ? (ColourInfo)colours.Gray6 : latencyColour(latency, 15, 45);
@@ -183,6 +198,9 @@ namespace osu.Game.Graphics.UserInterface
         protected override void Update()
         {
             base.Update();
+
+            if (Volatile.Read(ref audioLatencyDirty))
+                updateAudio();
 
             displayedFps = Interpolation.DampContinuously(displayedFps, drawClock.FramesPerSecond, damp_time, Time.Elapsed);
             displayedDrawTime = Interpolation.DampContinuously(displayedDrawTime, drawClock.ElapsedFrameTime, damp_time, Time.Elapsed);
