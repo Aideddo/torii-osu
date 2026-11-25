@@ -182,7 +182,7 @@ $osNote = if ($isNet10) {
     'macOS requires 14 or newer. x64 requires x86-64-v2. These runtime requirements are unchanged from the .NET 11 migration.'
 }
 $notes = @("# $title v$version",'', 'Player profiles, Torii Classic UI and optional NoFail.', '', $runtimeNote, '', $osNote, '', "Private source commit: $(git rev-parse HEAD)")
-$notes += @('', 'Updates: main menu background editor and seasonal background pinning, custom beatmap theme music, right-click image preview with cursor indicator, wiki language selector, online overlay retry placeholders, unsubmitted score warning, V2 results modded star rating fix, deferred renderer optimizations, and an audio latency counter thread-safety crash fix.', '', 'Linux AppImages are available for x64 and ARM64 alongside the portable archives.')
+$notes += @('', 'Updates: main menu background editor and seasonal background pinning, custom beatmap theme music, right-click image preview with smooth mouse cursor indicator, compact points reward popup during gameplay, wiki language selector, online overlay retry placeholders, unsubmitted score warning, V2 results modded star rating fix, deferred renderer optimizations, and an audio latency counter thread-safety crash fix.', '', 'Linux AppImages are available for x64 and ARM64 alongside the portable archives.')
 $notes | Out-File (Join-Path $outputRoot RELEASE-NOTES.md) -Encoding utf8
 $checksums = Get-ChildItem -LiteralPath $outputRoot -File | Sort-Object Name | ForEach-Object {
     "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
