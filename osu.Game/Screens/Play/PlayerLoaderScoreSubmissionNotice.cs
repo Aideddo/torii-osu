@@ -9,6 +9,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
 using osu.Game.Graphics;
+using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
@@ -89,12 +90,12 @@ namespace osu.Game.Screens.Play
                                     {
                                         Anchor = Anchor.CentreLeft,
                                         Origin = Anchor.CentreLeft,
-                                        Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
+                                        Font = OsuFont.Style.Heading2.With(weight: FontWeight.Bold),
                                         Text = ScoreSubmissionStrings.NotSubmittingScore,
                                     },
                                 },
                             },
-                            new TextFlowContainer(t => t.Font = OsuFont.GetFont(size: 15))
+                            new OsuTextFlowContainer(t => t.Font = OsuFont.Style.Body)
                             {
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
