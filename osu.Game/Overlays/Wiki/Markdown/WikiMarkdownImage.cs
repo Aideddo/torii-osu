@@ -1,8 +1,16 @@
+<<<<<<< HEAD
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
+=======
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
+>>>>>>> b7c44b3f84 (Merge pull request #10 from GooGuTeam/feat/image-preview-overlay)
 
 using Markdig.Syntax.Inlines;
+using osu.Framework.Graphics;
+using osu.Framework.Graphics.Sprites;
 using osu.Game.Graphics.Containers.Markdown;
+using osu.Game.Overlays.ImagePreview;
 
 namespace osu.Game.Overlays.Wiki.Markdown
 {
@@ -20,6 +28,28 @@ namespace osu.Game.Overlays.Wiki.Markdown
             url = url.Replace("/wiki/", "/wiki/images/");
 
             return base.CreateImageContainer(url);
+        }
+
+        protected override ImageContainer CreateImageContainerCore(string mediaUrl)
+        {
+            var container = new WikiImageContainer(mediaUrl);
+            container.OnLoadComplete += d => d.FadeInFromZero(300, Easing.OutQuint);
+            return container;
+        }
+
+        private partial class WikiImageContainer : ImageContainer
+        {
+            private PreviewableSprite sprite = null!;
+
+            public WikiImageContainer(string url)
+                : base(url)
+            {
+                // the sprite is created from ImageContainer's constructor, which runs before this type's fields are
+                // assigned, so the url can only be handed over to it here.
+                sprite.Url = url;
+            }
+
+            protected override Sprite CreateImageSprite() => sprite = new PreviewableSprite();
         }
     }
 }
