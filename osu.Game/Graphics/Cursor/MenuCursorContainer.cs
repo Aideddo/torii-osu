@@ -10,6 +10,7 @@ using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
+using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
@@ -23,6 +24,8 @@ using osu.Game.Screens.Menu;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace osu.Game.Graphics.Cursor
 {
@@ -517,6 +520,7 @@ namespace osu.Game.Graphics.Cursor
             // mid-session — no restart required.
             private TextureStore textures = null!;
             private OsuColour colour = null!;
+            private Texture? rightClickMouseTexture;
 
             // True while the parent is dispatching a gameplay-style
             // press (OnMouseDown). The parent reads this through the
@@ -542,10 +546,12 @@ namespace osu.Game.Graphics.Cursor
             }
 
             [BackgroundDependencyLoader]
-            private void load(OsuConfigManager config, TextureStore textures, OsuColour colour)
+            private void load(OsuConfigManager config, TextureStore textures, OsuColour colour, IRenderer renderer)
             {
                 this.textures = textures;
                 this.colour = colour;
+
+                rightClickMouseTexture = createRightClickMouseTexture(renderer, colour);
 
                 menuCursorScale = config.GetBindable<float>(OsuSetting.MenuCursorSize);
                 menuCursorStyle = config.GetBindable<MenuCursorStyle>(OsuSetting.MenuCursorStyle);
@@ -588,7 +594,7 @@ namespace osu.Game.Graphics.Cursor
 
                 if (available)
                 {
-                    rightClickIndicator.FadeIn(140, Easing.OutQuint)
+                    rightClickIndicator.FadeTo(0.9f, 140, Easing.OutQuint)
                                        .ScaleTo(1f, 180, Easing.OutQuint);
                 }
                 else
@@ -715,23 +721,16 @@ namespace osu.Game.Graphics.Cursor
                                 rightClickIndicator = new Container
                                 {
                                     BypassAutoSizeAxes = Axes.Both,
-                                    Position = new Vector2(278, 294),
+                                    Position = new Vector2(154, 158),
                                     Origin = Anchor.Centre,
-                                    AutoSizeAxes = Axes.Both,
+                                    Size = new Vector2(60, 80),
                                     Alpha = 0,
-                                    Scale = new Vector2(0.75f),
-                                    Child = new FillFlowContainer
+                                    Scale = new Vector2(0.8f),
+                                    Child = new Sprite
                                     {
-                                        AutoSizeAxes = Axes.Both,
-                                        Direction = FillDirection.Horizontal,
-                                        Spacing = new Vector2(9),
-                                        Children = new[]
-                                        {
-                                            createRightClickDot(),
-                                            createRightClickDot(),
-                                            createRightClickDot(),
-                                        }
-                                    }
+                                        RelativeSizeAxes = Axes.Both,
+                                        Texture = rightClickMouseTexture,
+                                    },
                                 },
                             }
                         }
@@ -741,18 +740,120 @@ namespace osu.Game.Graphics.Cursor
                 }
             }
 
-            private static Drawable createRightClickDot() => new CircularContainer
+            protected override void Dispose(bool isDisposing)
             {
-                Size = new Vector2(24),
-                Masking = true,
-                BorderThickness = 4.5f,
-                BorderColour = Color4.Black.Opacity(0.85f),
-                Child = new Box
+                rightClickMouseTexture?.Dispose();
+                rightClickMouseTexture = null;
+                base.Dispose(isDisposing);
+            }
+
+            private static Texture createRightClickMouseTexture(IRenderer renderer, OsuColour colour)
+            {
+                const int width = 192;
+                const int height = 256;
+                const float half_width = 68f;
+                const float half_height = 92f;
+                const float corner_radius = 56f;
+                const float border_width = 16f;
+                const float divider_half = 5f;
+                const float split_y = -8f;
+                const float aa = 1.5f;
+
+                var image = new Image<Rgba32>(width, height);
+                Color4 accent = colour.Pink;
+
+                for (int y = 0; y < height; y++)
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = Color4.White,
-                },
-            };
+                    float uy = (y + 0.5f) - height * 0.5f;
+
+                    for (int x = 0; x < width; x++)
+                    {
+                        float ux = (x + 0.5f) - width * 0.5f;
+
+                        float shadowDist = sdRoundedRect(ux - 2f, uy - 6f, half_width, half_height, corner_radius);
+                        float shadowAlpha = (1f - smoothstep(-2f, 14f, shadowDist)) * (120f / 255f);
+
+                        float r = 0f, g = 0f, b = 0f, a = shadowAlpha;
+
+                        float outerDist = sdRoundedRect(ux, uy, half_width, half_height, corner_radius);
+                        float outerMask = 1f - smoothstep(-aa, aa, outerDist);
+
+                        if (outerMask > 0.001f)
+                        {
+                            float innerMask = 1f - smoothstep(-aa, aa, outerDist + border_width);
+
+                            // Charcoal backing with right-mouse-button accent & crisp inner dividers.
+                            float fr = 20f / 255f;
+                            float fg = 20f / 255f;
+                            float fb = 26f / 255f;
+                            float fa = 232f / 255f;
+
+                            float rmbX = smoothstep(0f, aa * 2f, ux - divider_half);
+                            float rmbY = 1f - smoothstep(-aa * 2f, 0f, uy - (split_y - divider_half));
+                            float rmbAlpha = rmbX * rmbY * 0.9f;
+                            if (rmbAlpha > 0f)
+                                blendOver(ref fr, ref fg, ref fb, ref fa, accent.R, accent.G, accent.B, rmbAlpha);
+
+                            float hDiv = 1f - smoothstep(divider_half - aa, divider_half + aa, MathF.Abs(uy - split_y));
+                            float vDiv = (1f - smoothstep(divider_half - aa, divider_half + aa, MathF.Abs(ux)))
+                                         * (1f - smoothstep(-aa, aa, uy - split_y));
+                            float divAlpha = MathF.Max(hDiv, vDiv) * (215f / 255f);
+                            if (divAlpha > 0f)
+                                blendOver(ref fr, ref fg, ref fb, ref fa, 240f / 255f, 240f / 255f, 248f / 255f, divAlpha);
+
+                            float borderWeight = 1f - innerMask;
+                            float br = 248f / 255f;
+                            float bg = 248f / 255f;
+                            float bb = 252f / 255f;
+                            float ba = 240f / 255f;
+
+                            float sr = fr * innerMask + br * borderWeight;
+                            float sg = fg * innerMask + bg * borderWeight;
+                            float sb = fb * innerMask + bb * borderWeight;
+                            float sa = (fa * innerMask + ba * borderWeight) * outerMask;
+
+                            blendOver(ref r, ref g, ref b, ref a, sr, sg, sb, sa);
+                        }
+
+                        image[x, y] = new Rgba32(
+                            (byte)Math.Clamp(MathF.Round(r * 255f), 0, 255),
+                            (byte)Math.Clamp(MathF.Round(g * 255f), 0, 255),
+                            (byte)Math.Clamp(MathF.Round(b * 255f), 0, 255),
+                            (byte)Math.Clamp(MathF.Round(a * 255f), 0, 255));
+                    }
+                }
+
+                var texture = renderer.CreateTexture(width, height);
+                texture.SetData(new TextureUpload(image));
+                return texture;
+            }
+
+            private static float sdRoundedRect(float px, float py, float halfWidth, float halfHeight, float radius)
+            {
+                float qx = MathF.Abs(px) - halfWidth + radius;
+                float qy = MathF.Abs(py) - halfHeight + radius;
+                float outside = MathF.Sqrt(MathF.Max(qx, 0f) * MathF.Max(qx, 0f) + MathF.Max(qy, 0f) * MathF.Max(qy, 0f));
+                float inside = MathF.Min(MathF.Max(qx, qy), 0f);
+                return outside + inside - radius;
+            }
+
+            private static float smoothstep(float edge0, float edge1, float x)
+            {
+                float t = Math.Clamp((x - edge0) / (edge1 - edge0), 0f, 1f);
+                return t * t * (3f - 2f * t);
+            }
+
+            private static void blendOver(ref float dr, ref float dg, ref float db, ref float da, float sr, float sg, float sb, float sa)
+            {
+                float outA = sa + da * (1f - sa);
+                if (outA <= 1e-6f)
+                    return;
+
+                dr = (sr * sa + dr * da * (1f - sa)) / outA;
+                dg = (sg * sa + dg * da * (1f - sa)) / outA;
+                db = (sb * sa + db * da * (1f - sa)) / outA;
+                da = outA;
+            }
         }
 
         private partial class MouseInputDetector : Component
