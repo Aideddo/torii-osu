@@ -15,19 +15,14 @@ using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics.Backgrounds;
-using osu.Game.Online.API;
-using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Skinning;
 
 namespace osu.Game.Screens.Backgrounds
 {
     public partial class BackgroundScreenDefault : BackgroundScreen
     {
-        private Background background;
-
         private int currentDisplay;
         private const int background_count = 8;
-        private IBindable<APIUser> user;
         private Bindable<Skin> skin;
         private Bindable<BackgroundSource> source;
         private Bindable<IntroSequence> introSequence;
@@ -50,9 +45,8 @@ namespace osu.Game.Screens.Backgrounds
         protected virtual string SkinBackgroundLookupName => @"menu-background";
 
         [BackgroundDependencyLoader]
-        private void load(IAPIProvider api, SkinManager skinManager, OsuConfigManager config)
+        private void load(SkinManager skinManager, OsuConfigManager config)
         {
-            user = api.LocalUser.GetBoundCopy();
             skin = skinManager.CurrentSkin.GetBoundCopy();
             source = config.GetBindable<BackgroundSource>(OsuSetting.MenuBackgroundSource);
             introSequence = config.GetBindable<IntroSequence>(OsuSetting.IntroSequence);
@@ -65,7 +59,6 @@ namespace osu.Game.Screens.Backgrounds
         {
             base.LoadComplete();
 
-            user.ValueChanged += _ => Scheduler.AddOnce(next);
             skin.ValueChanged += _ => Scheduler.AddOnce(next);
             source.ValueChanged += _ => Scheduler.AddOnce(next);
             legacyMainMenu.ValueChanged += _ => Scheduler.AddOnce(next);
@@ -84,7 +77,7 @@ namespace osu.Game.Screens.Backgrounds
 
         public override void OnSuspending(ScreenTransitionEvent e)
         {
-            if (background is BeatmapBackgroundWithStoryboard storyboardBackground)
+            if (CurrentBackground is BeatmapBackgroundWithStoryboard storyboardBackground)
                 storyboardUnloadDelegate = gameHost.UpdateThread.Scheduler.AddDelayed(storyboardBackground.UnloadStoryboard, TRANSITION_LENGTH);
 
             base.OnSuspending(e);
@@ -92,7 +85,7 @@ namespace osu.Game.Screens.Backgrounds
 
         public override void OnResuming(ScreenTransitionEvent e)
         {
-            if (background is BeatmapBackgroundWithStoryboard storyboardBackground)
+            if (CurrentBackground is BeatmapBackgroundWithStoryboard storyboardBackground)
             {
                 if (storyboardUnloadDelegate?.Completed == false)
                     storyboardUnloadDelegate.Cancel();
@@ -109,6 +102,11 @@ namespace osu.Game.Screens.Backgrounds
         private CancellationTokenSource cancellationTokenSource;
 
         /// <summary>
+        /// The background which has been queued for display but has not been displayed yet.
+        /// </summary>
+        private Background pendingBackground;
+
+        /// <summary>
         /// Request loading the next background.
         /// </summary>
         /// <returns>Whether a new background was queued for load. May return false if the current background is still valid.</returns>
@@ -117,8 +115,19 @@ namespace osu.Game.Screens.Backgrounds
             var nextBackground = createBackground();
 
             // in the case that the background hasn't changed, we want to avoid cancelling any tasks that could still be loading.
-            if (nextBackground == background)
+            if (nextBackground == CurrentBackground)
+            {
+                // the latest choice is the one already on screen, so anything still queued for load is stale
+                // (and would otherwise replace it, contradicting the saved selection).
+                if (pendingBackground != null)
+                {
+                    nextTask?.Cancel();
+                    cancellationTokenSource?.Cancel();
+                    pendingBackground = null;
+                }
+
                 return false;
+            }
 
             Logger.Log(@"🌅 Global background change queued");
 
@@ -126,6 +135,8 @@ namespace osu.Game.Screens.Backgrounds
             cancellationTokenSource = new CancellationTokenSource();
 
             nextTask?.Cancel();
+            pendingBackground = nextBackground;
+
             nextTask = Scheduler.AddDelayed(() =>
             {
                 Logger.Log(@"🌅 Global background loading");
@@ -137,10 +148,12 @@ namespace osu.Game.Screens.Backgrounds
 
         private void displayNext(Background newBackground)
         {
-            background?.FadeOut(800, Easing.OutQuint);
-            background?.Expire();
+            pendingBackground = null;
 
-            AddInternal(background = newBackground);
+            CurrentBackground?.FadeOut(800, Easing.OutQuint);
+            CurrentBackground?.Expire();
+
+            AddInternal(CurrentBackground = newBackground);
             currentDisplay++;
         }
 
@@ -151,9 +164,10 @@ namespace osu.Game.Screens.Backgrounds
             if (UseLegacyMainMenuBackground && legacyMainMenu.Value && skin.Value is LegacySkin and not DefaultLegacySkin)
                 newBackground = new SkinBackground(skin.Value, getBackgroundTextureName(), SkinBackgroundLookupName);
 
+            // seasonal backgrounds take highest priority, with a pinned one replacing the rotation.
             newBackground ??= seasonalBackgroundLoader.LoadNextBackground();
 
-            if (newBackground == null && user.Value?.IsSupporter == true)
+            if (newBackground == null)
             {
                 switch (source.Value)
                 {
@@ -187,8 +201,8 @@ namespace osu.Game.Screens.Backgrounds
 
             // this method is called in many cases where the background might not necessarily need to change.
             // if an equivalent background is currently being shown, we don't want to load it again.
-            if (newBackground?.Equals(background) == true)
-                return background;
+            if (newBackground?.Equals(CurrentBackground) == true)
+                return CurrentBackground;
 
             newBackground ??= new Background(getBackgroundTextureName());
             newBackground.Depth = currentDisplay;
@@ -207,5 +221,10 @@ namespace osu.Game.Screens.Backgrounds
                     return $@"Menu/menu-background-{currentDisplay % background_count + 1}";
             }
         }
+
+        /// <summary>
+        /// The background currently being displayed, if any.
+        /// </summary>
+        public Background CurrentBackground { get; private set; }
     }
 }

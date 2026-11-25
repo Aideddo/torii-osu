@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
 // See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 using osu.Framework.Localisation;
@@ -305,7 +305,10 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacyResultsStyle => new TranslatableString(getKey(@"legacy_results_style"), @"Torii (Stable)");
 
         /// <summary>
-        /// "What do you want to do with this beatmap?"
+        public static LocalisableString LegacyScoreMultiplier(string multiplier) => new TranslatableString(getKey(@"legacy_score_multiplier"), @"Score Multiplier: {0}", multiplier);
+
+        /// <summary>
+        /// "Pin seasonal background"
         /// </summary>
         public static LocalisableString LegacyBeatmapOptionsPrompt => new TranslatableString(getKey(@"legacy_beatmap_options_prompt"), @"What do you want to do with this beatmap?");
 
@@ -495,6 +498,64 @@ namespace osu.Game.Localisation
         /// "Score Multiplier: {0}"
         /// </summary>
         public static LocalisableString LegacyScoreMultiplier(string multiplier) => new TranslatableString(getKey(@"legacy_score_multiplier"), @"Score Multiplier: {0}", multiplier);
+        /// "Pin seasonal background"
+        /// </summary>
+        public static LocalisableString PinnedSeasonalBackground => new TranslatableString(getKey(@"pinned_seasonal_background"), @"Pin seasonal background");
+
+        /// <summary>
+        /// "Pinned background index"
+        /// </summary>
+        public static LocalisableString PinnedSeasonalBackgroundIndex => new TranslatableString(getKey(@"pinned_seasonal_background_index"), @"Pinned background index");
+
+        /// <summary>
+        /// "Skin background"
+        /// </summary>
+        public static LocalisableString SkinBackground => new TranslatableString(getKey(@"skin_background"), @"Skin background");
+
+        /// <summary>
+        /// "Beatmap background"
+        /// </summary>
+        public static LocalisableString BeatmapBackground => new TranslatableString(getKey(@"beatmap_background"), @"Beatmap background");
+
+        /// <summary>
+        /// "Random seasonal background"
+        /// </summary>
+        public static LocalisableString RandomSeasonalBackground => new TranslatableString(getKey(@"random_seasonal_background"), @"Random seasonal background");
+
+        /// <summary>
+        /// "Pinned seasonal background #{0}"
+        /// </summary>
+        public static LocalisableString PinnedSeasonalBackgroundItem(int index) => new TranslatableString(getKey(@"pinned_seasonal_background_item"), @"Pinned seasonal background #{0}", index);
+
+        /// <summary>
+        /// "Unavailable"
+        /// </summary>
+        public static LocalisableString Unavailable => new TranslatableString(getKey(@"unavailable"), @"Unavailable");
+
+        /// <summary>
+        /// "Background editor"
+        /// </summary>
+        public static LocalisableString BackgroundEditor => new TranslatableString(getKey(@"background_editor"), @"Background editor");
+
+        /// <summary>
+        /// "Save background to file"
+        /// </summary>
+        public static LocalisableString ExportBackground => new TranslatableString(getKey(@"export_background"), @"Save background to file");
+
+        /// <summary>
+        /// "Save and exit"
+        /// </summary>
+        public static LocalisableString SaveAndExit => new TranslatableString(getKey(@"save_and_exit"), @"Save and exit");
+
+        /// <summary>
+        /// "Background saved to {0}"
+        /// </summary>
+        public static LocalisableString BackgroundExported(LocalisableString filename) => new TranslatableString(getKey(@"background_exported"), @"Background saved to {0}", filename);
+
+        /// <summary>
+        /// "Failed to save the current background."
+        /// </summary>
+        public static LocalisableString BackgroundExportFailed => new TranslatableString(getKey(@"background_export_failed"), @"Failed to save the current background.");
 
         private static string getKey(string key) => $@"{prefix}:{key}";
     }
