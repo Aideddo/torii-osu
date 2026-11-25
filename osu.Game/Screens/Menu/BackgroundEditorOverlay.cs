@@ -488,14 +488,18 @@ namespace osu.Game.Screens.Menu
             // the selection (and the account state it depends on) may have changed while the editor was closed.
             refreshSelection();
 
-            this.MoveToY(0, 400, Easing.OutQuint);
-            this.FadeIn(400, Easing.OutQuint);
+            if (Alpha == 0)
+                Y = DrawHeight > 0 ? Math.Min(DrawHeight * 0.35f, 180f) : 180f;
+
+            this.MoveToY(0, 440, Easing.OutQuint);
+            this.FadeIn(320, Easing.OutQuint);
         }
 
         protected override void PopOut()
         {
-            this.MoveToY(DrawHeight, 400, Easing.InSine);
-            this.FadeOut(400, Easing.OutQuint);
+            float targetY = DrawHeight > 0 ? Math.Min(DrawHeight * 0.35f, 180f) : 180f;
+            this.MoveToY(targetY, 320, Easing.OutQuint);
+            this.FadeOut(240, Easing.OutQuint);
         }
 
         public override bool OnPressed(KeyBindingPressEvent<GlobalAction> e)

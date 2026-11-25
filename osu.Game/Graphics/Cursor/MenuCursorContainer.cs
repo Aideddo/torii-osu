@@ -6,17 +6,23 @@ using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
+using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Input;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osu.Game.Configuration;
 using osu.Game.Cosmetics;
+using osu.Game.Screens.Menu;
 using osu.Game.Skinning;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Graphics.Cursor
 {
@@ -69,6 +75,11 @@ namespace osu.Game.Graphics.Cursor
 
         private Bindable<MenuCursorStyle> menuCursorStyle = null!;
 
+        private InputManager? inputManager;
+        private IHasContextMenu? lastContextTarget;
+        private bool lastContextTargetHasItems;
+        private double lastContextCheckTime;
+
         // Resolved here (not just inside the inner Cursor) so the
         // trail rebuild can observe skin changes at the container
         // level — the trail lives as a sibling of the cursor visual,
@@ -102,6 +113,8 @@ namespace osu.Game.Graphics.Cursor
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            inputManager = GetContainingInputManager();
 
             lastInputWasMouse.BindTo(mouseInputDetector.LastInputWasMouseSource);
             lastInputWasMouse.BindValueChanged(_ => updateState(), true);
@@ -280,6 +293,60 @@ namespace osu.Game.Graphics.Cursor
                 cursorTrail.CursorScale = activeCursor.GameplayCursor.CurrentExpandedScale;
                 cursorTrail.PartRotation = activeCursor.GameplayCursor.CurrentRotation;
             }
+
+            bool showRightClickHint = visible && !activeCursor.UsesGameplayCursor && hasRightClickAction();
+            activeCursor.SetRightClickHint(showRightClickHint);
+        }
+
+        private bool hasRightClickAction()
+        {
+            if (inputManager == null)
+                return false;
+
+            bool blockedAboveBackground = false;
+
+            foreach (var d in inputManager.HoveredDrawables)
+            {
+                if (d is IHasContextMenu contextTarget)
+                {
+                    bool hasItems;
+
+                    if (ReferenceEquals(contextTarget, lastContextTarget) && Clock.CurrentTime - lastContextCheckTime < 150)
+                    {
+                        hasItems = lastContextTargetHasItems;
+                    }
+                    else
+                    {
+                        MenuItem[]? items = contextTarget.ContextMenuItems;
+
+                        if (items == null)
+                            continue;
+
+                        hasItems = items.Length > 0;
+                        lastContextTarget = contextTarget;
+                        lastContextTargetHasItems = hasItems;
+                        lastContextCheckTime = Clock.CurrentTime;
+                    }
+
+                    return hasItems;
+                }
+
+                if (d is OverlayContainer { State.Value: Visibility.Visible }
+                    || d is ClickableContainer
+                    || d is MainMenuButton
+                    || d is OsuLogo
+                    || d is Popover
+                    || d is Menu)
+                {
+                    blockedAboveBackground = true;
+                }
+
+                if (d is BackgroundEditorHoldTrigger)
+                    return !blockedAboveBackground;
+            }
+
+            lastContextTarget = null;
+            return false;
         }
 
         protected override bool OnMouseMove(MouseMoveEvent e)
@@ -432,6 +499,8 @@ namespace osu.Game.Graphics.Cursor
         {
             private Container cursorContainer = null!;
             private SkinnableGameplayCursor? gameplayCursor;
+            private Container? rightClickIndicator;
+            private bool rightClickHintVisible;
 
             private Bindable<float> menuCursorScale = null!;
             private Bindable<MenuCursorStyle> menuCursorStyle = null!;
@@ -510,6 +579,25 @@ namespace osu.Game.Graphics.Cursor
             /// </summary>
             public void Contract() => gameplayCursor?.Contract();
 
+            public void SetRightClickHint(bool available)
+            {
+                if (rightClickIndicator == null || rightClickHintVisible == available)
+                    return;
+
+                rightClickHintVisible = available;
+
+                if (available)
+                {
+                    rightClickIndicator.FadeIn(140, Easing.OutQuint)
+                                       .ScaleTo(1f, 180, Easing.OutQuint);
+                }
+                else
+                {
+                    rightClickIndicator.FadeOut(120, Easing.OutQuint)
+                                       .ScaleTo(0.75f, 140, Easing.OutQuint);
+                }
+            }
+
             private void buildCursor()
             {
                 // Swap the visual content based on the style enum.
@@ -520,6 +608,8 @@ namespace osu.Game.Graphics.Cursor
                 // unchanged.
                 Clear();
                 gameplayCursor = null;
+                rightClickIndicator = null;
+                rightClickHintVisible = false;
 
                 bool gameplayMode = menuCursorStyle.Value == MenuCursorStyle.SkinCursor
                                     || menuCursorStyle.Value == MenuCursorStyle.ToriiCursor;
@@ -622,6 +712,27 @@ namespace osu.Game.Graphics.Cursor
                                     Alpha = 0,
                                     Texture = textures.Get(@"Cursor/menu-cursor-additive"),
                                 },
+                                rightClickIndicator = new Container
+                                {
+                                    BypassAutoSizeAxes = Axes.Both,
+                                    Position = new Vector2(278, 294),
+                                    Origin = Anchor.Centre,
+                                    AutoSizeAxes = Axes.Both,
+                                    Alpha = 0,
+                                    Scale = new Vector2(0.75f),
+                                    Child = new FillFlowContainer
+                                    {
+                                        AutoSizeAxes = Axes.Both,
+                                        Direction = FillDirection.Horizontal,
+                                        Spacing = new Vector2(9),
+                                        Children = new[]
+                                        {
+                                            createRightClickDot(),
+                                            createRightClickDot(),
+                                            createRightClickDot(),
+                                        }
+                                    }
+                                },
                             }
                         }
                     };
@@ -629,6 +740,19 @@ namespace osu.Game.Graphics.Cursor
                     cursorContainer.Scale = new Vector2(menuCursorScale.Value * base_scale);
                 }
             }
+
+            private static Drawable createRightClickDot() => new CircularContainer
+            {
+                Size = new Vector2(24),
+                Masking = true,
+                BorderThickness = 4.5f,
+                BorderColour = Color4.Black.Opacity(0.85f),
+                Child = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Color4.White,
+                },
+            };
         }
 
         private partial class MouseInputDetector : Component

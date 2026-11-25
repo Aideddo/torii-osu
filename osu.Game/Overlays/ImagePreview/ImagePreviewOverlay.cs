@@ -36,8 +36,9 @@ namespace osu.Game.Overlays.ImagePreview
     /// </remarks>
     public partial class ImagePreviewOverlay : OsuFocusedOverlayContainer, IImagePreviewOverlay
     {
-        private const float transition_duration = 250;
-        private const float quick_transition_duration = 100;
+        private const float transition_duration = 380;
+        private const float fade_out_duration = 250;
+        private const float quick_transition_duration = 180;
         private const float zoom_step = 1.25f;
         private const float min_zoom = 0.1f;
         private const float max_zoom = 10f;
@@ -243,14 +244,17 @@ namespace osu.Game.Overlays.ImagePreview
             ImageHolder.Alpha = 0;
             background.Alpha = 0;
             toolbar.Alpha = 0;
+            toolbar.Y = -14;
 
             background.FadeIn(transition_duration, Easing.OutQuint);
-            toolbar.Delay(80).FadeIn(transition_duration, Easing.OutQuint);
+            toolbar.Delay(60)
+                   .FadeIn(transition_duration, Easing.OutQuint)
+                   .MoveToY(-30, transition_duration, Easing.OutQuint);
 
             transitionInProgress = true;
 
             ImageHolder.Position = hasSource ? ToLocalSpace(sourceQuad.Centre) - DrawSize / 2 : Vector2.Zero;
-            ImageHolder.Scale = new Vector2(hasSource ? sourceQuad.Width / ImageHolder.Size.X : 0.9f);
+            ImageHolder.Scale = new Vector2(hasSource ? sourceQuad.Width / ImageHolder.Size.X : 0.94f);
 
             ImageHolder.FadeIn(transition_duration, Easing.OutQuint)
                        .MoveTo(Vector2.Zero, transition_duration, Easing.OutQuint)
@@ -268,17 +272,18 @@ namespace osu.Game.Overlays.ImagePreview
 
             bool hasSource = tryGetSourceQuad(out Quad sourceQuad);
 
-            background.FadeOut(transition_duration, Easing.OutQuint);
-            toolbar.FadeOut(transition_duration / 2, Easing.OutQuint);
+            background.FadeOut(fade_out_duration, Easing.OutQuint);
+            toolbar.FadeOut(160, Easing.OutQuint)
+                   .MoveToY(-18, 200, Easing.OutQuint);
 
             transitionInProgress = true;
 
             // the image is faded out along the same curve it is moved back on, which means it is already
             // almost invisible by the time it lines up with the source again - so the source takes over
             // without the two ever being seen on top of each other.
-            ImageHolder.FadeOut(transition_duration, Easing.OutQuint)
+            ImageHolder.FadeOut(fade_out_duration, Easing.OutQuint)
                        .MoveTo(hasSource ? ToLocalSpace(sourceQuad.Centre) - DrawSize / 2 : Vector2.Zero, transition_duration, Easing.OutQuint)
-                       .ScaleTo(new Vector2(hasSource ? sourceQuad.Width / ImageHolder.Size.X : 0.9f), transition_duration, Easing.OutQuint)
+                       .ScaleTo(new Vector2(hasSource ? sourceQuad.Width / ImageHolder.Size.X : 0.94f), transition_duration, Easing.OutQuint)
                        .OnComplete(_ =>
                        {
                            transitionInProgress = false;

@@ -28,7 +28,7 @@ namespace osu.Game.Screens.Menu
         public Action? BeginEdit;
 
         private const double hold_duration = 900;
-        private const int fade_duration = 200;
+        private const int fade_duration = 260;
         private const int release_fade_delay = 500;
 
         private const float indicator_size = 56;
@@ -78,13 +78,14 @@ namespace osu.Game.Screens.Menu
         {
             indicator.ProgressRing.ClearTransforms();
             indicator.ProgressRing.Progress = 0;
-            indicator.ProgressRing.ProgressTo(1, hold_duration);
+            indicator.ProgressRing.ProgressTo(1, hold_duration, Easing.OutSine);
         }
 
         private void onHoldComplete()
         {
             holdFired = true;
-            indicator.FadeOut(fade_duration, Easing.OutQuint);
+            indicator.ScaleTo(1.12f, fade_duration, Easing.OutQuint)
+                     .FadeOut(fade_duration, Easing.OutQuint);
 
             BeginEdit?.Invoke();
         }
@@ -161,7 +162,7 @@ namespace osu.Game.Screens.Menu
             public void ShowAt(Vector2 screenSpacePosition)
             {
                 Position = getPositionInParent(screenSpacePosition);
-                this.ScaleTo(0.8f).ScaleTo(1, 200, Easing.OutQuint);
+                this.ScaleTo(0.78f).ScaleTo(1, fade_duration, Easing.OutQuint);
                 this.FadeIn(fade_duration, Easing.OutQuint);
             }
 
