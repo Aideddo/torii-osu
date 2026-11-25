@@ -1,5 +1,5 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -22,7 +21,6 @@ using osu.Game.Beatmaps.Drawables;
 using osu.Game.Collections;
 using osu.Game.Database;
 using osu.Game.Graphics;
-using osu.Game.Graphics.Backdrops;
 using osu.Game.Graphics.Carousel;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
@@ -42,8 +40,7 @@ namespace osu.Game.Screens.Select
 
         public Bindable<HashSet<BeatmapInfo>?> VisibleBeatmaps { get; } = new Bindable<HashSet<BeatmapInfo>?>();
 
-        // torii dark glass: Box blanco plano normalmente; GlassBackdrop blanco-frost con el theme glass.
-        private Drawable chevronBackground = null!;
+        private Box chevronBackground = null!;
         private PanelSetBackground setBackground = null!;
         private ScheduledDelegate? scheduledBackgroundRetrieval;
 
@@ -108,26 +105,12 @@ namespace osu.Game.Screens.Select
                 },
             };
 
-            // torii dark glass: el "cosito" blanco del set expandido se vuelve vidrio blanco-frost
-            // (blur de la escena detras teñido de blanco) en vez de blanco plano.
-            if (OsuColour.IsGlassTheme)
+            Background = chevronBackground = new Box
             {
-                Background = chevronBackground = new GlassBackdrop
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    TintColour = Color4.White.Opacity(0.25f), // bien transparente: que se note el blur atras
-                    Alpha = 0f,
-                };
-            }
-            else
-            {
-                Background = chevronBackground = new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = Color4.White,
-                    Alpha = 0f,
-                };
-            }
+                RelativeSizeAxes = Axes.Both,
+                Colour = Color4.White,
+                Alpha = 0f,
+            };
 
             Content.Children = new Drawable[]
             {
@@ -143,7 +126,7 @@ namespace osu.Game.Screens.Select
                     {
                         titleText = new OsuSpriteText
                         {
-                            Font = OsuFont.Style.Heading1.With(typeface: Typeface.TorusAlternate),
+                            Font = OsuFont.Style.Heading1,
                         },
                         artistText = new OsuSpriteText
                         {
@@ -216,7 +199,7 @@ namespace osu.Game.Screens.Select
             var beatmapSet = groupedBeatmapSet.BeatmapSet;
 
             // Choice of background image matches BSS implementation (always uses the lowest `beatmap_id` from the set).
-            scheduledBackgroundRetrieval = Scheduler.AddDelayed(s => setBackground.Beatmap = beatmaps.GetWorkingBeatmap(s.Beatmaps.MinBy(b => b.OnlineID)), beatmapSet, PanelSetBackground.BACKGROUND_RETRIEVAL_DELAY);
+            scheduledBackgroundRetrieval = Scheduler.AddDelayed(s => setBackground.Beatmap = beatmaps.GetWorkingBeatmap(s.Beatmaps.MinBy(b => b.OnlineID)), beatmapSet, 50);
 
             titleText.Text = new RomanisableString(beatmapSet.Metadata.TitleUnicode, beatmapSet.Metadata.Title);
             artistText.Text = new RomanisableString(beatmapSet.Metadata.ArtistUnicode, beatmapSet.Metadata.Artist);
@@ -278,18 +261,6 @@ namespace osu.Game.Screens.Select
                     if (beatmapSet.GetOnlineURL(api, ruleset.Value) is string url)
                         items.Add(new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => game?.CopyToClipboard(url)));
 
-                    if (beatmapSet.GetOfficialOnlineURL(ruleset.Value) is string osuUrl)
-                        items.Add(new OsuMenuItem("Copy osu! link", MenuItemType.Standard, () => game?.CopyToClipboard(osuUrl)));
-
-                    items.Add(new OsuMenuItemSpacer());
-                }
-
-                // torii: mandar la cancion del set a mapperatorinator. cualquier diff
-                // sirve como fuente, el audio es del set. para sets ya generados con
-                // la IA el mismo helper devuelve el submenu de regenerar/nueva diff.
-                if (beatmapSet.Beatmaps.FirstOrDefault() is BeatmapInfo sourceBeatmap && songSelect is SoloSongSelect solo)
-                {
-                    items.AddRange(solo.CreateMapperatorinatorMenuItems(sourceBeatmap));
                     items.Add(new OsuMenuItemSpacer());
                 }
 
@@ -303,6 +274,9 @@ namespace osu.Game.Screens.Select
                     collectionItems.Add(new OsuMenuItem(CommonStrings.Manage, MenuItemType.Standard, manageCollectionsDialog.Show));
 
                 items.Add(new OsuMenuItem(CommonStrings.Collections) { Items = collectionItems });
+
+                // The beatmap set panel isn't included in SongSelect's `GetForwardActions()`.
+                items.Add(new OsuMenuItem(ThemeMusicStrings.UseAsThemeMusic, MenuItemType.Standard, () => songSelect?.UseAsThemeMusic(beatmapSet)));
 
                 if (beatmapSet.Beatmaps.Any(b => b.Hidden))
                     items.Add(new OsuMenuItem(SongSelectStrings.RestoreAllHidden, MenuItemType.Standard, () => songSelect?.RestoreAllHidden(beatmapSet)));

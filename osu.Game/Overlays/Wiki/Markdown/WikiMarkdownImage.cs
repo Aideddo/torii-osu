@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
-// See the LICENCE file in the repository root for full licence text.
-=======
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh> & GooGuTeam. Licensed under the MIT Licence.
 // See the LICENCE & LICENCE-OSU file in the repository root for full licence text.
->>>>>>> b7c44b3f84 (Merge pull request #10 from GooGuTeam/feat/image-preview-overlay)
 
 using Markdig.Syntax.Inlines;
 using osu.Framework.Graphics;
@@ -23,16 +18,11 @@ namespace osu.Game.Overlays.Wiki.Markdown
 
         protected override ImageContainer CreateImageContainer(string url)
         {
-            // The idea is replace "https://website.url/wiki/{path-to-image}" to "https://website.url/wiki/images/{path-to-image}"
+            // The idea is to replace "https://website.url/wiki/{path-to-image}" to "https://website.url/wiki/images/{path-to-image}"
             // "/wiki/images/*" is route to fetch wiki image from osu!web server (see: https://github.com/ppy/osu-web/blob/4205eb66a4da86bdee7835045e4bf28c35456e04/routes/web.php#L289)
             url = url.Replace("/wiki/", "/wiki/images/");
 
-            return base.CreateImageContainer(url);
-        }
-
-        protected override ImageContainer CreateImageContainerCore(string mediaUrl)
-        {
-            var container = new WikiImageContainer(mediaUrl);
+            var container = new WikiImageContainer(url);
             container.OnLoadComplete += d => d.FadeInFromZero(300, Easing.OutQuint);
             return container;
         }
