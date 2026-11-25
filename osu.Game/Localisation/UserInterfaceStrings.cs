@@ -305,10 +305,7 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacyResultsStyle => new TranslatableString(getKey(@"legacy_results_style"), @"Torii (Stable)");
 
         /// <summary>
-        public static LocalisableString LegacyScoreMultiplier(string multiplier) => new TranslatableString(getKey(@"legacy_score_multiplier"), @"Score Multiplier: {0}", multiplier);
-
-        /// <summary>
-        /// "Pin seasonal background"
+        /// "What do you want to do with this beatmap?"
         /// </summary>
         public static LocalisableString LegacyBeatmapOptionsPrompt => new TranslatableString(getKey(@"legacy_beatmap_options_prompt"), @"What do you want to do with this beatmap?");
 
@@ -498,6 +495,8 @@ namespace osu.Game.Localisation
         /// "Score Multiplier: {0}"
         /// </summary>
         public static LocalisableString LegacyScoreMultiplier(string multiplier) => new TranslatableString(getKey(@"legacy_score_multiplier"), @"Score Multiplier: {0}", multiplier);
+
+        /// <summary>
         /// "Pin seasonal background"
         /// </summary>
         public static LocalisableString PinnedSeasonalBackground => new TranslatableString(getKey(@"pinned_seasonal_background"), @"Pin seasonal background");
