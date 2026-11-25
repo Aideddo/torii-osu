@@ -82,6 +82,19 @@ namespace osu.Game.Input.Bindings
 
         public bool OnPressed(KeyBindingPressEvent<GlobalAction> e) => handler?.OnPressed(e) == true;
 
+#if DEBUG
+        protected override bool OnKeyDown(KeyDownEvent e)
+        {
+            if (e.Key == osuTK.Input.Key.F6 && Environment.GetEnvironmentVariable("TORII_POINTS_PREVIEW") == "1" && handler is OsuGame game)
+            {
+                if (!e.Repeat)
+                    game.PreviewPoints(e.ShiftPressed);
+                return true;
+            }
+            return base.OnKeyDown(e);
+        }
+#endif
+
         public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e) => handler?.OnReleased(e);
 
         private static IEnumerable<KeyBinding> globalKeyBindings => new[]

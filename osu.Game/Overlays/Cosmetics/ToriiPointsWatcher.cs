@@ -42,7 +42,9 @@ namespace osu.Game.Overlays.Cosmetics
 
         private Bindable<int> cursor;
         private Bindable<bool> reducedMotion;
-        private FillFlowContainer<PointsEarnedCard> flow;
+        private Container cards;
+        private PointsEarnedCard activeCard;
+        private bool gameplayActive;
         private IBindable<APIState> apiState;
         private bool busy;
 
@@ -81,16 +83,33 @@ namespace osu.Game.Overlays.Cosmetics
                 }
             }, true);
 
-            Child = flow = new FillFlowContainer<PointsEarnedCard>
-            {
-                Anchor = Anchor.TopCentre,
-                Origin = Anchor.TopCentre,
-                AutoSizeAxes = Axes.Both,
-                Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, BriefingTheme.SpacingSm),
-                Y = 72,
-            };
+            Child = cards = new Container { RelativeSizeAxes = Axes.Both };
         }
+
+        public void SetGameplay(bool gameplay)
+        {
+            gameplayActive = gameplay;
+            activeCard?.SetGameplay(gameplay);
+        }
+
+        private void showCard(IEnumerable<PointsEarnedCard.Line> lines, int balance)
+        {
+            activeCard?.Dismiss();
+            activeCard = new PointsEarnedCard(lines, balance, reducedMotion.Value);
+            activeCard.SetGameplay(gameplayActive);
+            cards.Add(activeCard);
+        }
+
+#if DEBUG
+        public void ShowPreview() => showCard(new[]
+        {
+            new PointsEarnedCard.Line(25, "daily_play", "streak:3"),
+            new PointsEarnedCard.Line(80, "top_play", "rank:12"),
+            new PointsEarnedCard.Line(15, "medal", string.Empty),
+        }, 1953);
+
+        public void CompactPreview() => activeCard?.SetGameplay(true);
+#endif
 
         /// <summary>A play just finished. Wait a beat longer than a snappy toast so
         /// the medal pop + every award (top play is committed in the stats pass)
@@ -164,7 +183,7 @@ namespace osu.Game.Overlays.Cosmetics
                                 .ToList();
 
                 if (cardLines.Count > 0)
-                    flow.Add(new PointsEarnedCard(cardLines, res.Balance, reducedMotion.Value));
+                    showCard(cardLines, res.Balance);
             });
             req.Failure += _ => Schedule(() => busy = false);
             api.Queue(req);
