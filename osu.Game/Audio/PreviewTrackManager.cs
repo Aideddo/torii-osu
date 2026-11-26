@@ -113,8 +113,8 @@ namespace osu.Game.Audio
 
             protected override Track GetTrack()
             {
-                string webUrl = System.Environment.GetEnvironmentVariable("TORII_WEB_URL")?.TrimEnd('/') ?? "https://lazer.shikkesora.com";
-                return trackManager.Get($"{webUrl}/preview/{beatmapSetInfo.OnlineID}.mp3");
+                string apiUrl = System.Environment.GetEnvironmentVariable("TORII_API_URL")?.TrimEnd('/') ?? "https://lazer-api.shikkesora.com";
+                return trackManager.Get($"{apiUrl}/api/private/audio/beatmapset/{beatmapSetInfo.OnlineID}");
             }
         }
     }
