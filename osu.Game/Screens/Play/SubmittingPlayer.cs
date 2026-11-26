@@ -87,6 +87,9 @@ namespace osu.Game.Screens.Play
 
             AddInternal(new PlayerTouchInputDetector());
 
+            // Torii: likewise for plays made with VR controllers.
+            AddInternal(new PlayerVRInputDetector());
+
             // We probably want to move this display to something more global.
             // Probably using the OSD somehow.
             AddInternal(new GameplayOffsetControl

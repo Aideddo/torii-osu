@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Screens;
@@ -49,6 +50,7 @@ namespace osu.Game.Screens.Play
         private double? lastFrameTime;
 
         private double userPlaybackRateBeforeFastForward;
+        private bool fastForwarding;
 
         private ReplayFailIndicator? failIndicator;
         private PlaybackSettings? playbackSettings;
@@ -85,6 +87,28 @@ namespace osu.Game.Screens.Play
         }
 
         /// <summary>
+        /// Torii: gives its content the gameplay clock, as if it were inside the <see cref="GameplayClockContainer"/>.
+        /// </summary>
+        private partial class GameplayClockDependencies : Container
+        {
+            private readonly GameplayClockContainer gameplayClockContainer;
+
+            public GameplayClockDependencies(GameplayClockContainer gameplayClockContainer)
+            {
+                this.gameplayClockContainer = gameplayClockContainer;
+                RelativeSizeAxes = Axes.Both;
+            }
+
+            protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
+            {
+                var dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+                dependencies.CacheAs(gameplayClockContainer);
+                dependencies.CacheAs<IGameplayClock>(gameplayClockContainer);
+                return dependencies;
+            }
+        }
+
+        /// <summary>
         /// Add a settings group to the HUD overlay. Intended to be used by rulesets to add replay-specific settings.
         /// </summary>
         /// <param name="settings">The settings group to be shown.</param>
@@ -98,7 +122,20 @@ namespace osu.Game.Screens.Play
 
             AddInternal(leaderboardProvider);
 
-            GameplayClockContainer.Add(ReplayOverlay = new ReplayOverlay());
+            ReplayOverlay = new ReplayOverlay();
+
+            // Torii: shown as a scene, the replay takes no input from the mouse: its settings stay flat in front of it.
+            if (VRReplayScene != null)
+            {
+                // (With what they'd have found where they usually are.)
+                var overlay = new GameplayClockDependencies(GameplayClockContainer) { Child = ReplayOverlay };
+
+                LoadComponent(overlay);
+                VRReplayScene.Overlay.Add(overlay);
+                ReplayOverlay.Settings.Add(VRReplayScene.CreateSettings());
+            }
+            else
+                GameplayClockContainer.Add(ReplayOverlay);
 
             playbackSettings = new PlaybackSettings
             {
@@ -177,6 +214,10 @@ namespace osu.Game.Screens.Play
             if (!LoadedBeatmapSuccessfully)
                 return false;
 
+            // Torii: the keys the camera of the scene is flown with aren't the replay's while it is.
+            if (VRReplayScene?.FlyingCamera == true)
+                return true;
+
             switch (e.Action)
             {
                 case GlobalAction.StepReplayBackward:
@@ -205,6 +246,10 @@ namespace osu.Game.Screens.Play
                 case GlobalAction.FastForwardReplay:
                     if (e.Repeat) return false;
 
+                    // Torii: shift means nothing for a replay of a VR play (it flies the scene's camera down).
+                    if (VRReplayScene != null) return true;
+
+                    fastForwarding = true;
                     userPlaybackRateBeforeFastForward = playbackSettings!.UserPlaybackRate.Value;
                     playbackSettings!.UserPlaybackRate.Value *= 2;
                     return true;
@@ -240,6 +285,9 @@ namespace osu.Game.Screens.Play
             switch (e.Action)
             {
                 case GlobalAction.FastForwardReplay:
+                    if (!fastForwarding) return;
+
+                    fastForwarding = false;
                     playbackSettings!.UserPlaybackRate.Value = userPlaybackRateBeforeFastForward;
                     return;
             }

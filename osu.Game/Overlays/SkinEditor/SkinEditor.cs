@@ -413,6 +413,14 @@ namespace osu.Game.Overlays.SkinEditor
                 },
             };
 
+            // Torii: VR components get their own section above everything else, in VR only (they do nothing elsewhere).
+            if (VR.VRRuntime.IsVR)
+            {
+                var vrToolbox = SkinComponentToolbox.CreateVR(skinComponentsContainer, target.NewValue.Ruleset);
+                vrToolbox.RequestPlacement = requestPlacement;
+                componentsSidebar.Add(vrToolbox);
+            }
+
             // Pinned at the top: the Torii-exclusive components
             // (anything implementing IToriiSkinComponent). Drawn from
             // both osu.Game and the active ruleset's assembly so a

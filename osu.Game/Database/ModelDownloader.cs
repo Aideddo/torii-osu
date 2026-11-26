@@ -21,6 +21,15 @@ namespace osu.Game.Database
     {
         public Action<Notification>? PostNotification { protected get; set; }
 
+        /// <summary>
+        /// Torii: invoked for each model imported from a download, for anything to be fetched along with it.
+        /// </summary>
+        /// <param name="requested">What was asked to be downloaded.</param>
+        /// <param name="imported">What it was imported as.</param>
+        protected virtual void OnImported(T requested, Live<TModel> imported)
+        {
+        }
+
         public event Action<ArchiveDownloadRequest<T>>? DownloadBegan;
 
         public event Action<ArchiveDownloadRequest<T>>? DownloadFailed;
@@ -72,7 +81,13 @@ namespace osu.Game.Database
                         if (originalModel != null)
                             importSuccessful = (await importer.ImportAsUpdate(notification, new ImportTask(filename), originalModel).ConfigureAwait(false)) != null;
                         else
-                            importSuccessful = (await importer.Import(notification, new[] { new ImportTask(filename) }).ConfigureAwait(false)).Any();
+                        {
+                            var imported = (await importer.Import(notification, new[] { new ImportTask(filename) }).ConfigureAwait(false)).ToArray();
+                            importSuccessful = imported.Length > 0;
+
+                            foreach (var live in imported)
+                                OnImported(request.Model, live);
+                        }
                     }
                     finally
                     {

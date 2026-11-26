@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game.Extensions;
 using osu.Game.IO;
@@ -107,9 +108,28 @@ namespace osu.Game.Database
                 throw;
             }
 
+            try
+            {
+                model.PerformRead(s => OnExported(s, filename));
+            }
+            catch (Exception e)
+            {
+                // What goes along with the export isn't worth failing it for.
+                Logger.Error(e, $"Failed to export what accompanies {filename}.");
+            }
+
             notification.CompletionText = NotificationsStrings.FileExportFinished(itemFilename);
             notification.CompletionClickAction = () => ExportStorage.PresentFileExternally(filename);
             notification.State = ProgressNotificationState.Completed;
+        }
+
+        /// <summary>
+        /// Torii: invoked once a model has been exported to <see cref="ExportStorage"/>, for anything to be exported along with it.
+        /// </summary>
+        /// <param name="model">The model exported.</param>
+        /// <param name="filename">The name of the file it was exported to.</param>
+        protected virtual void OnExported(TModel model, string filename)
+        {
         }
 
         /// <summary>

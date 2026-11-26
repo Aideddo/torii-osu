@@ -18,6 +18,7 @@ using osu.Game.Performance;
 using osu.Game.Screens;
 using osu.Game.Updater;
 using osu.Game.Utils;
+using osu.Game.VR;
 using osuTK;
 
 namespace osu.Android
@@ -32,7 +33,8 @@ namespace osu.Android
 
         private readonly PackageInfo packageInfo;
 
-        public override Vector2 ScalingContainerTargetDrawSize => new Vector2(1024, 1024 * DrawHeight / DrawWidth);
+        // Torii: in VR the game draws to a large virtual panel, so keep the desktop target size rather than the phone zoom.
+        public override Vector2 ScalingContainerTargetDrawSize => VRRuntime.IsVR ? base.ScalingContainerTargetDrawSize : new Vector2(1024, 1024 * DrawHeight / DrawWidth);
 
         public OsuGameAndroid(OsuGameActivity activity)
             : base(null)
@@ -105,6 +107,9 @@ namespace osu.Android
 
         private void updateOrientation()
         {
+            if (VRRuntime.IsVR)
+                return;
+
             var orientation = MobileUtils.GetOrientation(this, (IOsuScreen)ScreenStack.CurrentScreen, gameActivity.IsTablet);
 
             switch (orientation)

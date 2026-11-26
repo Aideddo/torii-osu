@@ -127,6 +127,94 @@ correctly licensed, contact the Torii maintainer and it will be removed
 promptly.
 
 ================================================================================
+8. "Graphic tablet" 3D model (VR pen)
+================================================================================
+
+"Graphic tablet" by RoughnessPub (https://sketchfab.com/RoughnessPub)
+Source: https://sketchfab.com/3d-models/graphic-tablet-6b30ea789a0e4a36a8a300e020aece2c
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0)
+Licence text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Modified by Torii: only the pen is used. It was separated from the tablet,
+re-centred on its tip, simplified (fewer triangles), and its base colour
+texture was reduced to 512x512; the other texture maps were removed. Used as
+the optional pen model held in place of the controllers in VR.
+
+================================================================================
+9. OpenXR loader (VR on Windows)
+================================================================================
+
+OpenXR loader by The Khronos Group Inc.
+Source: https://github.com/KhronosGroup/OpenXR-SDK-Source (release 1.1.65)
+Licence: Apache License 2.0 (text shipped alongside the library)
+
+Distributed unmodified as runtimes/win-x64/openxr/openxr_loader.dll.
+
+================================================================================
+10. "Vr Glasses" icon (icon of the VR mod)
+================================================================================
+
+"Vr Glasses" by Vectopus, from the "Atlas Variety Line Icons" collection
+Source: https://www.svgrepo.com/svg/455120/vr-glasses
+Licence: MIT
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Modified by Torii: redrawn in white with rounded line ends at the line weight
+of the game's other mod icons, and rendered to a 120x84 image
+(Textures/Icons/Mods/mod-vr.png in the game's resources). Shown for the VR
+mod, which marks plays made with VR controllers.
+
+================================================================================
+11. "VR Headset Free Model" 3D model (headset in replays of VR plays)
+================================================================================
+
+"VR Headset Free Model" by Vitamin (https://sketchfab.com/btrseller)
+Source: https://sketchfab.com/3d-models/vr-headset-free-model-51b8dbff65e247979f068914f6197909
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0)
+Licence text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Modified by Torii: scaled to real size, re-centred on the point between the
+wearer's eyes and turned to face the other way; its base colour texture was
+reduced to 512x512 and the other texture maps were removed. Shown where the
+player's head was when a replay of a play made in VR is watched as a 3D scene.
+
+================================================================================
+12. "Meta Quest Pro Left Controller" and "Meta Quest Pro Right Controller" 3D
+    models (generic VR controllers)
+================================================================================
+
+"Meta Quest Pro Left Controller" and "Meta Quest Pro Right Controller" by
+mreimer (https://sketchfab.com/mreimer)
+Sources:
+  https://sketchfab.com/3d-models/meta-quest-pro-left-controller-b65700705dec4df9a12dd9e31933fb62
+  https://sketchfab.com/3d-models/meta-quest-pro-right-controller-76a1fbb0530842eea882019bcfe51b79
+Licence: Creative Commons Attribution-NoDerivatives 4.0 International
+         (CC BY-ND 4.0)
+Licence text: https://creativecommons.org/licenses/by-nd/4.0/legalcode
+
+Distributed unmodified, as downloaded (meta_quest_pro_left_controller.glb and
+meta_quest_pro_right_controller.glb). Drawn where a VR controller is and no
+model of the actual controller is available: in the hands of the player of a
+replay, and for the user's own controllers on VR runtimes which provide none.
+
+================================================================================
 
 8. GooGuTeam / telecomadm1145 contributions
 ================================================================================
@@ -156,6 +244,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+================================================================================
+13. Microsoft.Maui.Essentials (Meta Quest Android build)
+================================================================================
+
+Copyright (c) .NET Foundation and Contributors
+Source: https://github.com/dotnet/maui
+Licence: MIT
 
 ================================================================================
 

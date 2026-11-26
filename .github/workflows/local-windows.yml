@@ -39,13 +39,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: ShikkesoraSIM/torii-framework
-          ref: b29d1347c21a952cc7bf68f9e02e4f65c40c2c14
+          ref: 4795c0baf99e259c02f2453f7d98420b2a8a0e5a
           path: torii-framework
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: ShikkesoraSIM/torii-hiding
-          ref: a62ed2bf241a73ffaa248c1ea56355e641384542
+          ref: b3014d392c65f5184675cc143e0b92159e1ba85f
           path: toriirefresh-resources
           persist-credentials: false
       - name: Build and validate every platform

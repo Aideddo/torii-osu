@@ -391,12 +391,20 @@ namespace osu.Game.Database
         {
             try
             {
+                var deletedScoreHashes = new List<string>();
+
                 using (var transaction = realm.BeginWrite())
                 {
                     var pendingDeleteScores = realm.All<ScoreInfo>().Where(s => s.DeletePending);
 
                     foreach (var score in pendingDeleteScores)
+                    {
+                        // Torii: what was saved along with the replay goes with it (below, once the scores are really gone).
+                        if (!string.IsNullOrEmpty(score.Hash))
+                            deletedScoreHashes.Add(score.Hash);
+
                         realm.Remove(score);
+                    }
 
                     var pendingDeleteSets = realm.All<BeatmapSetInfo>().Where(s => s.DeletePending);
 
@@ -428,6 +436,18 @@ namespace osu.Game.Database
                         realm.Remove(a);
 
                     transaction.Commit();
+                }
+
+                if (deletedScoreHashes.Count > 0)
+                {
+                    var replayExtras = new ReplayExtrasStore(storage);
+
+                    // (Not those of a replay another score still has: the same replay imported again since.)
+                    foreach (string hash in deletedScoreHashes.Distinct())
+                    {
+                        if (realm.All<ScoreInfo>().Where(s => s.Hash == hash).Count() == 0)
+                            replayExtras.Delete(hash);
+                    }
                 }
 
                 // clean up files after dropping any pending deletions.

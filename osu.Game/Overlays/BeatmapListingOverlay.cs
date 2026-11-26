@@ -25,6 +25,7 @@ using osu.Game.Graphics.Containers;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays.BeatmapListing;
+using osu.Game.Performance;
 using osu.Game.Localisation;
 using osu.Game.Resources.Localisation.Web;
 using osuTK;
@@ -44,7 +45,10 @@ namespace osu.Game.Overlays
 
         private Container panelTarget;
         private Container pageErrorTarget;
-        private FillFlowContainer<BeatmapCard> foundContent;
+        // Torii: holds cards, or with the lightweight interface their slots (see createCardsFor()).
+        private FillFlowContainer<Drawable> foundContent;
+
+        private static APIBeatmapSet beatmapSetOf(Drawable cardOrSlot) => cardOrSlot is BeatmapCardSlot slot ? slot.BeatmapSet : ((BeatmapCard)cardOrSlot).BeatmapSet;
 
         private BeatmapListingFilterControl filterControl => Header.FilterControl;
 
@@ -225,28 +229,37 @@ namespace osu.Game.Overlays
                 // new results may contain beatmaps from a previous page,
                 // this is dodgy but matches web behaviour for now.
                 // see: https://github.com/ppy/osu-web/issues/9270
-                newCards = newCards.ExceptBy(foundContent.Select(c => c.BeatmapSet.OnlineID), c => c.BeatmapSet.OnlineID);
+                newCards = newCards.ExceptBy(foundContent.Select(c => beatmapSetOf(c).OnlineID), c => beatmapSetOf(c).OnlineID);
+
+                var target = foundContent;
 
                 panelLoadTask = LoadComponentsAsync(newCards, loaded =>
                 {
                     lastFetchDisplayedTime = Time.Current;
-                    foundContent.AddRange(loaded);
-                    loaded.ForEach(p => p.FadeIn(200, Easing.OutQuint));
+
+                    // Torii: added a few per frame (see Update()), rather than all at once.
+                    foreach (var card in loaded)
+                        pendingCards.Enqueue((card, target));
                 }, (cancellationToken = new CancellationTokenSource()).Token);
             }
         }
 
-        private IEnumerable<BeatmapCard> createCardsFor(IEnumerable<APIBeatmapSet> beatmapSets) => beatmapSets.Select(set => BeatmapCard.Create(set, filterControl.CardSize.Value).With(c =>
+        private IEnumerable<Drawable> createCardsFor(IEnumerable<APIBeatmapSet> beatmapSets) => beatmapSets.Select(set => createCardFor(set).With(c =>
         {
             c.Anchor = Anchor.TopCentre;
             c.Origin = Anchor.TopCentre;
         })).ToArray();
 
-        private static ReverseChildIDFillFlowContainer<BeatmapCard> createCardContainerFor(IEnumerable<BeatmapCard> newCards)
+        // Torii: with the lightweight interface, cards are only created for the results in view (see BeatmapCardSlot).
+        private Drawable createCardFor(APIBeatmapSet set) => LightweightInterface.Active
+            ? new BeatmapCardSlot(set, filterControl.CardSize.Value)
+            : BeatmapCard.Create(set, filterControl.CardSize.Value);
+
+        private static ReverseChildIDFillFlowContainer<Drawable> createCardContainerFor(IEnumerable<Drawable> newCards)
         {
             // spawn new children with the contained so we only clear old content at the last moment.
             // reverse ID flow is required for correct Z-ordering of the cards' expandable content (last card should be front-most).
-            var content = new ReverseChildIDFillFlowContainer<BeatmapCard>
+            var content = new ReverseChildIDFillFlowContainer<Drawable>
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -290,7 +303,7 @@ namespace osu.Game.Overlays
 
             Loading.Show();
 
-            var newCards = createCardsFor(foundContent.Reverse().Select(card => card.BeatmapSet));
+            var newCards = createCardsFor(foundContent.Reverse().Select(beatmapSetOf));
 
             cancellationToken?.Cancel();
 
@@ -305,6 +318,10 @@ namespace osu.Game.Overlays
         protected override void Dispose(bool isDisposing)
         {
             cancellationToken?.Cancel();
+
+            while (pendingCards.TryDequeue(out var pending))
+                pending.card.Dispose();
+
             base.Dispose(isDisposing);
         }
 
@@ -414,13 +431,48 @@ namespace osu.Game.Overlays
 
         private double lastFetchDisplayedTime;
 
+        /// <summary>
+        /// Torii: cards of a further page, loaded and waiting to be added to the results. Adding a whole page (50 cards) in one frame
+        /// stalls it for tens of milliseconds on desktop, and many times that on a headset.
+        /// </summary>
+        private readonly Queue<(Drawable card, FillFlowContainer<Drawable> target)> pendingCards = new Queue<(Drawable, FillFlowContainer<Drawable>)>();
+
+        private const int cards_added_per_frame = 1;
+
+        private void addPendingCards()
+        {
+            // Slots are next to nothing to add.
+            int limit = LightweightInterface.Active ? int.MaxValue : cards_added_per_frame;
+
+            for (int added = 0; added < limit && pendingCards.TryDequeue(out var pending);)
+            {
+                // The results were replaced (new search, other card size) since this card was loaded.
+                if (pending.target != foundContent)
+                {
+                    pending.card.Dispose();
+                    continue;
+                }
+
+                pending.target.Add(pending.card);
+                pending.card.FadeIn(200, Easing.OutQuint);
+                added++;
+            }
+
+            // Further pages are fetched a while after the last card is shown.
+            if (pendingCards.Count > 0)
+                lastFetchDisplayedTime = Time.Current;
+        }
+
         protected override void Update()
         {
             base.Update();
 
+            addPendingCards();
+
             const int pagination_scroll_distance = 500;
 
             bool shouldShowMore = panelLoadTask?.IsCompleted != false
+                                  && pendingCards.Count == 0
                                   && Time.Current - lastFetchDisplayedTime > time_between_fetches
                                   && (ScrollFlow.ScrollableExtent > 0 && ScrollFlow.IsScrolledToEnd(pagination_scroll_distance));
 

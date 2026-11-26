@@ -13,13 +13,25 @@ using Android.Graphics;
 using Android.OS;
 using Android.Views;
 using osu.Framework.Android;
+#if TORII_QUEST
+using osu.Framework.Android.XR;
+#endif
 using osu.Game.Database;
+using osu.Game.VR;
 using Debug = System.Diagnostics.Debug;
 using Uri = Android.Net.Uri;
 
 namespace osu.Android
 {
+#if TORII_QUEST
+    // Torii: Quest (immersive VR) build. The launcher entry must carry the Oculus VR category in the same MAIN/LAUNCHER filter
+    // for Horizon OS to start the app immersively instead of as a 2D panel.
+    [Activity(ConfigurationChanges = DEFAULT_CONFIG_CHANGES, Exported = true, LaunchMode = DEFAULT_LAUNCH_MODE, MainLauncher = false,
+        ScreenOrientation = ScreenOrientation.Landscape, ResizeableActivity = false)]
+    [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, "com.oculus.intent.category.VR" })]
+#else
     [Activity(ConfigurationChanges = DEFAULT_CONFIG_CHANGES, Exported = true, LaunchMode = DEFAULT_LAUNCH_MODE, MainLauncher = true)]
+#endif
     [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataPathPattern = ".*\\\\.osz", DataHost = "*", DataMimeType = "*/*")]
     [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataPathPattern = ".*\\\\.osk", DataHost = "*", DataMimeType = "*/*")]
     [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataPathPattern = ".*\\\\.osr", DataHost = "*", DataMimeType = "*/*")]
@@ -55,6 +67,14 @@ namespace osu.Android
 
         private bool gameCreated;
 
+#if TORII_QUEST
+        // Torii: render into an OpenXR panel and let the runtime pace and present frames.
+        protected override AndroidGameHost CreateHost() => new OpenXRAndroidGameHost(this);
+
+        // Torii: the OpenXR session says whether the game is displayed and has input, not the (unseen) Android window.
+        protected override bool PauseOnWindowFocusLoss => false;
+#endif
+
         protected override Framework.Game CreateGame()
         {
             if (gameCreated)
@@ -66,6 +86,10 @@ namespace osu.Android
 
         public OsuGameActivity()
         {
+#if TORII_QUEST
+            // Must happen before the game is constructed, as config defaults read it.
+            VRRuntime.EnableVR();
+#endif
             game = new OsuGameAndroid(this);
         }
 
@@ -83,6 +107,12 @@ namespace osu.Android
             Window.AddFlags(WindowManagerFlags.Fullscreen);
             Window.AddFlags(WindowManagerFlags.KeepScreenOn);
 
+            loadRulesetAssemblies();
+
+            // Torii: the headset has no phone/tablet orientation concept; the Quest activity is fixed to landscape.
+            if (VRRuntime.IsVR)
+                return;
+
             Debug.Assert(WindowManager?.DefaultDisplay != null);
             Debug.Assert(Resources?.DisplayMetrics != null);
 
@@ -94,7 +124,10 @@ namespace osu.Android
             IsTablet = smallestWidthDp >= 600f;
 
             RequestedOrientation = DefaultOrientation = IsTablet ? ScreenOrientation.FullUser : ScreenOrientation.SensorLandscape;
+        }
 
+        private static void loadRulesetAssemblies()
+        {
             // Currently (SDK 6.0.200), BundleAssemblies is not runnable for net6-android.
             // The assembly files are not available as files either after native AOT.
             // Manually load them so that they can be loaded by RulesetStore.loadFromAppDomain.

@@ -194,7 +194,8 @@ namespace osu.Game.Screens.Select
                     double otherStarDifficulty = otherStarDifficulties[i];
                     var target = otherStarDifficulty < StarDifficulty.Value.Stars ? preceding : succeeding;
 
-                    var circle = new Circle
+                    // Torii: FastCircle draws without masking, so consecutive dots share one draw call.
+                    var circle = new FastCircle
                     {
                         Size = new Vector2(5, 10),
                         Anchor = Anchor.CentreLeft,

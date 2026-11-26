@@ -249,6 +249,7 @@ namespace osu.Game.Rulesets.Osu
                     return new Mod[]
                     {
                         new OsuModTouchDevice(),
+                        new ModVR(),
                     };
 
                 default:

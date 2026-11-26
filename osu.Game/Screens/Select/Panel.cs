@@ -21,6 +21,7 @@ using osu.Game.Graphics.Carousel;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
+using osu.Game.Performance;
 using osuTK;
 using osuTK.Graphics;
 
@@ -124,7 +125,9 @@ namespace osu.Game.Screens.Select
                 CornerRadius = CORNER_RADIUS,
                 RelativeSizeAxes = Axes.Both,
                 X = CORNER_RADIUS,
-                Children = new[]
+            };
+
+            var layers = new[]
                 {
                     backgroundContainer = new Container
                     {
@@ -177,8 +180,24 @@ namespace osu.Game.Screens.Select
                         RelativeSizeAxes = Axes.Both,
                     },
                     new HoverSounds(),
-                }
-            };
+                };
+
+            // Torii: with the lightweight interface a panel is drawn into a frame buffer, and again only when something in it changes.
+            // A panel is a dozen masked and blended layers, each of which splits draw batches; a carousel of them is most of what
+            // song select costs to draw. Not possible otherwise: the frosted glass shows what's behind the panel wherever it is, and
+            // the selection pulses and triangles move on every frame.
+            if (LightweightInterface.Active)
+            {
+                TopLevelContent.Child = new BufferedContainer(cachedFrameBuffer: true)
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    TrackSubtreeChanges = true,
+                    ReleaseFrameBufferWhenNotDrawn = true,
+                    Children = layers,
+                };
+            }
+            else
+                TopLevelContent.Children = layers;
 
             legacySongSelect = new BindableBool(ToriiStableUI.SongSelect(config));
         }
@@ -189,6 +208,8 @@ namespace osu.Game.Screens.Select
 
             private readonly Box box;
 
+            protected override bool SuppressedByLightweightInterface => true;
+
             public PulsatingBox()
             {
                 EarlyActivationMilliseconds = 40;
@@ -198,6 +219,8 @@ namespace osu.Game.Screens.Select
                     box = new Box
                     {
                         RelativeSizeAxes = Axes.Both,
+                        // Without the pulse, between its two ends.
+                        Alpha = LightweightInterface.Active ? 0.6f : 1,
                     },
                 };
             }

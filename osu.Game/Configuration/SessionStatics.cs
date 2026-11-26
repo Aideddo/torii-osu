@@ -1,7 +1,6 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using osu.Framework;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Input;
 using osu.Game.Online.API.Requests.Responses;
@@ -11,6 +10,7 @@ using osu.Game.Scoring;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Skinning;
 using osu.Game.Users;
+using osu.Game.VR;
 
 namespace osu.Game.Configuration
 {
@@ -29,7 +29,8 @@ namespace osu.Game.Configuration
             SetDefault(Static.LastModSelectPanelSamplePlaybackTime, (double?)null);
             SetDefault(Static.LastRankChangeSamplePlaybackTime, (double?)null);
             SetDefault<APISeasonalBackgrounds?>(Static.SeasonalBackgrounds, null);
-            SetDefault(Static.TouchInputActive, RuntimeInfo.IsMobile);
+            // Torii: in VR, input arrives from tracked controllers as absolute pointer input, never as touch.
+            SetDefault(Static.TouchInputActive, VRRuntime.IsMobileNonVR);
             SetDefault<ScoreInfo?>(Static.LastLocalUserScore, null);
             SetDefault<ScoreInfo?>(Static.LastAppliedOffsetScore, null);
             SetDefault<UserActivity?>(Static.UserOnlineActivity, null);

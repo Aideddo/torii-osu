@@ -3,8 +3,11 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
+using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osu.Game.Graphics.Containers;
+using osu.Game.VR;
 
 namespace osu.Game.Screens
 {
@@ -45,14 +48,28 @@ namespace osu.Game.Screens
             set => backgroundTopExtension = value;
         }
 
+        private readonly RenderTargetRedirectContainer backgroundRedirect;
+
+        [BackgroundDependencyLoader]
+        private void load(GameHost host)
+        {
+            if (VRRuntime.IsVR)
+                backgroundRedirect.Target = host.GetExternalRenderTarget(VRLayers.BACKGROUND);
+        }
+
         public OsuScreenStack()
         {
-            InternalChild = parallaxContainer = new ParallaxContainer
+            // Torii: in VR, backgrounds are drawn into their own compositor layer placed far behind the game panel.
+            InternalChild = backgroundRedirect = new RenderTargetRedirectContainer
             {
-                // El alto lo maneja Update para poder sumarle BackgroundTopExtension.
-                // Con la extension en 0 esto es igual que RelativeSizeAxes.Both.
-                RelativeSizeAxes = Axes.X,
-                Child = backgroundScreenStack = new BackgroundScreenStack { RelativeSizeAxes = Axes.Both },
+                RelativeSizeAxes = Axes.Both,
+                Child = parallaxContainer = new ParallaxContainer
+                {
+                    // El alto lo maneja Update para poder sumarle BackgroundTopExtension.
+                    // Con la extension en 0 esto es igual que RelativeSizeAxes.Both.
+                    RelativeSizeAxes = Axes.X,
+                    Child = backgroundScreenStack = new BackgroundScreenStack { RelativeSizeAxes = Axes.Both },
+                },
             };
 
             ScreenPushed += screenPushed;
@@ -96,6 +113,7 @@ namespace osu.Game.Screens
         }
 
         private void setParallax(IScreen? next) =>
-            parallaxContainer.ParallaxAmount = ParallaxContainer.DEFAULT_PARALLAX_AMOUNT * ((next as IOsuScreen)?.BackgroundParallaxAmount ?? 1.0f);
+            // Torii: in VR the background moving with the pointer causes motion sickness; real depth from head movement replaces it.
+            parallaxContainer.ParallaxAmount = VRRuntime.IsVR ? 0 : ParallaxContainer.DEFAULT_PARALLAX_AMOUNT * ((next as IOsuScreen)?.BackgroundParallaxAmount ?? 1.0f);
     }
 }

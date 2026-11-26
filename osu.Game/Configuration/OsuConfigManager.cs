@@ -28,6 +28,7 @@ using osu.Game.Screens.Select;
 using osu.Game.Screens.Select.Filter;
 using osu.Game.Skinning;
 using osu.Game.Users;
+using osu.Game.VR;
 
 namespace osu.Game.Configuration
 {
@@ -318,6 +319,10 @@ namespace osu.Game.Configuration
             // Torii: Potato Mode (extreme-perf preset, read once at startup, restart-gated).
             SetDefault(OsuSetting.ToriiPotatoMode, false);
 
+            // Torii: lightweight interface (see Performance.LightweightInterface), read once at startup, restart-gated.
+            // On where there's the least frame time to spare.
+            SetDefault(OsuSetting.ToriiLightweightInterface, RuntimeInfo.IsMobile);
+
             // Torii: input/audio/update thread rate. Drives GameHost.ToriiInputAudioHz live.
             SetDefault(OsuSetting.ToriiInputAudioHz, ToriiInputAudioHzMode.Hz2000);
             // torii: marca de una sola vez. el primer arranque siembra el default de hz segun la
@@ -398,7 +403,32 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.ToriiExclusiveAudioPeriod, ExclusiveAudioPeriod.Automatic);
             SetDefault(OsuSetting.ToriiSkipBreaksSingleConfirmation, false);
             SetDefault(OsuSetting.ToriiSkipBreaksBriefingSeen, false);
-            SetDefault(OsuSetting.EnableOboeAudio, true);
+            // Torii VR: off on the Quest. The headset's video recorder doesn't capture the bridge's AAudio stream (recordings come
+            // out silent), while BASS' own output is captured; all audio goes through the headset's low-latency mixer anyway.
+            SetDefault(OsuSetting.EnableOboeAudio, !VRRuntime.IsVR);
+
+            // Torii: VR settings (see VRSection).
+            SetDefault(OsuSetting.VRStoryboardOverlayInFront, false);
+            SetDefault(OsuSetting.VREnvironment, VR.VREnvironment.Field);
+            SetDefault(OsuSetting.VRPlayfieldBacking, 0.35f, 0f, 1f, 0.05f);
+            SetDefault(OsuSetting.VRFlashReduction, 0.5f, 0f, 1f, 0.05f);
+            SetDefault(OsuSetting.VRHideBoundaryInPassthrough, false);
+            SetDefault(OsuSetting.VRPanelSize, 60f, 30f, 140f, 1f);
+            SetDefault(OsuSetting.VRPanelDistance, 1.5f, 0.5f, 4f, 0.1f);
+            // Where the panel was moved to by grabbing it (see VRPanelPlacement), empty for the default.
+            SetDefault(OsuSetting.VRPanelPlacement, string.Empty);
+            SetDefault(OsuSetting.VRShowControllers, true);
+            SetDefault(OsuSetting.VRControllerModel, VRControllerModel.Controller);
+            // Pen placement relative to the controller's pointing pose: degrees, and centimetres along the (tilted) pen and up.
+            SetDefault(OsuSetting.VRPenTilt, 0f, -60f, 60f, 1f);
+            SetDefault(OsuSetting.VRPenOffsetForward, 5f, -15f, 25f, 0.5f);
+            SetDefault(OsuSetting.VRPenOffsetUp, 0f, -10f, 10f, 0.5f);
+            SetDefault(OsuSetting.VRHapticStrength, 0.6f, 0f, 1f, 0.05f);
+            // Whether plays in VR save head and controller tracking along with their replays (see VRReplayRecorder).
+            SetDefault(OsuSetting.VRSaveReplayExtras, true);
+            // Outside VR: whether replays of VR plays open in the 3D scene view (see VRReplayScene).
+            SetDefault(OsuSetting.VRReplaySceneView, true);
+            SetDefault(OsuSetting.VRReplaySceneCamera, VRReplayCamera.FollowHead);
             // torii: el stable song select es OPT-IN (se ofrece via el promo "try this!" tras varias
             // visitas). arranca APAGADO. era true por error: caia en modo stable sin que el usuario lo
             // pidiera y ademas tapaba el promo (el guard cortaba + el contador de visitas nunca subia).
@@ -457,7 +487,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.ScalingPositionX, 0.5f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.ScalingPositionY, 0.5f, 0f, 1f, 0.01f);
 
-            if (RuntimeInfo.IsMobile)
+            // Torii: the VR panel is a large virtual surface, so it uses the desktop UI scale range rather than the phone one.
+            if (VRRuntime.IsMobileNonVR)
                 SetDefault(OsuSetting.UIScale, 1f, 0.8f, 1.1f, 0.01f);
             else
                 SetDefault(OsuSetting.UIScale, 1f, 0.8f, 1.6f, 0.01f);
@@ -774,6 +805,7 @@ namespace osu.Game.Configuration
         ToriiGlassDefaultMigrated,
         ToriiNewThemePopupPending,
         ToriiPotatoMode,
+        ToriiLightweightInterface,
         ToriiInputAudioHz,
         ToriiInputAudioHzAutoTuned,
         ToriiInputAudioHzRetunedWeakQuad,
@@ -821,6 +853,23 @@ namespace osu.Game.Configuration
         ToriiSkipBreaksSingleConfirmation,
         ToriiSkipBreaksBriefingSeen,
         EnableOboeAudio,
+        VRStoryboardOverlayInFront,
+        VREnvironment,
+        VRPlayfieldBacking,
+        VRFlashReduction,
+        VRPanelSize,
+        VRPanelDistance,
+        VRShowControllers,
+        VRControllerModel,
+        VRPenTilt,
+        VRPenOffsetForward,
+        VRPenOffsetUp,
+        VRHapticStrength,
+        VRReplaySceneView,
+        VRReplaySceneCamera,
+        VRSaveReplayExtras,
+        VRPanelPlacement,
+        VRHideBoundaryInPassthrough,
         ToriiLegacyFooterUseSkin,
         ToriiStableOptInMigrated,
         /// <summary>

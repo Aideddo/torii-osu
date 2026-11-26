@@ -478,7 +478,7 @@ namespace osu.Game.Tests.Visual.Online
             AddUntilStep("wait for expanded", () => this.ChildrenOfType<BeatmapCardNormal>().Single().Expanded.Value);
             AddAssert("expanded content not clipped", () =>
             {
-                var cardContainer = this.ChildrenOfType<ReverseChildIDFillFlowContainer<BeatmapCard>>().Single().Parent;
+                var cardContainer = this.ChildrenOfType<BeatmapCardNormal>().Single().Parent!.Parent;
                 var expandedContent = this.ChildrenOfType<ExpandedContentScrollContainer>().Single();
                 return expandedContent.ScreenSpaceDrawQuad.GetVertices().ToArray().All(v => cardContainer!.ScreenSpaceDrawQuad.Contains(v));
             });

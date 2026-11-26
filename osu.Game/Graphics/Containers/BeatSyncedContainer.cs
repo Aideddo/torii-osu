@@ -105,6 +105,12 @@ namespace osu.Game.Graphics.Containers
         /// </summary>
         protected virtual bool SuppressedByPotatoMode => true;
 
+        /// <summary>
+        /// Torii: whether beats are also left out with the lightweight interface (<see cref="LightweightInterface"/>), which unlike
+        /// Potato Mode only drops the animations that are in the way of something expensive.
+        /// </summary>
+        protected virtual bool SuppressedByLightweightInterface => false;
+
         protected override void Update()
         {
             IsBeatSyncedWithTrack = BeatSyncSource.Clock.IsRunning;
@@ -161,7 +167,8 @@ namespace osu.Game.Graphics.Containers
             // this can happen after a seek operation.
             // Potato mode: cosmetic beat animations are suppressed (functional consumers opt out via SuppressedByPotatoMode).
             if ((AllowMistimedEventFiring || Math.Abs(TimeSinceLastBeat) < MISTIMED_ALLOWANCE)
-                && !(PotatoMode.Active && SuppressedByPotatoMode))
+                && !(PotatoMode.Active && SuppressedByPotatoMode)
+                && !(LightweightInterface.Active && SuppressedByLightweightInterface))
             {
                 using (BeginDelayedSequence(-TimeSinceLastBeat))
                     OnNewBeat(beatIndex, TimingPoint, EffectPoint, BeatSyncSource.CurrentAmplitudes);

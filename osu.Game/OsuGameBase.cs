@@ -33,6 +33,7 @@ using osu.Framework.IO.Stores;
 using osu.Framework.Localisation;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Platform.OpenXR;
 using osu.Framework.Timing;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
@@ -65,6 +66,7 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Skinning;
 using osu.Game.Utils;
+using osu.Game.VR;
 using RuntimeInfo = osu.Framework.RuntimeInfo;
 
 namespace osu.Game
@@ -164,6 +166,8 @@ namespace osu.Game
         protected ScoreManager ScoreManager { get; private set; }
 
         protected ScoreModelDownloader ScoreDownloader { get; private set; }
+
+        private ReplayExtrasStore replayExtrasStore;
 
         protected SkinManager SkinManager { get; private set; }
 
@@ -297,6 +301,21 @@ namespace osu.Game
 
             dependencies.CacheAs(Storage);
 
+            // Torii: switching in and out of VR mode, where the platform can (desktop).
+            if (CreateVRModeControl() is IVRModeControl vrModeControl)
+                dependencies.CacheAs(vrModeControl);
+
+            // Torii: VR controllers, for gameplay to map each trigger to its own key.
+            if (Host is IOpenXRHost xrHost)
+            {
+                dependencies.CacheAs<IVRControllers>(new OpenXRHostIntegration.Controllers(xrHost.OpenXR.ControllerInput));
+                dependencies.CacheAs<IVRTracking>(new OpenXRHostIntegration.Tracking(xrHost.OpenXR));
+                dependencies.CacheAs<IVRScene>(new OpenXRHostIntegration.Scene(xrHost.OpenXR));
+            }
+
+            // Torii: what plays save next to their replays (e.g. head and controller tracking in VR).
+            dependencies.Cache(replayExtrasStore = new ReplayExtrasStore(Storage));
+
             // Torii: tracks which in-game "NEW" feature badges have been seen/dismissed
             // (sidecar JSON under the torii/ storage dir). Cached after Storage so its
             // constructor can resolve it. Consumed by NewFeatureBadge on form controls.
@@ -414,7 +433,7 @@ namespace osu.Game
             });
 
             dependencies.Cache(BeatmapDownloader = new BeatmapModelDownloader(BeatmapManager, API));
-            dependencies.Cache(ScoreDownloader = new ScoreModelDownloader(ScoreManager, API));
+            dependencies.Cache(ScoreDownloader = new ScoreModelDownloader(ScoreManager, API, replayExtrasStore));
 
             // Add after all the above cache operations as it depends on them.
             base.Content.Add(difficultyCache);
@@ -561,6 +580,7 @@ namespace osu.Game
 
             // Torii: Potato Mode read-once flag (heavy visuals check it at construction). Restart-gated.
             Performance.PotatoMode.SetFromConfig(LocalConfig.Get<bool>(OsuSetting.ToriiPotatoMode));
+            Performance.LightweightInterface.SetFromConfig(LocalConfig.Get<bool>(OsuSetting.ToriiLightweightInterface));
             // Potato forces the legacy (BASS) audio path; its larger buffer rides over GC hitches
             // that starve the tiny WASAPI buffer on weak machines (the map-switch stutter).
             if (Performance.PotatoMode.Active)
@@ -703,6 +723,16 @@ namespace osu.Game
         /// Default 0 (let Oboe pick); overridden in OsuGameAndroid.
         /// </summary>
         protected virtual int GetAndroidNativeOutputSampleRate() => 0;
+
+        /// <summary>
+        /// Whether the user can currently interact with the game, for pausing time-sensitive activity such as gameplay.
+        /// </summary>
+        /// <remarks>
+        /// Same as <see cref="Framework.Game.IsActive"/> by default. Torii: in VR the game stays active (and keeps rendering at full
+        /// rate) while a system overlay such as the keyboard or the system menu has input focus, so this follows the OpenXR host's
+        /// input focus instead.
+        /// </remarks>
+        public virtual IBindable<bool> GameplayFocus => (Host as IOpenXRHost)?.OpenXR.HasInputFocus ?? IsActive;
 
         /// <summary>
         /// Boot/tear down the Android Oboe low-latency audio path from OsuSetting.EnableOboeAudio.
@@ -891,6 +921,12 @@ namespace osu.Game
         }
 
         /// <summary>
+        /// Torii: whether the user already made clear they want the next <see cref="AttemptExit"/> (e.g. by choosing to switch VR mode,
+        /// which restarts the game), so the main menu doesn't ask again. It still does while operations are ongoing.
+        /// </summary>
+        public bool ExitConfirmed { get; set; }
+
+        /// <summary>
         /// An action that restarts the application after it has exited.
         /// </summary>
         [CanBeNull]
@@ -901,6 +937,7 @@ namespace osu.Game
         /// </summary>
         public void CancelRestartOnExit()
         {
+            ExitConfirmed = false;
             RestartOnExitAction = null;
         }
 
@@ -909,6 +946,12 @@ namespace osu.Game
         /// </summary>
         /// <returns>Whether a restart operation was queued.</returns>
         public virtual bool RestartAppWhenExited() => false;
+
+        /// <summary>
+        /// Torii: creates the control for switching in and out of VR mode, on platforms where the game can (desktop). Null otherwise.
+        /// </summary>
+        [CanBeNull]
+        protected virtual IVRModeControl CreateVRModeControl() => null;
 
         #endregion
 

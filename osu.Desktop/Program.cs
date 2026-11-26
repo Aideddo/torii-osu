@@ -3,6 +3,8 @@
 
 using System;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using osu.Desktop.LegacyIpc;
 using osu.Desktop.Windows;
@@ -13,6 +15,8 @@ using osu.Framework.Platform;
 using osu.Game;
 using osu.Game.IPC;
 using osu.Game.Tournament;
+using osu.Game.VR;
+using osu.Desktop.VR;
 using SDL;
 using Velopack;
 
@@ -388,6 +392,25 @@ namespace osu.Desktop
             string gameName = base_game_name;
             bool tournamentClient = false;
 
+            // Torii: --vr presents through an OpenXR runtime (SteamVR; or e.g. Monado, which simulates a headset) instead of the window.
+            // The game switches in and out of this mode by restarting itself (see DesktopVRModeControl).
+            bool vr = args.Contains(DesktopVRModeControl.VR_ARGUMENT);
+
+            waitForReplacedInstance(args);
+
+            if (vr)
+            {
+                // Must happen before the game is constructed, as config defaults read it.
+                VRRuntime.EnableVR();
+
+                // The OpenXR hosts need SDL3. Remembered if it wasn't the user's choice, so leaving VR mode goes back to theirs.
+                if (Environment.GetEnvironmentVariable("OSU_SDL3") != "1")
+                {
+                    Environment.SetEnvironmentVariable("OSU_SDL3", "1");
+                    Environment.SetEnvironmentVariable(DesktopVRModeControl.FORCED_SDL3_VARIABLE, "1");
+                }
+            }
+
             foreach (string arg in args)
             {
                 string[] split = arg.Split('=');
@@ -397,6 +420,9 @@ namespace osu.Desktop
 
                 switch (key)
                 {
+                    case DesktopVRModeControl.VR_ARGUMENT:
+                        break;
+
                     case "--tournament":
                         tournamentClient = true;
                         break;
@@ -428,7 +454,9 @@ namespace osu.Desktop
                         configuredRenderer = arg["--renderer=".Length..].Trim();
                 }
 
-                NovaRendererBootstrap.PrepareRenderer(configuredRenderer);
+                // Torii: in VR on Windows the headset's runtime shares images with the graphics driver's own OpenGL, not with a
+                // translation layer (Zink / DXVK) swapped in for it.
+                NovaRendererBootstrap.PrepareRenderer(vr && OperatingSystem.IsWindows() ? null : configuredRenderer);
             }
 
             var hostOptions = new HostOptions
@@ -439,8 +467,15 @@ namespace osu.Desktop
 
             try
             {
-                using (DesktopGameHost host = Host.GetSuitableDesktopHost(gameName, hostOptions))
+                using (DesktopGameHost host = vr
+                           ? Host.GetOpenXRDesktopHost(gameName, hostOptions, debugDirectory: Path.Combine(storageFolder, "vr-debug"))
+                           : Host.GetSuitableDesktopHost(gameName, hostOptions))
                 {
+                    // Torii: SteamVR can be running without a headset (e.g. a wireless one not connected yet): wait for it, for as long
+                    // as SteamVR is there. The desktop window says so (see VRDesktopView).
+                    if (host is osu.Framework.Platform.OpenXR.IOpenXRHost xrHost)
+                        xrHost.OpenXR.WaitForHeadset = DesktopVRModeControl.IsRuntimeRunning;
+
                     if (!host.IsPrimaryInstance)
                     {
                         if (trySendIPCMessage(host, cwd, args))
@@ -483,6 +518,32 @@ namespace osu.Desktop
             finally
             {
                 finishVulkanSessionIfNeeded(vulkanSessionMarker);
+            }
+        }
+
+        /// <summary>
+        /// Torii: when the game restarted itself (to switch VR mode), waits for the instance being replaced to exit, as two can't run at
+        /// once.
+        /// </summary>
+        private static void waitForReplacedInstance(string[] args)
+        {
+            string? argument = args.FirstOrDefault(a => a.StartsWith(DesktopVRModeControl.WAIT_ARGUMENT, StringComparison.Ordinal));
+
+            if (argument == null || !int.TryParse(argument[DesktopVRModeControl.WAIT_ARGUMENT.Length..], out int processId))
+                return;
+
+            try
+            {
+                using (var process = System.Diagnostics.Process.GetProcessById(processId))
+                    process.WaitForExit(20000);
+            }
+            catch (ArgumentException)
+            {
+                // Already gone.
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"[Torii] Could not wait for the previous instance to exit: {e.Message}");
             }
         }
 

@@ -159,7 +159,8 @@ namespace osu.Game.Screens.Select
 
                         if ((visible && showVisible) || (!visible && showHidden))
                         {
-                            var circle = new Circle
+                            // Torii: FastCircle draws without masking, so consecutive dots share one draw call.
+                            var circle = new FastCircle
                             {
                                 Size = visible ? new Vector2(7, 12) : new Vector2(5, 10),
                                 Alpha = visible ? 1 : 0.5f,

@@ -36,8 +36,8 @@ namespace osu.Game.Beatmaps.Drawables.Cards
             }
         }
 
-        private const float height = 60;
-        private const float width = 300;
+        public const float HEIGHT = 60;
+        public new const float WIDTH = 300;
 
         [Cached]
         private readonly BeatmapCardContent content;
@@ -53,7 +53,7 @@ namespace osu.Game.Beatmaps.Drawables.Cards
         public BeatmapCardNano(APIBeatmapSet beatmapSet)
             : base(beatmapSet, false)
         {
-            content = new BeatmapCardContent(height);
+            content = new BeatmapCardContent(HEIGHT);
 
             Action = DefaultAction;
         }
@@ -61,15 +61,15 @@ namespace osu.Game.Beatmaps.Drawables.Cards
         [BackgroundDependencyLoader]
         private void load()
         {
-            Width = width;
-            Height = height;
+            Width = WIDTH;
+            Height = HEIGHT;
 
             Child = content.With(c =>
             {
                 c.MainContent = new Container
                 {
                     RelativeSizeAxes = Axes.X,
-                    Height = height,
+                    Height = HEIGHT,
                     Children = new Drawable[]
                     {
                         buttonContainer = new CollapsibleButtonContainer(BeatmapSet)

@@ -8,6 +8,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
+using osu.Game.Performance;
 
 namespace osu.Game.Beatmaps.Drawables
 {
@@ -31,7 +32,9 @@ namespace osu.Game.Beatmaps.Drawables
 
         private readonly double timeBeforeUnload;
 
-        protected override double TransformDuration => 400;
+        // Torii: no fade with the lightweight interface. Covers sit in cards cached in frame buffers, which a fade has redrawn on every
+        // frame it lasts: with a screen of cards coming into view, that was a dozen buffers redrawn per frame.
+        protected override double TransformDuration => LightweightInterface.Active ? 0 : 400;
 
         public UpdateableOnlineBeatmapSetCover(BeatmapSetCoverType coverType = BeatmapSetCoverType.Cover, double timeBeforeLoad = 500, double timeBeforeUnload = 1000)
         {

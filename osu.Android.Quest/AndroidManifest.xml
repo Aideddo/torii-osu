@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Torii: manifest for the Meta Quest (immersive VR) build. See osu.Android/AndroidManifest.xml for the phone build.
+     The package and the label come from ApplicationId and ApplicationTitle of the project, so a flavour can have its own. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="auto">
+	<uses-sdk android:minSdkVersion="29" android:targetSdkVersion="34" />
+
+	<!-- Immersive VR app: requires 6DoF head tracking, so it can't be installed on phones. -->
+	<uses-feature android:name="android.hardware.vr.headtracking" android:required="true" android:version="1" />
+	<!-- Optional features used by the VR environments. -->
+	<uses-feature android:name="com.oculus.feature.PASSTHROUGH" android:required="false" />
+	<!-- System keyboard overlay: lets the soft keyboard requested by SDL's hidden text field (osu! text boxes) appear in immersive mode. -->
+	<uses-feature android:name="oculus.software.overlay_keyboard" android:required="false" />
+	<!-- Models of the paired controllers (XR_FB_render_model). -->
+	<uses-feature android:name="com.oculus.feature.RENDER_MODEL" android:required="false" />
+	<uses-permission android:name="com.oculus.permission.RENDER_MODEL" />
+	<!-- Hiding the boundary while passthrough is shown (XR_META_boundary_visibility). -->
+	<uses-permission android:name="com.oculus.permission.BOUNDARY_VISIBILITY" />
+
+	<!-- OpenXR loader access to the system runtime. -->
+	<uses-permission android:name="org.khronos.openxr.permission.OPENXR" />
+	<uses-permission android:name="org.khronos.openxr.permission.OPENXR_SYSTEM" />
+
+	<queries>
+		<provider android:authorities="org.khronos.openxr.runtime_broker;org.khronos.openxr.system_runtime_broker" />
+		<intent>
+			<action android:name="org.khronos.openxr.OpenXRRuntimeService" />
+		</intent>
+		<intent>
+			<action android:name="org.khronos.openxr.OpenXRApiLayerService" />
+		</intent>
+	</queries>
+
+	<application android:allowBackup="true"
+				 android:supportsRtl="true"
+				 android:icon="@mipmap/ic_launcher"
+				 android:roundIcon="@mipmap/ic_launcher"
+				 android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+		<meta-data android:name="com.oculus.supportedDevices" android:value="quest2|questpro|quest3|quest3s" />
+
+		<!-- AndroidGameHost resolves the authority as "<package>.fileprovider". -->
+		<provider android:name="androidx.core.content.FileProvider"
+				  android:authorities="${applicationId}.fileprovider"
+				  android:grantUriPermissions="true"
+				  android:exported="false">
+			<meta-data android:name="android.support.FILE_PROVIDER_PATHS"
+					   android:resource="@xml/filepaths" />
+		</provider>
+	</application>
+
+	<!-- for editor usage (see osu.Android/AndroidManifest.xml) -->
+	<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+	<uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+</manifest>

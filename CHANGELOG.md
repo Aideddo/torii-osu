@@ -2,6 +2,7 @@
 
 ## Latest
 
+- Added immersive VR support (Meta Quest standalone & SteamVR on desktop), `VR` mod, VR replay tracking/ghost hands, and lightweight interface mode.
 - Fixed ranked play results not showing the two scores, ranks and HP damage.
 - Fixed the renamed damage sound and kept compatibility with older resources.
 - Fixed late score requests trying to load results after leaving the round.

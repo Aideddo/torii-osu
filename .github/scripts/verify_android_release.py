@@ -13,7 +13,7 @@ def verify_certificate(output, certificate):
         raise ValueError('APK does not use the original signing certificate')
 
 
-def verify(apk, keystore, expected_code):
+def verify(apk, keystore, expected_code, expected_package='sh.shikkesora.torii'):
     tools = sorted((Path(os.environ['ANDROID_SDK_ROOT']) / 'build-tools').iterdir())[-1]
     signer = subprocess.run([str(tools / 'apksigner.bat'), 'verify', '--print-certs', apk], capture_output=True, text=True, check=True)
     certificate = subprocess.run([
@@ -24,7 +24,7 @@ def verify(apk, keystore, expected_code):
     verify_certificate(signer.stdout, certificate)
     badging = subprocess.run([str(tools / 'aapt.exe'), 'dump', 'badging', apk], capture_output=True, text=True, check=True).stdout
     package = re.search(r"package: name='([^']+)' versionCode='([^']+)'", badging)
-    if not package or package[1] != 'sh.shikkesora.torii' or package[2] != expected_code:
+    if not package or package[1] != expected_package or package[2] != expected_code:
         raise ValueError('Android package identity/version code mismatch')
     with zipfile.ZipFile(apk) as archive:
         for name in ('libbass.so', 'libbassmix.so', 'libbass_fx.so'):

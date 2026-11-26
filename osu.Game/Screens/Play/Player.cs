@@ -17,6 +17,7 @@ using osu.Framework.Platform;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Rendering;
 using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
@@ -40,8 +41,11 @@ using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
 using osu.Game.Screens.Ranking;
 using osu.Game.Skinning;
+using osu.Game.Storyboards;
 using osu.Game.Users;
 using osu.Game.Utils;
+using osu.Game.VR;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Screens.Play
@@ -220,9 +224,74 @@ namespace osu.Game.Screens.Play
         [Resolved]
         private GameHost gameHost { get; set; } = null!;
 
+        /// <summary>
+        /// Torii: the VR background layer, or null outside VR.
+        /// </summary>
+        private ExternalRenderTarget vrBackgroundTarget => VRRuntime.IsVR ? gameHost.GetExternalRenderTarget(VRLayers.BACKGROUND) : null;
+
+        /// <summary>
+        /// Torii: null outside VR.
+        /// </summary>
+        [Resolved(CanBeNull = true)]
+        private IVRTracking vrTracking { get; set; }
+
+        [Resolved(CanBeNull = true)]
+        private IVRScene vrScene { get; set; }
+
+        [Resolved(CanBeNull = true)]
+        private ReplayExtrasStore replayExtrasStore { get; set; }
+
+        /// <summary>
+        /// Torii: records what a play in VR saves along with its replay (see <see cref="VRReplayExtras"/>), or null outside VR.
+        /// </summary>
+        private VRReplayRecorder vrReplayRecorder;
+
+        /// <summary>
+        /// Torii: shows the replay as the scene it was played in (see <see cref="VR.VRReplayScene"/>), or null where it can't be:
+        /// in VR, or for a replay of a play not made in VR.
+        /// </summary>
+        protected VRReplayScene VRReplayScene { get; private set; }
+
+        // Torii: the storyboard (and video), and what it's drawn in behind the gameplay: in a replay shown as a scene it's taken
+        // from there and shown on the wall behind the panel, as it was for the player.
+        private Drawable vrStoryboardLayer;
+        private Container vrUnderlay;
+
+        /// <summary>
+        /// Torii: has <paramref name="drawable"/> keep the clock it has when it's moved elsewhere (out of the
+        /// <see cref="GameplayClockContainer"/>, where it would run by the screen's clock instead).
+        /// </summary>
+        private static void keepClock(Drawable drawable)
+        {
+            drawable.Clock = drawable.Clock;
+            drawable.ProcessCustomClock = false;
+        }
+
+        /// <summary>
+        /// Torii: shown as a scene, the replay takes no input from the mouse. What's only shown or used with the mouse is put flat in
+        /// front of the scene instead (see <see cref="VRReplayScene.Overlay"/>): the buttons to skip with.
+        /// </summary>
+        private void moveToVRReplaySceneOverlay(Drawable drawable)
+        {
+            if (drawable?.Parent is not Container<Drawable> parent)
+                return;
+
+            keepClock(drawable);
+            parent.Remove(drawable, false);
+            VRReplayScene.Overlay.Add(drawable);
+        }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            if (VRReplayScene != null && LoadedBeatmapSuccessfully)
+            {
+                moveToVRReplaySceneOverlay(SkipIntroOverlay);
+                moveToVRReplaySceneOverlay(skipOutroOverlay);
+                moveToVRReplaySceneOverlay(skipBreakOverlay);
+                moveToVRReplaySceneOverlay(skipBreakBriefingOverlay);
+            }
 
             // torii: censo de diagnostico del arbol de dibujo (TORII_DRAW_CENSUS=1),
             // para diffear contra otro build que compone esta misma escena.
@@ -258,12 +327,18 @@ namespace osu.Game.Screens.Play
 
         private bool constantHitsoundVolume;
 
+        /// <summary>
+        /// Torii: whether the storyboard's overlay layer stays in front of the playfield in VR (it's moved to the background layer otherwise).
+        /// </summary>
+        private bool vrStoryboardOverlayInFront;
+
         [BackgroundDependencyLoader(true)]
         private void load(OsuConfigManager config, OsuGameBase game, CancellationToken cancellationToken)
         {
             // torii: capturado aca porque loadPlayableBeatmap corre adentro de este load.
             constantHitsoundVolume = config.Get<bool>(OsuSetting.ToriiConstantHitsoundVolume);
             legacyGameplayScreens = ToriiStableUI.GameplayScreens(config);
+            vrStoryboardOverlayInFront = config.Get<bool>(OsuSetting.VRStoryboardOverlayInFront);
 
             var gameplayMods = Mods.Value.Select(m => m.DeepClone()).ToArray();
 
@@ -288,7 +363,7 @@ namespace osu.Game.Screens.Play
             }
 
             if (game != null)
-                gameActive.BindTo(game.IsActive);
+                gameActive.BindTo(game.GameplayFocus);
 
             DrawableRuleset = ruleset.CreateDrawableRulesetWith(playableBeatmap, gameplayMods);
             dependencies.CacheAs(DrawableRuleset);
@@ -317,6 +392,27 @@ namespace osu.Game.Screens.Play
 
             Score = CreateScore(playableBeatmap);
 
+            // Torii: outside VR, a replay of a play made in VR can be watched as the scene it was (the replay is taken off the screen
+            // and put on the player's panel there, see VRReplayScene). In VR the player's hands are shown instead (VRReplayGhostHands).
+            // (Not on phones and tablets: the camera is flown with a mouse and keyboard.)
+            if (vrTracking == null && !osu.Framework.RuntimeInfo.IsMobile && replayExtrasStore?.Has(Score.ScoreInfo, ReplayExtrasType.VRTracking) == true)
+            {
+                AddInternal(VRReplayScene = new VRReplayScene(Score.ScoreInfo.Hash, () =>
+                {
+                    RemoveInternal(GameplayClockContainer, false);
+                    return GameplayClockContainer;
+                }, AddInternal, () =>
+                {
+                    keepClock(vrStoryboardLayer);
+                    vrUnderlay.Remove(vrStoryboardLayer, false);
+                    return vrStoryboardLayer;
+                }, d => vrUnderlay.Add(d))
+                {
+                    // What it shows flat stays in front of the replay.
+                    Depth = float.MinValue,
+                });
+            }
+
             // ensure the score is in a consistent state with the current player.
             Score.ScoreInfo.BeatmapInfo = Beatmap.Value.BeatmapInfo;
             Score.ScoreInfo.BeatmapHash = Beatmap.Value.BeatmapInfo.Hash;
@@ -324,6 +420,14 @@ namespace osu.Game.Screens.Play
             Score.ScoreInfo.Mods = gameplayMods;
 
             dependencies.CacheAs(GameplayState = new GameplayState(playableBeatmap, ruleset, gameplayMods, Score, ScoreProcessor, HealthProcessor, Beatmap.Value.Storyboard, PlayingState));
+
+            // Torii: plays in VR save where the head and controllers were along with their replays.
+            if (vrTracking != null && config.Get<bool>(OsuSetting.VRSaveReplayExtras))
+                GameplayClockContainer.Add(vrReplayRecorder = new VRReplayRecorder());
+
+            // Torii: and replays of such plays show their player's hands again.
+            if (vrTracking != null && vrScene != null)
+                GameplayClockContainer.Add(new VRReplayGhostHands());
 
             var rulesetSkinProvider = new RulesetSkinProvidingContainer(ruleset, playableBeatmap, Beatmap.Value.Skin);
             config.BindWith(OsuSetting.BeatmapSkins, rulesetSkinProvider.BeatmapSkins);
@@ -495,14 +599,22 @@ namespace osu.Game.Screens.Play
 
         private Drawable createUnderlayComponents(WorkingBeatmap working)
         {
-            var container = new Container
+            var container = vrUnderlay = new Container
             {
                 RelativeSizeAxes = Axes.Both,
                 Children = new Drawable[]
                 {
-                    DimmableStoryboard = new DimmableStoryboard(GameplayState.Storyboard, GameplayState.Mods)
+                    // Torii: in VR, the storyboard (and video) is part of the background layer far behind the game panel.
+                    vrStoryboardLayer = new RenderTargetRedirectContainer
                     {
-                        RelativeSizeAxes = Axes.Both
+                        RelativeSizeAxes = Axes.Both,
+                        // Behind the rest here, also when put back after being shown elsewhere (see VRReplayScene).
+                        Depth = 1,
+                        Target = vrBackgroundTarget,
+                        Child = createVRStoryboardBuffer(DimmableStoryboard = new DimmableStoryboard(GameplayState.Storyboard, GameplayState.Mods)
+                        {
+                            RelativeSizeAxes = Axes.Both
+                        }),
                     },
                     letterboxOverlay = new LetterboxOverlay
                     {
@@ -516,10 +628,38 @@ namespace osu.Game.Screens.Play
             return container;
         }
 
+        /// <summary>
+        /// Torii: the resolution storyboards are drawn at in VR, relative to the background layer's.
+        /// </summary>
+        private const float vr_storyboard_resolution = 0.5f;
+
+        /// <summary>
+        /// Torii: in VR, draws a storyboard with sprites at reduced resolution (then scaled up onto the background layer).
+        /// </summary>
+        /// <remarks>
+        /// Storyboards stack many blended sprites, often each covering the whole screen and more, and headsets' mobile GPUs can't fill that
+        /// many pixels within a frame: frame rate halved during busy sections. Fill cost goes with the square of the resolution, and little
+        /// is lost: the layer is far behind the panel, and storyboards are authored for a 480 pixels tall screen.
+        /// </remarks>
+        private Drawable createVRStoryboardBuffer(DimmableStoryboard storyboard)
+        {
+            if (!VRRuntime.IsVR || !GameplayState.Storyboard.Layers.Any(l => l.Elements.Any(e => e is StoryboardSprite)))
+                return storyboard;
+
+            return new BufferedContainer
+            {
+                RelativeSizeAxes = Axes.Both,
+                FrameBufferScale = new Vector2(vr_storyboard_resolution),
+                Child = storyboard,
+            };
+        }
+
         private Drawable createGameplayComponents() => new ScalingContainer(ScalingMode.Gameplay)
         {
             Children = new Drawable[]
             {
+                // Torii: in VR, an adjustable dark backing behind gameplay keeps hit objects readable over the room / background layer.
+                new VRPlayfieldBacking(),
                 DrawableRuleset.With(r =>
                     r.FrameStableComponents.Children = new Drawable[]
                     {
@@ -538,7 +678,14 @@ namespace osu.Game.Screens.Play
                 RelativeSizeAxes = Axes.Both,
                 Children = new[]
                 {
-                    DimmableStoryboard.OverlayLayerContainer.CreateProxy(),
+                    // Torii: in VR the storyboard's overlay layer also goes to the background layer by default, rather than in the
+                    // player's face over the playfield (full field-of-view flashes are much harsher in a headset).
+                    new RenderTargetRedirectContainer
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Target = vrStoryboardOverlayInFront ? null : vrBackgroundTarget,
+                        Child = DimmableStoryboard.OverlayLayerContainer.CreateProxy(),
+                    },
                     HUDOverlay = new HUDOverlay(DrawableRuleset, GameplayState.Mods, Configuration)
                     {
                         HoldToQuit =
@@ -1128,6 +1275,9 @@ namespace osu.Game.Screens.Play
             // - Must be cloned for the same reason.
             Score scoreCopy = Score.DeepClone();
 
+            // Torii: likewise ended now, and saved once the import has given the replay its hash.
+            vrReplayRecorder?.Stop();
+
             return prepareScoreForDisplayTask = Task.Run(async () =>
             {
                 try
@@ -1147,6 +1297,8 @@ namespace osu.Game.Screens.Play
                 {
                     Logger.Error(ex, @"Score import failed!");
                 }
+
+                vrReplayRecorder?.Save(scoreCopy.ScoreInfo);
 
                 return scoreCopy.ScoreInfo;
             });
@@ -1344,7 +1496,20 @@ namespace osu.Game.Screens.Play
                 b.StoryboardReplacesBackground.BindTo(storyboardReplacesBackground);
 
                 failAnimationContainer.Background = b;
+
+                // Torii: in VR the background layer is larger than the panel the flashlight darkens, so it would stay lit around it.
+                if (VRRuntime.IsVR && GameplayState.Mods.OfType<ModFlashlight>().Any())
+                {
+                    b.IgnoreUserSettings.Value = true;
+                    b.DimWhenUserSettingsIgnored.Value = 1;
+                }
             });
+
+            if (VRRuntime.IsVR && GameplayState.Mods.OfType<ModFlashlight>().Any())
+            {
+                DimmableStoryboard.IgnoreUserSettings.Value = true;
+                DimmableStoryboard.DimWhenUserSettingsIgnored.Value = 1;
+            }
 
             HUDOverlay.IsPlaying.BindTo(localUserPlaying);
             ShowingOverlayComponents.BindTo(HUDOverlay.ShowHud);

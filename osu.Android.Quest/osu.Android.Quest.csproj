@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Torii: Meta Quest (immersive VR) build.
+
+    Compiles the same sources as osu.Android with TORII_QUEST defined, but with its own manifest and application ID.
+    Kept as a separate project (rather than a flag on osu.Android) so the two flavours
+    never share intermediate output or restore state.
+  -->
+  <Import Project="..\osu.Android.props" />
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>osu.Android</RootNamespace>
+    <AssemblyName>osu.Android</AssemblyName>
+    <Version>0.0.0</Version>
+    <ApplicationVersion Condition=" '$(ApplicationVersion)' == '' ">1</ApplicationVersion>
+    <ApplicationDisplayVersion Condition=" '$(ApplicationDisplayVersion)' == '' ">$(Version)</ApplicationDisplayVersion>
+    <DefineConstants>$(DefineConstants);TORII_QUEST</DefineConstants>
+
+    <!-- Quest runs Android 12L+ and OpenXR requires API 29+ (overrides 21 from osu.Android.props). -->
+    <SupportedOSPlatformVersion>29.0</SupportedOSPlatformVersion>
+
+    <!-- See osu.Android.csproj for the reasoning behind these. -->
+    <UseMonoRuntime>false</UseMonoRuntime>
+    <PublishReadyToRun>false</PublishReadyToRun>
+
+    <!-- Separate application ID so the VR build can't clash with (or be overwritten by) a sideloaded phone APK. -->
+    <ApplicationId>sh.shikkesora.torii.vr</ApplicationId>
+    <ApplicationTitle>Torii Nova VR</ApplicationTitle>
+    <AndroidManifest>AndroidManifest.xml</AndroidManifest>
+  </PropertyGroup>
+  <ItemGroup Label="Environment" Condition=" '$(ToriiEnvironmentFile)' != '' ">
+    <!-- Environment variables set when the app starts (KEY=value lines), e.g. tools/test-server.env to play on a test server.
+         Build such a flavour with its own ApplicationId and ApplicationTitle, so it installs next to the usual one. -->
+    <AndroidEnvironment Include="$(ToriiEnvironmentFile)" />
+  </ItemGroup>
+  <ItemGroup Label="Shared sources from osu.Android">
+    <Compile Include="..\osu.Android\**\*.cs" Exclude="..\osu.Android\obj\**;..\osu.Android\bin\**" LinkBase="Shared" />
+    <AndroidResource Include="..\osu.Android\Resources\**\*" Link="Resources\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\osu.Game.Rulesets.Catch\osu.Game.Rulesets.Catch.csproj" />
+    <ProjectReference Include="..\osu.Game.Rulesets.Mania\osu.Game.Rulesets.Mania.csproj" />
+    <ProjectReference Include="..\osu.Game.Rulesets.Osu\osu.Game.Rulesets.Osu.csproj" />
+    <ProjectReference Include="..\osu.Game.Rulesets.Taiko\osu.Game.Rulesets.Taiko.csproj" />
+    <ProjectReference Include="..\osu.Game\osu.Game.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.3" />
+  </ItemGroup>
+  <ItemGroup Label="OpenXR">
+    <!-- Khronos OpenXR loader (libopenxr_loader.so + its manifest permissions/queries), fetched from Maven Central.
+         Native-only AAR, so no Java bindings are generated. Keep the version in sync with the headers used by
+         osu.Framework/Platform/OpenXR/Native/generate.py in the framework. -->
+    <AndroidMavenLibrary Include="org.khronos.openxr:openxr_loader_for_android" Version="1.1.65" Bind="false" />
+  </ItemGroup>
+</Project>

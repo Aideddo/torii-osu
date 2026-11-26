@@ -41,8 +41,8 @@ namespace osu.Game.Screens.Select
 
             public float LabelWidth => labelText.DrawWidth;
 
-            private readonly Circle bar;
-            private readonly Circle adjustedBar;
+            private readonly FastCircle bar;
+            private readonly FastCircle adjustedBar;
             private readonly OsuSpriteText labelText;
             private readonly OsuSpriteText valueText;
             private readonly SpriteIcon valueIcon;
@@ -76,30 +76,25 @@ namespace osu.Game.Screens.Select
                             AutoSizeAxes = Axes.Y,
                             Children = new[]
                             {
-                                new Circle
+                                // Torii: FastCircles (pills without masking), so the three bars share one draw call.
+                                new FastCircle
                                 {
                                     RelativeSizeAxes = Axes.X,
                                     Height = 2f,
                                     Colour = Color4.Black,
-                                    Masking = true,
-                                    CornerRadius = 1f,
                                     Depth = float.MaxValue,
                                 },
-                                bar = new Circle
+                                bar = new FastCircle
                                 {
                                     RelativeSizeAxes = Axes.X,
                                     Width = 0f,
                                     Height = 2f,
-                                    Masking = true,
-                                    CornerRadius = 1f,
                                 },
-                                adjustedBar = new Circle
+                                adjustedBar = new FastCircle
                                 {
                                     RelativeSizeAxes = Axes.X,
                                     Width = 0f,
                                     Height = 2f,
-                                    Masking = true,
-                                    CornerRadius = 1f,
                                 },
                             },
                         },

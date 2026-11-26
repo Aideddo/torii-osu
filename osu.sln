@@ -102,6 +102,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodeAnalysis", "CodeAnalysi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Torii.CosmeticCreator", "Torii.CosmeticCreator\Torii.CosmeticCreator.csproj", "{D5A89B48-AF55-4FAF-B601-7B45FEFAED71}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Android.Quest", "osu.Android.Quest\osu.Android.Quest.csproj", "{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -544,6 +546,18 @@ Global
 		{D5A89B48-AF55-4FAF-B601-7B45FEFAED71}.Release|x64.Build.0 = Release|Any CPU
 		{D5A89B48-AF55-4FAF-B601-7B45FEFAED71}.Release|x86.ActiveCfg = Release|Any CPU
 		{D5A89B48-AF55-4FAF-B601-7B45FEFAED71}.Release|x86.Build.0 = Release|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Debug|x64.Build.0 = Debug|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Debug|x86.Build.0 = Debug|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Release|x64.ActiveCfg = Release|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Release|x64.Build.0 = Release|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Release|x86.ActiveCfg = Release|Any CPU
+		{F3B34989-E207-4A0A-9BB8-0FC21D6F80EB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

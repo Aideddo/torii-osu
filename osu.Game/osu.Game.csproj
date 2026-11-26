@@ -67,4 +67,12 @@
   <ItemGroup>
     <EmbeddedResource Include="Cosmetics\Definitions\Shipped\*.toriicosmetic" />
   </ItemGroup>
+
+  <!-- Torii VR: the pen held in place of the controllers (see VRControllerModel; credited in THIRD-PARTY-NOTICES.txt). -->
+  <ItemGroup>
+    <EmbeddedResource Include="VR\Models\pen.glb" LogicalName="osu.Game.VR.Models.pen.glb" />
+    <EmbeddedResource Include="VR\Models\headset.glb" LogicalName="osu.Game.VR.Models.headset.glb" />
+    <EmbeddedResource Include="VR\Models\meta_quest_pro_left_controller.glb" LogicalName="osu.Game.VR.Models.meta_quest_pro_left_controller.glb" />
+    <EmbeddedResource Include="VR\Models\meta_quest_pro_right_controller.glb" LogicalName="osu.Game.VR.Models.meta_quest_pro_right_controller.glb" />
+  </ItemGroup>
 </Project>

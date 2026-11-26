@@ -19,7 +19,7 @@ def required_assets(version):
         'portable-linux-x64.tar.gz', 'portable-linux-arm64.tar.gz',
         'Torii-linux-x64.AppImage', 'Torii-linux-arm64.AppImage',
         'portable-osx-x64.zip', 'portable-osx-arm64.zip',
-        'Torii-macOS-Intel.zip', 'Torii-macOS-AppleSilicon.zip', 'torii.apk',
+        'Torii-macOS-Intel.zip', 'Torii-macOS-AppleSilicon.zip', 'torii.apk', 'torii-vr.apk',
         'assets.win.json', 'assets.win-arm64.json',
         'releases.win.json', 'releases.win-arm64.json', 'RELEASES', 'RELEASES-win-arm64',
         f'torii-{version}-full.nupkg', f'torii-{version}-win-arm64-full.nupkg',

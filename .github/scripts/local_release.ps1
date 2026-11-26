@@ -156,6 +156,30 @@ try {
     $androidHash = python .github/scripts/android_release.py version-hash $version
     if ($LASTEXITCODE -ne 0) { throw 'Android hash calculation failed' }
     $hashes[$androidHash.Trim()] = 'Android'
+
+    # Quest VR APK (torii-vr.apk)
+    & $dotnet build osu.Android.Quest/osu.Android.Quest.csproj -t:Package -c Release -f $androidTfm -r android-arm64 `
+        -p:Version=$version -p:ApplicationVersion=$code -p:ApplicationDisplayVersion=$version `
+        -p:AndroidSdkDirectory=$androidSdk -p:JavaSdkDirectory=$env:JAVA_HOME `
+        -p:ToriiUnsignedAndroid=true -p:AndroidKeyStore=true `
+        -p:ApplicationTitle="$title VR" `
+        -p:AndroidPackageFormat=apk
+    if ($LASTEXITCODE -ne 0) { throw 'Quest VR Android package build failed' }
+    New-Item -ItemType Directory -Path publish/android-quest -Force | Out-Null
+    $vrApk = @(Get-ChildItem "osu.Android.Quest/bin/Release/$androidTfm" -Filter 'sh.shikkesora.torii.vr.apk' -Recurse)
+    if ($vrApk.Count -ne 1) { throw 'Expected exactly one unsigned Quest VR APK' }
+    python .github/scripts/prepare_android_apk.py $vrApk[0].FullName ../torii-framework/osu.Framework.Android/arm64-v8a publish/android-quest/torii-vr-unsigned.apk
+    if ($LASTEXITCODE -ne 0) { throw 'Quest VR Android bionic packaging failed' }
+    & (Join-Path $tools.FullName 'zipalign.exe') -P 16 -f 4 publish/android-quest/torii-vr-unsigned.apk publish/android-quest/torii-vr-aligned.apk
+    if ($LASTEXITCODE -ne 0) { throw 'Quest VR APK alignment failed' }
+    & $apksigner sign --ks $keystore --ks-pass env:ANDROID_KEYSTORE_PASSWORD --ks-key-alias $env:ANDROID_KEY_ALIAS --key-pass env:ANDROID_KEY_PASSWORD publish/android-quest/torii-vr-aligned.apk
+    if ($LASTEXITCODE -ne 0) { throw 'Quest VR APK signing failed' }
+    $finalVrApk = 'publish/android-quest/torii-vr-aligned.apk'
+    & $apksigner verify --verbose --print-certs $finalVrApk
+    if ($LASTEXITCODE -ne 0) { throw 'Quest VR APK signature verification failed' }
+    python .github/scripts/verify_android_release.py $finalVrApk $keystore $code sh.shikkesora.torii.vr
+    if ($LASTEXITCODE -ne 0) { throw 'Quest VR APK upgrade compatibility check failed' }
+    Copy-Item $finalVrApk Releases/torii-vr.apk
 } finally {
     if (Test-Path -LiteralPath $keystore) { Remove-Item -LiteralPath $keystore -Force }
 }

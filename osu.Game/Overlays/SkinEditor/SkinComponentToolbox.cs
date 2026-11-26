@@ -39,6 +39,9 @@ namespace osu.Game.Overlays.SkinEditor
         // standard set to find the bonus pieces shipped with Torii.
         private readonly bool toriiExclusiveOnly;
 
+        // Torii: when set (together with toriiExclusiveOnly), lists only the VR components (IVRSkinComponent) instead.
+        private readonly bool vrOnly;
+
         private FillFlowContainer fill = null!;
 
         /// <summary>
@@ -62,14 +65,22 @@ namespace osu.Game.Overlays.SkinEditor
         public static SkinComponentToolbox CreateToriiExclusive(SkinnableContainer target, RulesetInfo? ruleset)
             => new SkinComponentToolbox(target, ruleset, toriiOnly: true);
 
-        private SkinComponentToolbox(SkinnableContainer target, RulesetInfo? ruleset, bool toriiOnly)
+        /// <summary>
+        /// Factory for the VR section pinned above the Torii one. Lists only components flagged with <see cref="IVRSkinComponent"/>,
+        /// which no other toolbox lists.
+        /// </summary>
+        public static SkinComponentToolbox CreateVR(SkinnableContainer target, RulesetInfo? ruleset)
+            => new SkinComponentToolbox(target, ruleset, toriiOnly: true, vrOnly: true);
+
+        private SkinComponentToolbox(SkinnableContainer target, RulesetInfo? ruleset, bool toriiOnly, bool vrOnly = false)
             : base(toriiOnly
-                ? (LocalisableString)@"Torii Exclusive Components"
+                ? (LocalisableString)(vrOnly ? @"VR Components" : @"Torii Exclusive Components")
                 : (ruleset == null ? SkinEditorStrings.Components : LocalisableString.Interpolate($"{SkinEditorStrings.Components} ({ruleset.Name})")))
         {
             this.target = target;
             this.ruleset = ruleset;
             toriiExclusiveOnly = toriiOnly;
+            this.vrOnly = vrOnly;
         }
 
         [BackgroundDependencyLoader]
@@ -91,11 +102,15 @@ namespace osu.Game.Overlays.SkinEditor
             fill.Clear();
 
             var skinnableTypes = toriiExclusiveOnly
-                ? SerialisedDrawableInfo.GetAllToriiSkinComponents(ruleset)
+                ? (vrOnly ? SerialisedDrawableInfo.GetAllVRSkinComponents(ruleset) : SerialisedDrawableInfo.GetAllToriiSkinComponents(ruleset))
                 : SerialisedDrawableInfo.GetAllAvailableDrawables(ruleset);
 
             foreach (var type in skinnableTypes)
                 attemptAddComponent(type);
+
+            // The VR section has few components, and none of them may suit the current target: don't leave an empty header.
+            if (vrOnly && fill.Count == 0)
+                Hide();
         }
 
         private void attemptAddComponent(Type type)

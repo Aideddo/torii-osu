@@ -29,6 +29,7 @@ namespace osu.Game.Scoring
         private readonly OsuConfigManager? configManager;
         private readonly ScoreImporter scoreImporter;
         private readonly LegacyScoreExporter scoreExporter;
+        private readonly ReplayExtrasStore replayExtras;
 
         public override bool PauseImports
         {
@@ -56,6 +57,8 @@ namespace osu.Game.Scoring
             {
                 PostNotification = obj => PostNotification?.Invoke(obj)
             };
+
+            replayExtras = new ReplayExtrasStore(storage);
         }
 
         /// <summary>
@@ -97,11 +100,19 @@ namespace osu.Game.Scoring
                     databasedScoreInfo = Query(s => s.Hash == scoreInfo.Hash);
             }
 
+            // Torii: a deleted score stays in the database until it's purged, and the same play may have been downloaded since:
+            // that one is the one to find (the deleted one has lost what was saved along with its replay, for a start).
             if (originalScoreInfo.OnlineID > 0)
-                databasedScoreInfo ??= Query(s => s.OnlineID == originalScoreInfo.OnlineID);
+            {
+                databasedScoreInfo ??= Query(s => s.OnlineID == originalScoreInfo.OnlineID && !s.DeletePending)
+                                       ?? Query(s => s.OnlineID == originalScoreInfo.OnlineID);
+            }
 
             if (originalScoreInfo.LegacyOnlineID > 0)
-                databasedScoreInfo ??= Query(s => s.LegacyOnlineID == originalScoreInfo.LegacyOnlineID);
+            {
+                databasedScoreInfo ??= Query(s => s.LegacyOnlineID == originalScoreInfo.LegacyOnlineID && !s.DeletePending)
+                                       ?? Query(s => s.LegacyOnlineID == originalScoreInfo.LegacyOnlineID);
+            }
 
             if (databasedScoreInfo == null)
             {
@@ -163,6 +174,29 @@ namespace osu.Game.Scoring
             {
                 this.totalScore = totalScore;
                 this.totalScore.BindValueChanged(v => Value = v.NewValue.ToString("N0"), true);
+            }
+        }
+
+        /// <summary>
+        /// Torii: what was saved along with a score's replay (see <see cref="ReplayExtrasFile"/>) is removed as soon as the score is
+        /// deleted, unless another score has the same replay. Restoring the score doesn't bring it back.
+        /// </summary>
+        protected override void OnDeleted(ScoreInfo item, Realms.Realm realm)
+        {
+            string hash = item.Hash;
+
+            if (string.IsNullOrEmpty(hash))
+                return;
+
+            try
+            {
+                if (realm.All<ScoreInfo>().Where(s => s.Hash == hash && !s.DeletePending).Count() == 0)
+                    replayExtras.Delete(hash);
+            }
+            catch (Exception e)
+            {
+                // The score is deleted all the same; what's left is removed when it's purged (see RealmAccess).
+                Logger.Error(e, @"Failed to remove the extras of a deleted score.", LoggingTarget.Database);
             }
         }
 
