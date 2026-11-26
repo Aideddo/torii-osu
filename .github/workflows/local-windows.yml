@@ -1,4 +1,4 @@
-﻿name: Local multiplatform release
+name: Local multiplatform release
 
 on:
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: ShikkesoraSIM/torii-hiding
-          ref: fbf326cabada05eda4c5c15c30eef574d025ab26
+          ref: d11427942d72e253686dfff9983a865064e92651
           path: toriirefresh-resources
           persist-credentials: false
       - name: Build and validate every platform
