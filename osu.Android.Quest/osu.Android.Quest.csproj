@@ -1,4 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <!--
     Torii: Meta Quest (immersive VR) build.
 
@@ -54,4 +55,6 @@
          osu.Framework/Platform/OpenXR/Native/generate.py in the framework. -->
     <AndroidMavenLibrary Include="org.khronos.openxr:openxr_loader_for_android" Version="1.1.65" Bind="false" />
   </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="..\.github\scripts\android_unsigned.targets" Condition="'$(ToriiUnsignedAndroid)' == 'true'" />
 </Project>
