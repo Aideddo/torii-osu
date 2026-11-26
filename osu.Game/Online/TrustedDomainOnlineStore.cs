@@ -26,12 +26,11 @@ namespace osu.Game.Online
         /// <param name="_">Optional config manager (unused in Torii; trusted hosts are strictly pinned).</param>
         public static bool IsAllowedUrl(string? url, OsuConfigManager? _ = null)
         {
-            // Trust the Torii server's file host (avatars, team flags, etc.) alongside ppy.sh.
+            // Trust the Torii server's file host (avatars, team flags, proxied covers/previews, etc.).
             // torii.local es el host del stack de dev; solo resuelve a 127.0.0.1 via el hosts, asi
             // que confiarlo es inofensivo en prod (no resuelve en una maquina normal).
             return Uri.TryCreate(url, UriKind.Absolute, out Uri? uri)
-                   && (uri.Host.EndsWith(@".ppy.sh", StringComparison.OrdinalIgnoreCase)
-                       || uri.Host.EndsWith(@".shikkesora.com", StringComparison.OrdinalIgnoreCase)
+                   && (uri.Host.EndsWith(@".shikkesora.com", StringComparison.OrdinalIgnoreCase)
                        || uri.Host.Equals(@"torii.local", StringComparison.OrdinalIgnoreCase)
                        || uri.Host.EndsWith(@".torii.local", StringComparison.OrdinalIgnoreCase));
         }
