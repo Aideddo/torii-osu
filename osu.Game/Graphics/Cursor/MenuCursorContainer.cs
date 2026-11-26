@@ -59,6 +59,7 @@ namespace osu.Game.Graphics.Cursor
 
         private Bindable<bool> cursorRotate = null!;
         private Sample tapSample = null!;
+        private Sample? tapReleaseSample;
 
         private MouseInputDetector mouseInputDetector = null!;
 
@@ -102,6 +103,7 @@ namespace osu.Game.Graphics.Cursor
                 screenshotCursorVisibility.BindTo(screenshotManager.CursorVisibility);
 
             tapSample = audio.Samples.Get(@"UI/cursor-tap");
+            tapReleaseSample = audio.Samples.Get(@"UI/cursor-release");
 
             Add(mouseInputDetector = new MouseInputDetector());
         }
@@ -446,7 +448,7 @@ namespace osu.Game.Graphics.Cursor
                 }
 
                 if (State.Value == Visibility.Visible)
-                    playTapSample(0.8);
+                    playTapSample(tapReleaseSample != null ? 1.0 : 0.8, tapReleaseSample);
             }
 
             base.OnMouseUp(e);
@@ -485,15 +487,15 @@ namespace osu.Game.Graphics.Cursor
                 activeCursor.RotateTo(0, 400, Easing.OutQuint);
         }
 
-        private void playTapSample(double baseFrequency = 1f)
+        private void playTapSample(double baseFrequency = 1f, Sample? sampleOverride = null)
         {
             const float random_range = 0.02f;
-            SampleChannel channel = tapSample.GetChannel();
+            SampleChannel channel = (sampleOverride ?? tapSample).GetChannel();
 
             // Scale to [-0.75, 0.75] so that the sample isn't fully panned left or right (sounds weird)
             channel.Balance.Value = ((activeCursor.X / DrawWidth) * 2 - 1) * OsuGameBase.SFX_STEREO_STRENGTH;
             channel.Frequency.Value = baseFrequency - (random_range / 2f) + RNG.NextDouble(random_range);
-            channel.Volume.Value = baseFrequency;
+            channel.Volume.Value = sampleOverride != null ? 0.9f : baseFrequency;
 
             channel.Play();
         }

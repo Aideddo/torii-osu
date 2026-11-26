@@ -45,7 +45,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: ShikkesoraSIM/torii-hiding
-          ref: 68435c6f06f5c8975d303f12bfa7626042841a8b
+          ref: a62ed2bf241a73ffaa248c1ea56355e641384542
           path: toriirefresh-resources
           persist-credentials: false
       - name: Build and validate every platform
