@@ -17,9 +17,9 @@ namespace osu.Game.Rulesets.Osu.Configuration
         protected override void InitialiseDefaults()
         {
             base.InitialiseDefaults();
-            SetDefault(OsuRulesetSetting.SnakingInSliders, true);
+            SetDefault(OsuRulesetSetting.SnakingInSliders, false);
             SetDefault(OsuRulesetSetting.SnakingOutSliders, true);
-            SetDefault(OsuRulesetSetting.HitAnimations, true);
+            SetDefault(OsuRulesetSetting.HitAnimations, false);
             SetDefault(OsuRulesetSetting.ShowCursorTrail, true);
             SetDefault(OsuRulesetSetting.ShowCursorRipples, false);
             SetDefault(OsuRulesetSetting.PlayfieldBorderStyle, PlayfieldBorderStyle.None);

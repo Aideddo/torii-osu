@@ -36,13 +36,29 @@ namespace osu.Game.Localisation
         public static LocalisableString WelcomeTitle => new TranslatableString(getKey(@"welcome_title"), @"Welcome");
 
         /// <summary>
-        /// "Welcome to the first-run setup guide!
+        /// "Welcome to the Torii setup guide!
         ///
-        /// Torii is a very configurable game, and diving straight into the settings can sometimes be overwhelming. This guide will help you get the important choices out of the way to ensure a great first experience!"
+        /// Torii is an independent community rhythm game project and is not affiliated with ppy Pty Ltd or osu!.
+        ///
+        /// This guide will help you get the important choices out of the way to ensure a great first experience."
         /// </summary>
-        public static LocalisableString WelcomeDescription => new TranslatableString(getKey(@"welcome_description"), @"Welcome to the first-run setup guide!
+        public static LocalisableString WelcomeDescription => new TranslatableString(getKey(@"welcome_description"), @"Welcome to the Torii setup guide!
 
-Torii is a very configurable game, and diving straight into the settings can sometimes be overwhelming. This guide will help you get the important choices out of the way to ensure a great first experience!");
+Torii is an independent community rhythm game project and is not affiliated with ppy Pty Ltd or osu!.
+
+This guide will help you get the important choices out of the way to ensure a great first experience.");
+
+        public static LocalisableString ExperienceModePrompt => new TranslatableString(getKey(@"experience_mode_prompt"), @"How familiar are you with circle-clicking rhythm games?");
+
+        public static LocalisableString ExperienceModeNew => new TranslatableString(getKey(@"experience_mode_new"), @"I'm new to this");
+
+        public static LocalisableString ExperienceModeNewSub => new TranslatableString(getKey(@"experience_mode_new_sub"), @"Walk me through the basics with Torii Recommended options highlighted.");
+
+        public static LocalisableString ExperienceModeExperienced => new TranslatableString(getKey(@"experience_mode_experienced"), @"I already know how this works");
+
+        public static LocalisableString ExperienceModeExperiencedSub => new TranslatableString(getKey(@"experience_mode_experienced_sub"), @"I'm familiar with rhythm games and just want to import or tune my settings.");
+
+        public static LocalisableString ToriiRecommendedBadge => new TranslatableString(getKey(@"torii_recommended_badge"), @"Torii Recommended");
 
         /// <summary>
         /// "The size of the Torii user interface can be adjusted to your liking."
@@ -55,14 +71,25 @@ Torii is a very configurable game, and diving straight into the settings can som
         public static LocalisableString Behaviour => new TranslatableString(getKey(@"behaviour"), @"Behaviour");
 
         /// <summary>
-        /// "Some new defaults for game behaviours have been implemented, with the aim of improving the game experience and making it more accessible to everyone.
-        ///
-        /// We recommend you give the new defaults a try, but if you&#39;d like to have things feel more like classic versions of osu!, you can easily apply some sane defaults below."
+        /// "Torii ships with curated defaults tuned for the best gameplay and reading experience (primarily for standard torii mode, though many also apply across other modes)."
         /// </summary>
         public static LocalisableString BehaviourDescription => new TranslatableString(getKey(@"behaviour_description"),
-            @"Some new defaults for game behaviours have been implemented, with the aim of improving the game experience and making it more accessible to everyone.
+            @"Torii ships with curated defaults tuned for the best gameplay and reading experience (primarily for standard torii mode, though many also apply across other modes).");
 
-We recommend you give the new defaults a try, but if you'd like to have things feel more like classic versions of osu!, you can easily apply some sane defaults below.");
+        /// <summary>
+        /// "Torii Recommended"
+        /// </summary>
+        public static LocalisableString ToriiRecommendedButton => new TranslatableString(getKey(@"torii_recommended_button"), @"Torii Recommended");
+
+        /// <summary>
+        /// "You already have the Torii Recommended settings active by default."
+        /// </summary>
+        public static LocalisableString ToriiRecommendedAlreadyActive => new TranslatableString(getKey(@"torii_recommended_already_active"), @"You already have the Torii Recommended settings active by default.");
+
+        /// <summary>
+        /// "Torii Recommended settings applied."
+        /// </summary>
+        public static LocalisableString ToriiRecommendedApplied => new TranslatableString(getKey(@"torii_recommended_applied"), @"Torii Recommended settings applied.");
 
         /// <summary>
         /// "New defaults"

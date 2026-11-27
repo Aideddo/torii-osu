@@ -253,6 +253,7 @@ namespace osu.Game.Overlays.Settings.Rendering
         private partial class ColourProviderBox : Box
         {
             private readonly Func<OverlayColourProvider, Color4> colour;
+            private IDisposable? themeBinding;
 
             public ColourProviderBox(Func<OverlayColourProvider, Color4> colour)
             {
@@ -262,7 +263,18 @@ namespace osu.Game.Overlays.Settings.Rendering
             [BackgroundDependencyLoader]
             private void load(OverlayColourProvider colourProvider)
             {
-                Colour = colour(colourProvider);
+                themeBinding = this.BindThemeColour(colourProvider, colour);
+            }
+
+            protected override void Dispose(bool isDisposing)
+            {
+                if (isDisposing)
+                {
+                    themeBinding?.Dispose();
+                    themeBinding = null;
+                }
+
+                base.Dispose(isDisposing);
             }
         }
 
@@ -278,7 +290,10 @@ namespace osu.Game.Overlays.Settings.Rendering
             private readonly LocalisableString header;
             private readonly Drawable content;
 
+            private Box separator = null!;
             private Box dim = null!;
+            private IDisposable? separatorThemeBinding;
+            private IDisposable? dimThemeBinding;
 
             public bool RequiresSelectionForInput => true;
 
@@ -298,10 +313,9 @@ namespace osu.Game.Overlays.Settings.Rendering
             {
                 InternalChildren = new Drawable[]
                 {
-                    new Box
+                    separator = new Box
                     {
                         Name = "separator",
-                        Colour = colourProvider.Background6,
                         RelativeSizeAxes = Axes.X,
                         Height = border_size,
                     },
@@ -335,12 +349,27 @@ namespace osu.Game.Overlays.Settings.Rendering
                             dim = new Box
                             {
                                 RelativeSizeAxes = Axes.Both,
-                                Colour = colourProvider.Background5,
                                 Alpha = inactive_alpha,
                             },
                         }
                     },
                 };
+
+                separatorThemeBinding = separator.BindThemeColour(colourProvider, p => p.Background6);
+                dimThemeBinding = dim.BindThemeColour(colourProvider, p => p.Background5);
+            }
+
+            protected override void Dispose(bool isDisposing)
+            {
+                if (isDisposing)
+                {
+                    separatorThemeBinding?.Dispose();
+                    separatorThemeBinding = null;
+                    dimThemeBinding?.Dispose();
+                    dimThemeBinding = null;
+                }
+
+                base.Dispose(isDisposing);
             }
 
             public void UpdateState(bool isCurrent, bool isHovered)

@@ -44,6 +44,7 @@ namespace osu.Game.Overlays
 
         private LoadingSpinner loading = null!;
         private ScheduledDelegate? loadingShowDelegate;
+        private IDisposable? backgroundThemeBinding;
 
         public bool Completed { get; private set; }
 
@@ -89,8 +90,7 @@ namespace osu.Game.Overlays
                                         new Box
                                         {
                                             RelativeSizeAxes = Axes.Both,
-                                            Colour = ColourProvider.Background6,
-                                        },
+                                        }.With(b => backgroundThemeBinding = b.BindThemeColour(ColourProvider, p => p.Background6)),
                                         loading = new LoadingSpinner(),
                                         new Container
                                         {
@@ -308,6 +308,17 @@ namespace osu.Game.Overlays
             {
                 this.Delay(400).FadeOut();
             }
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (isDisposing)
+            {
+                backgroundThemeBinding?.Dispose();
+                backgroundThemeBinding = null;
+            }
+
+            base.Dispose(isDisposing);
         }
     }
 }

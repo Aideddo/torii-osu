@@ -80,8 +80,7 @@ namespace osu.Game.Overlays.Mods
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = ColourProvider.Background6.Opacity(0.75f),
-                    },
+                    }.With(b => backgroundThemeBinding = b.BindThemeColour(ColourProvider, p => p.Background6.Opacity(0.75f))),
                     Header = new ShearedOverlayHeader
                     {
                         Anchor = Anchor.TopCentre,
@@ -127,6 +126,7 @@ namespace osu.Game.Overlays.Mods
         }
 
         private IDisposable? activeOverlayRegistration;
+        private IDisposable? backgroundThemeBinding;
         private bool hideFooterOnPopOut;
 
         protected override void PopIn()
@@ -171,6 +171,17 @@ namespace osu.Game.Overlays.Mods
                     hideFooterOnPopOut = false;
                 }
             }
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (isDisposing)
+            {
+                backgroundThemeBinding?.Dispose();
+                backgroundThemeBinding = null;
+            }
+
+            base.Dispose(isDisposing);
         }
     }
 }

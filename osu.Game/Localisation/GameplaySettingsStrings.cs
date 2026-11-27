@@ -140,9 +140,9 @@ namespace osu.Game.Localisation
         public static LocalisableString NeverShowHUD => new TranslatableString(getKey(@"never_show_hud"), @"Never");
 
         /// <summary>
-        /// "Score V3 (Lazer)"
+        /// "Score V3"
         /// </summary>
-        public static LocalisableString StandardisedScoreDisplay => new TranslatableString(getKey(@"standardised_score_display"), @"Score V3 (Lazer)");
+        public static LocalisableString StandardisedScoreDisplay => new TranslatableString(getKey(@"standardised_score_display"), @"Score V3");
 
         /// <summary>
         /// "Score V1 (Classic)"

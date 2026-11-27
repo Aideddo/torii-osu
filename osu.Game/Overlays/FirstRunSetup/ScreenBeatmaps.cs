@@ -8,14 +8,10 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
-using osu.Game.Beatmaps.Drawables;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Localisation;
-using osu.Game.Online;
-using osuTK;
-using osuTK.Graphics;
 using Realms;
 
 namespace osu.Game.Overlays.FirstRunSetup
@@ -23,15 +19,7 @@ namespace osu.Game.Overlays.FirstRunSetup
     [LocalisableDescription(typeof(FirstRunSetupBeatmapScreenStrings), nameof(FirstRunSetupBeatmapScreenStrings.Header))]
     public partial class ScreenBeatmaps : WizardScreen
     {
-        private ProgressRoundedButton downloadBundledButton = null!;
-        private ProgressRoundedButton downloadTutorialButton = null!;
-
-        private OsuTextFlowContainer downloadInBackgroundText = null!;
-
         private OsuTextFlowContainer currentlyLoadedBeatmaps = null!;
-
-        private BundledBeatmapDownloader? tutorialDownloader;
-        private BundledBeatmapDownloader? bundledDownloader;
 
         [Resolved]
         private OsuColour colours { get; set; } = null!;
@@ -44,8 +32,6 @@ namespace osu.Game.Overlays.FirstRunSetup
         [BackgroundDependencyLoader]
         private void load()
         {
-            Vector2 buttonSize = new Vector2(400, 50);
-
             Content.Children = new Drawable[]
             {
                 new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: CONTENT_FONT_SIZE))
@@ -70,47 +56,6 @@ namespace osu.Game.Overlays.FirstRunSetup
                             AutoSizeAxes = Axes.Both,
                         },
                     }
-                },
-                new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: CONTENT_FONT_SIZE))
-                {
-                    Colour = OverlayColourProvider.Content1,
-                    Text = FirstRunSetupBeatmapScreenStrings.TutorialDescription,
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y
-                },
-                downloadTutorialButton = new ProgressRoundedButton
-                {
-                    Size = buttonSize,
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    BackgroundColour = colours.Pink3,
-                    Text = FirstRunSetupBeatmapScreenStrings.TutorialButton,
-                    Action = downloadTutorial
-                },
-                new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: CONTENT_FONT_SIZE))
-                {
-                    Colour = OverlayColourProvider.Content1,
-                    Text = FirstRunSetupBeatmapScreenStrings.BundledDescription,
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y
-                },
-                downloadBundledButton = new ProgressRoundedButton
-                {
-                    Size = buttonSize,
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    BackgroundColour = colours.Blue3,
-                    Text = FirstRunSetupBeatmapScreenStrings.BundledButton,
-                    Action = downloadBundled
-                },
-                downloadInBackgroundText = new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: CONTENT_FONT_SIZE))
-                {
-                    Colour = OverlayColourProvider.Light2,
-                    Alpha = 0,
-                    TextAnchor = Anchor.TopCentre,
-                    Text = FirstRunSetupBeatmapScreenStrings.DownloadingInBackground,
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y
                 },
                 new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: CONTENT_FONT_SIZE))
                 {
@@ -152,55 +97,5 @@ namespace osu.Game.Overlays.FirstRunSetup
                                        .ScaleTo(1, 1500, Easing.OutQuint);
             }
         });
-
-        private void downloadTutorial()
-        {
-            if (tutorialDownloader != null)
-                return;
-
-            tutorialDownloader = new BundledBeatmapDownloader(true);
-
-            AddInternal(tutorialDownloader);
-
-            var downloadTracker = tutorialDownloader.DownloadTrackers.First();
-
-            downloadTracker.State.BindValueChanged(state =>
-            {
-                if (state.NewValue == DownloadState.LocallyAvailable)
-                    downloadTutorialButton.Complete();
-            }, true);
-
-            downloadTracker.Progress.BindValueChanged(progress =>
-            {
-                downloadTutorialButton.SetProgress(progress.NewValue, false);
-            }, true);
-        }
-
-        private void downloadBundled()
-        {
-            if (bundledDownloader != null)
-                return;
-
-            downloadInBackgroundText
-                .FlashColour(Color4.White, 500)
-                .FadeIn(200);
-
-            bundledDownloader = new BundledBeatmapDownloader(false);
-
-            AddInternal(bundledDownloader);
-
-            foreach (var tracker in bundledDownloader.DownloadTrackers)
-                tracker.State.BindValueChanged(_ => updateProgress(), true);
-
-            void updateProgress()
-            {
-                double progress = (double)bundledDownloader.DownloadTrackers.Count(t => t.State.Value == DownloadState.LocallyAvailable) / bundledDownloader.DownloadTrackers.Count();
-
-                if (progress == 1)
-                    downloadBundledButton.Complete();
-                else
-                    downloadBundledButton.SetProgress(progress, true);
-            }
-        }
     }
 }
