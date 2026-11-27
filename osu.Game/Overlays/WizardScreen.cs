@@ -3,6 +3,7 @@
 
 #nullable disable
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
@@ -31,6 +32,8 @@ namespace osu.Game.Overlays
         [Resolved]
         protected OverlayColourProvider OverlayColourProvider { get; private set; }
 
+        private IDisposable headerThemeBinding;
+
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -53,8 +56,7 @@ namespace osu.Game.Overlays
                             {
                                 Text = this.GetLocalisableDescription(),
                                 Font = OsuFont.TorusAlternate.With(size: HEADER_FONT_SIZE),
-                                Colour = OverlayColourProvider.Light1,
-                            },
+                            }.With(t => headerThemeBinding = t.BindThemeColour(OverlayColourProvider, p => p.Light1)),
                             Content = new FillFlowContainer
                             {
                                 Y = HEADER_FONT_SIZE + spacing,
@@ -76,6 +78,17 @@ namespace osu.Game.Overlays
                 .FadeInFromZero(100)
                 .MoveToX(offset)
                 .MoveToX(0, 500, Easing.OutQuint);
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (isDisposing)
+            {
+                headerThemeBinding?.Dispose();
+                headerThemeBinding = null;
+            }
+
+            base.Dispose(isDisposing);
         }
 
         public override void OnResuming(ScreenTransitionEvent e)

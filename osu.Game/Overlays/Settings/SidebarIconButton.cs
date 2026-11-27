@@ -111,6 +111,8 @@ namespace osu.Game.Overlays.Settings
         {
             base.UpdateState();
 
+            selectionIndicator.Colour = ColourProvider.Highlight1;
+
             if (Selected)
             {
                 textIconContent.FadeColour(ColourProvider.Content1, FADE_DURATION, Easing.OutQuint);

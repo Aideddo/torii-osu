@@ -256,9 +256,13 @@ namespace osu.Game.Overlays
 
             public Action? ShowNextStep;
 
+            private OverlayColourProvider? colourProvider;
+
             [BackgroundDependencyLoader]
             private void load(OverlayColourProvider colourProvider)
             {
+                this.colourProvider = colourProvider;
+
                 RelativeSizeAxes = Axes.Both;
 
                 Padding = new MarginPadding { Right = OsuGame.SCREEN_EDGE_MARGIN };
@@ -271,6 +275,25 @@ namespace osu.Game.Overlays
                     LighterColour = colourProvider.Colour2,
                     Action = () => ShowNextStep?.Invoke(),
                 };
+
+                colourProvider.ColoursChanged += updateTheme;
+            }
+
+            private void updateTheme()
+            {
+                if (colourProvider == null)
+                    return;
+
+                NextButton.DarkerColour = colourProvider.Colour3;
+                NextButton.LighterColour = colourProvider.Colour2;
+            }
+
+            protected override void Dispose(bool isDisposing)
+            {
+                if (isDisposing && colourProvider != null)
+                    colourProvider.ColoursChanged -= updateTheme;
+
+                base.Dispose(isDisposing);
             }
 
             public void UpdateButtons(int? currentStep, WizardScreen? currentScreen, IReadOnlyList<Type> steps)

@@ -27,7 +27,7 @@ namespace osu.Game.Overlays.Settings
         protected override bool ExpandOnHover => false;
 
         private readonly bool showBackButton;
-        private Box background = null!;
+        private Drawable background = null!;
         private OverlayColourProvider colourProvider = null!;
 
         public SettingsSidebar(bool showBackButton)
@@ -45,7 +45,9 @@ namespace osu.Game.Overlays.Settings
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider)
         {
-            AddInternal(CreateBackground(colourProvider).With(d => d.Depth = float.MaxValue));
+            this.colourProvider = colourProvider;
+
+            AddInternal((background = CreateBackground(colourProvider)).With(d => d.Depth = float.MaxValue));
 
             if (showBackButton)
             {
