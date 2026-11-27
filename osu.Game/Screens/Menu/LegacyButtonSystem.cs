@@ -595,7 +595,7 @@ namespace osu.Game.Screens.Menu
                             {
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre,
-                                Text = @"osu!",
+                                Text = @"torii",
                                 Font = OsuFont.GetFont(size: 80, weight: FontWeight.Bold),
                             }
                         }

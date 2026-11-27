@@ -125,9 +125,9 @@ namespace osu.Game.Localisation
         public static LocalisableString NoModPresetsFoundToRestore => new TranslatableString(getKey(@"no_mod_presets_found_to_restore"), @"No mod presets found to restore!");
 
         /// <summary>
-        /// "Please select your osu!stable install location"
+        /// "Please select your legacy install location"
         /// </summary>
-        public static LocalisableString StableDirectorySelectHeader => new TranslatableString(getKey(@"stable_directory_select_header"), @"Please select your osu!stable install location");
+        public static LocalisableString StableDirectorySelectHeader => new TranslatableString(getKey(@"stable_directory_select_header"), @"Please select your legacy install location");
 
         /// <summary>
         /// "All offsets have been reset!"

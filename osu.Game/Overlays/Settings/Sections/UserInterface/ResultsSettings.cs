@@ -35,9 +35,9 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
                 CreateItem(new EnumDropdownEntry<ResultsScreenStyle>
                 {
                     Caption = UserInterfaceStrings.ResultsScreenStyle,
-                    HintText = "Choose a results layout. Changes to the Stable UI layout take effect after restarting the game.",
+                    HintText = "Choose a results layout. Changes to the Torii Classic UI layout take effect after restarting the game.",
                     Current = style,
-                    Keywords = new[] { @"results", @"ranking", @"score", @"modern", @"legacy", @"stable", @"layout", @"skin" },
+                    Keywords = new[] { @"results", @"ranking", @"score", @"modern", @"legacy", @"classic", @"layout", @"skin" },
                 }),
             };
 

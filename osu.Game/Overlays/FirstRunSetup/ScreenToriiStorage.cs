@@ -47,20 +47,11 @@ namespace osu.Game.Overlays.FirstRunSetup
         [Resolved(canBeNull: true)]
         private FirstRunSetupOverlay? firstRunOverlay { get; set; }
 
-        private string? detectedLazerPath;
-
         private OsuTextFlowContainer helperText = null!;
-
-        // torii: el footer del wizard siempre tiene su botón, y desde acá avanzar sin elegir nada
-        // equivale a quedarse en la carpeta nueva, así que lo etiquetamos como lo que hace.
 
         [BackgroundDependencyLoader]
         private void load()
         {
-            detectedLazerPath = ToriiStoragePathHelper.GetLikelyLazerStoragePath();
-
-            bool detected = !string.IsNullOrEmpty(detectedLazerPath);
-
             var intro = new List<Drawable>
             {
                 new CircularContainer
@@ -81,46 +72,11 @@ namespace osu.Game.Overlays.FirstRunSetup
                 },
                 new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: CONTENT_FONT_SIZE))
                 {
-                    Text = detected ? ToriiSettingsStrings.FirstRunDescription : ToriiSettingsStrings.NoDetectedLazerFolder,
+                    Text = ToriiSettingsStrings.NoDetectedLazerFolder,
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
                 },
             };
-
-            if (detected)
-            {
-                intro.Add(new Container
-                {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Masking = true,
-                    CornerRadius = 8,
-                    Children = new Drawable[]
-                    {
-                        new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Colour = OverlayColourProvider.Background4,
-                        },
-                        new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: CONTENT_FONT_SIZE, weight: FontWeight.SemiBold))
-                        {
-                            Text = ToriiSettingsStrings.DetectedLazerFolder(detectedLazerPath!),
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Padding = new MarginPadding { Horizontal = 15, Vertical = 10 },
-                            Colour = OverlayColourProvider.Content1,
-                        },
-                    }
-                });
-
-                intro.Add(new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: CONTENT_FONT_SIZE - 2))
-                {
-                    Text = ToriiSettingsStrings.FirstRunSharedFolderNote,
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Colour = OverlayColourProvider.Content2,
-                });
-            }
 
             var content = new List<Drawable>
             {
@@ -140,14 +96,12 @@ namespace osu.Game.Overlays.FirstRunSetup
                     Spacing = new Vector2(10),
                     Children = new Drawable[]
                     {
-                        // torii: sin carpeta detectada no hay nada que importar de una, así que el lugar
-                        // del botón principal se lo queda elegirla a mano.
                         new RoundedButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Height = 55,
-                            Text = detected ? ToriiSettingsStrings.UseDetectedLazerFolder : ToriiSettingsStrings.ChooseLazerFolderManually,
-                            Action = detected ? importDetectedFolder : (Action)showFolderPicker,
+                            Text = ToriiSettingsStrings.ChooseLazerFolderManually,
+                            Action = showFolderPicker,
                         },
                         new RoundedButton
                         {
@@ -160,27 +114,6 @@ namespace osu.Game.Overlays.FirstRunSetup
                 },
             };
 
-            if (detected)
-            {
-                // la opción terciaria: sin fondo de botón y en chiquito, para que compita lo menos posible
-                // con las dos de arriba.
-                content.Add(new OsuHoverContainer
-                {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    IdleColour = OverlayColourProvider.Content2,
-                    HoverColour = OverlayColourProvider.Light1,
-                    Action = showFolderPicker,
-                    Child = new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: 13))
-                    {
-                        Text = ToriiSettingsStrings.ImportAnotherLazerFolder,
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        TextAnchor = Anchor.TopCentre,
-                    },
-                });
-            }
-
             content.Add(helperText = new OsuTextFlowContainer(cp => cp.Font = OsuFont.Default.With(size: 13))
             {
                 Text = ToriiSettingsStrings.ChangeLaterInSettings,
@@ -190,16 +123,6 @@ namespace osu.Game.Overlays.FirstRunSetup
             });
 
             Content.AddRange(content);
-        }
-
-        private void importDetectedFolder()
-        {
-            // la carpeta se validó al detectarla, pero puede haber desaparecido entre medio.
-            if (!ToriiFirstRunFlow.ApplyDataPath(detectedLazerPath, storage, game, config, dialogOverlay))
-            {
-                helperText.Text = ToriiSettingsStrings.InvalidLazerFolder;
-                helperText.Colour = colours.Orange1;
-            }
         }
 
         private void showFolderPicker()

@@ -27,7 +27,7 @@ namespace osu.Game.Graphics.Cursor
         /// first value of the enum so it's the default for users
         /// who never touch the setting.
         /// </summary>
-        [System.ComponentModel.Description("Lazer default")]
+        [System.ComponentModel.Description("Torii default")]
         LazerDefault,
 
         /// <summary>

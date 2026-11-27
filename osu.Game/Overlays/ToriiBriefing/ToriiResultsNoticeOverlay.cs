@@ -131,7 +131,7 @@ namespace osu.Game.Overlays.ToriiBriefing
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
                     Colour = Color4.White.Opacity(BriefingTheme.InkSecondary),
-                    Text = "We're introducing a modern results screen featuring a refreshed layout, visual score metrics, expanded hit statistics, and quick access to leaderboards.\n\nPrefer the classic Lazer design or osu!stable style? You can switch anytime in Settings or right here:",
+                    Text = "We're introducing a modern results screen featuring a refreshed layout, visual score metrics, expanded hit statistics, and quick access to leaderboards.\n\nPrefer the classic design or Torii Classic style? You can switch anytime in Settings or right here:",
                 },
                 // Card for in-situ layout choices
                 new BriefingGlass
@@ -160,7 +160,7 @@ namespace osu.Game.Overlays.ToriiBriefing
                             {
                                 new Drawable?[]
                                 {
-                                    new ResultsLayoutChoiceButton(FontAwesome.Solid.LayerGroup, "Lazer Classic", BriefingTheme.AccentPink)
+                                    new ResultsLayoutChoiceButton(FontAwesome.Solid.LayerGroup, "Classic", BriefingTheme.AccentPink)
                                     {
                                         Action = () =>
                                         {
@@ -170,7 +170,7 @@ namespace osu.Game.Overlays.ToriiBriefing
                                         }
                                     },
                                     null,
-                                    new ResultsLayoutChoiceButton(FontAwesome.Solid.History, "Torii (Stable)", BriefingTheme.AccentCyan)
+                                    new ResultsLayoutChoiceButton(FontAwesome.Solid.History, "Torii Classic", BriefingTheme.AccentCyan)
                                     {
                                         Action = () =>
                                         {

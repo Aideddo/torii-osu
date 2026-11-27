@@ -13,35 +13,35 @@ namespace osu.Game.Localisation
 
         public static LocalisableString FirstRunHeader => new TranslatableString(getKey(@"first_run_header"), @"Welcome to Torii");
 
-        public static LocalisableString FirstRunDescription => new TranslatableString(getKey(@"first_run_description"), @"We found your osu!lazer folder on this computer. Import it and Torii opens with all your beatmaps, skins, scores and collections already in place. Nothing is copied or moved, so it is instant and your osu!lazer install is left exactly as it is.");
+        public static LocalisableString FirstRunDescription => new TranslatableString(getKey(@"first_run_description"), @"Choose where Torii stores your beatmaps, skins, scores, and collections. You can start fresh with Torii's own folder, or point Torii at an existing compatible data folder on your computer.");
 
-        public static LocalisableString FirstRunSharedFolderNote => new TranslatableString(getKey(@"first_run_shared_folder_note"), @"From then on Torii and osu!lazer share that folder, so a beatmap you download in one is already waiting for you in the other.");
+        public static LocalisableString FirstRunSharedFolderNote => new TranslatableString(getKey(@"first_run_shared_folder_note"), @"Torii will read and save your data directly in the selected folder.");
 
-        public static LocalisableString DetectedLazerFolder(string path) => new TranslatableString(getKey(@"detected_lazer_folder"), "Detected osu!lazer folder:\n{0}", path);
+        public static LocalisableString DetectedLazerFolder(string path) => new TranslatableString(getKey(@"detected_lazer_folder"), "Selected data folder:\n{0}", path);
 
-        public static LocalisableString NoDetectedLazerFolder => new TranslatableString(getKey(@"no_detected_lazer_folder"), @"We could not find an osu!lazer folder automatically. You can point Torii at one yourself, or just start fresh and sort this out later.");
+        public static LocalisableString NoDetectedLazerFolder => new TranslatableString(getKey(@"no_detected_lazer_folder"), @"Choose where Torii stores your beatmaps, skins, scores, and collections. You can point Torii at an existing compatible data folder on your computer, or start fresh with Torii's own folder.");
 
-        public static LocalisableString FolderSelectorLabel => new TranslatableString(getKey(@"folder_selector_label"), @"Existing osu! lazer data folder");
+        public static LocalisableString FolderSelectorLabel => new TranslatableString(getKey(@"folder_selector_label"), @"Existing data folder");
 
         public static LocalisableString FolderSelectorPlaceholder => new TranslatableString(getKey(@"folder_selector_placeholder"), @"Choose the folder that contains client.realm");
 
-        public static LocalisableString UseDetectedLazerFolder => new TranslatableString(getKey(@"use_detected_lazer_folder"), @"Import from detected osu! folder");
+        public static LocalisableString UseDetectedLazerFolder => new TranslatableString(getKey(@"use_detected_lazer_folder"), @"Use selected data folder");
 
-        public static LocalisableString UseSelectedLazerFolder => new TranslatableString(getKey(@"use_selected_lazer_folder"), @"Import from this folder");
+        public static LocalisableString UseSelectedLazerFolder => new TranslatableString(getKey(@"use_selected_lazer_folder"), @"Use this folder");
 
-        public static LocalisableString KeepPortable => new TranslatableString(getKey(@"keep_portable"), @"Stay fresh for now");
+        public static LocalisableString KeepPortable => new TranslatableString(getKey(@"keep_portable"), @"Start fresh");
 
-        public static LocalisableString ImportAnotherLazerFolder => new TranslatableString(getKey(@"import_another_lazer_folder"), @"I want to import another osu! Lazer folder, not the detected one");
+        public static LocalisableString ImportAnotherLazerFolder => new TranslatableString(getKey(@"import_another_lazer_folder"), @"Choose a different data folder");
 
-        public static LocalisableString ChooseLazerFolderManually => new TranslatableString(getKey(@"choose_lazer_folder_manually"), @"Choose my osu! lazer folder");
+        public static LocalisableString ChooseLazerFolderManually => new TranslatableString(getKey(@"choose_lazer_folder_manually"), @"Choose an existing data folder");
 
-        public static LocalisableString StayFreshInstead => new TranslatableString(getKey(@"stay_fresh_instead"), @"Never mind, stay fresh for now");
+        public static LocalisableString StayFreshInstead => new TranslatableString(getKey(@"stay_fresh_instead"), @"Never mind, start fresh");
 
         public static LocalisableString SkipFirstRunSetup => new TranslatableString(getKey(@"skip_first_run_setup"), @"Skip for now");
 
         public static LocalisableString ChangeLaterInSettings => new TranslatableString(getKey(@"change_later_in_settings"), @"You can change this later from Settings > Torii.");
 
-        public static LocalisableString InvalidLazerFolder => new TranslatableString(getKey(@"invalid_lazer_folder"), @"That folder does not look like an osu! lazer data folder. Choose the folder that contains client.realm.");
+        public static LocalisableString InvalidLazerFolder => new TranslatableString(getKey(@"invalid_lazer_folder"), @"That folder does not look like a valid data folder. Choose the folder that contains client.realm.");
 
         public static LocalisableString CurrentModePortable => new TranslatableString(getKey(@"current_mode_portable"), @"Current mode: portable Torii data");
 
@@ -49,7 +49,7 @@ namespace osu.Game.Localisation
 
         public static LocalisableString OpenActiveDataFolder => new TranslatableString(getKey(@"open_active_data_folder"), @"Open active data folder");
 
-        public static LocalisableString ConfigureLazerDataFolder => new TranslatableString(getKey(@"configure_lazer_data_folder"), @"Link to osu! lazer data folder");
+        public static LocalisableString ConfigureLazerDataFolder => new TranslatableString(getKey(@"configure_lazer_data_folder"), @"Link to existing data folder");
 
         public static LocalisableString ManageDataSource => new TranslatableString(getKey(@"manage_data_source"), @"Manage Torii data source");
 
@@ -57,13 +57,13 @@ namespace osu.Game.Localisation
 
         public static LocalisableString SwitchToPortableModeDescription => new TranslatableString(getKey(@"switch_to_portable_mode_description"), @"Torii will close and use its own portable data folder again on next launch.");
 
-        public static LocalisableString LinkLazerDataFolderDescription => new TranslatableString(getKey(@"link_lazer_data_folder_description"), @"Pick an existing osu! lazer data folder. Torii will close and use it on next launch.");
+        public static LocalisableString LinkLazerDataFolderDescription => new TranslatableString(getKey(@"link_lazer_data_folder_description"), @"Pick an existing data folder. Torii will close and use it on next launch.");
 
         public static LocalisableString ContinueSetup => new TranslatableString(getKey(@"continue_setup"), @"Continue setup");
 
-        public static LocalisableString PickLazerFolderHeader => new TranslatableString(getKey(@"pick_lazer_folder_header"), @"Select your osu! lazer data folder");
+        public static LocalisableString PickLazerFolderHeader => new TranslatableString(getKey(@"pick_lazer_folder_header"), @"Select your data folder");
 
-        public static LocalisableString PickLazerFolderDescription => new TranslatableString(getKey(@"pick_lazer_folder_description"), @"Browse to the osu!lazer folder you want Torii to use. It is the folder that contains client.realm. Nothing is copied or moved: Torii reads your data where it already lives, and both clients share the folder from then on.");
+        public static LocalisableString PickLazerFolderDescription => new TranslatableString(getKey(@"pick_lazer_folder_description"), @"Browse to the data folder you want Torii to use (the folder that contains client.realm). Nothing is copied or moved: Torii reads and saves your data directly in that folder.");
 
         public static LocalisableString SkipBreaks => new TranslatableString(getKey(@"skip_breaks"), @"Skip breaks mid-map");
 

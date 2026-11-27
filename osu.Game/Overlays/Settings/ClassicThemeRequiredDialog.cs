@@ -9,8 +9,8 @@ namespace osu.Game.Overlays.Settings
     {
         public ClassicThemeRequiredDialog()
         {
-            HeaderText = "Torii Classic (Stable) required";
-            BodyText = "These options only apply to Torii Classic (Stable). Choose your components, then select Enable Torii Classic (Stable) and restart the game.";
+            HeaderText = "Torii Classic required";
+            BodyText = "These options only apply to Torii Classic. Choose your components, then select Enable Torii Classic and restart the game.";
             Buttons = new PopupDialogButton[] { new PopupDialogOkButton { Text = "Got it" } };
         }
     }

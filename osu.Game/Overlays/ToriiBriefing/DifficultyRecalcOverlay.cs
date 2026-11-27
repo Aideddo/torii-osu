@@ -182,7 +182,7 @@ namespace osu.Game.Overlays.ToriiBriefing
                             },
                             modeButton(count, "i paid for the whole cpu", "uses almost every core", colours.Pink, ToriiDifficultyRecalcMode.MaxCores),
                             modeButton(count, "Half the cores", "faster, some impact", colours.Blue, ToriiDifficultyRecalcMode.HalfCores),
-                            modeButton(count, "Gentle (lazer default)", "barely noticeable", colours.Gray5, ToriiDifficultyRecalcMode.LazerDefault),
+                            modeButton(count, "Gentle (default)", "barely noticeable", colours.Gray5, ToriiDifficultyRecalcMode.LazerDefault),
                         },
                     },
                 },

@@ -129,7 +129,7 @@ namespace osu.Game.Overlays.BeatmapListing
             [Resolved]
             private OsuConfigManager config { get; set; } = null!;
 
-            public LocalisableString TooltipText => @"Maps uploaded here, which don't exist on osu! official. Turn this off to leave them out of the listing.";
+            public LocalisableString TooltipText => @"Maps uploaded here, which don't exist on the official server. Turn this off to leave them out of the listing.";
 
             public ToriiExclusiveTabItem()
                 : base(SearchGeneral.ToriiExclusive)
@@ -155,7 +155,7 @@ namespace osu.Game.Overlays.BeatmapListing
             [Resolved]
             private OsuConfigManager config { get; set; } = null!;
 
-            public LocalisableString TooltipText => @"Maps generated with Mapperatorinator, from here or from osu! official. Turn this off to leave them out of the listing.";
+            public LocalisableString TooltipText => @"Maps generated with Mapperatorinator, from here or from the official server. Turn this off to leave them out of the listing.";
 
             public AiGeneratedTabItem()
                 : base(SearchGeneral.AiGenerated)

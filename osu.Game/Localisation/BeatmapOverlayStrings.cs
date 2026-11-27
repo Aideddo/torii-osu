@@ -29,9 +29,9 @@ This includes content that may not be correctly licensed for use in Torii. Brows
         public static LocalisableString UserContentConfirmButtonText => new TranslatableString(getKey(@"understood"), @"I understand");
 
         /// <summary>
-        /// "Featured Artists are music artists who have collaborated with osu! to make a selection of their tracks available for use in beatmaps. For some Torii releases, we showcase only featured artist beatmaps to better support the surrounding ecosystem."
+        /// "Featured Artists are music artists who have licensed tracks for use in rhythm game beatmaps. For some Torii releases, we showcase only featured artist beatmaps to better support the surrounding ecosystem."
         /// </summary>
-        public static LocalisableString FeaturedArtistsTooltip => new TranslatableString(getKey(@"featured_artists_disabled_tooltip"), @"Featured Artists are music artists who have collaborated with osu! to make a selection of their tracks available for use in beatmaps. For some Torii releases, we showcase only featured artist beatmaps to better support the surrounding ecosystem.");
+        public static LocalisableString FeaturedArtistsTooltip => new TranslatableString(getKey(@"featured_artists_disabled_tooltip"), @"Featured Artists are music artists who have licensed tracks for use in rhythm game beatmaps. For some Torii releases, we showcase only featured artist beatmaps to better support the surrounding ecosystem.");
 
         /// <summary>
         /// "Filtering by {0} requires an active {1}"

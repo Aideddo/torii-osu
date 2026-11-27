@@ -30,9 +30,9 @@ namespace osu.Game.Localisation
         public static LocalisableString Cancel => new TranslatableString(getKey(@"cancel"), @"No! Abort mission");
 
         /// <summary>
-        /// "Failed to automatically locate an osu!stable installation."
+        /// "Failed to automatically locate a legacy installation."
         /// </summary>
-        public static LocalisableString StableDirectoryLocationHeaderText => new TranslatableString(getKey(@"stable_directory_location_header_text"), @"Failed to automatically locate an osu!stable installation.");
+        public static LocalisableString StableDirectoryLocationHeaderText => new TranslatableString(getKey(@"stable_directory_location_header_text"), @"Failed to automatically locate a legacy installation.");
 
         /// <summary>
         /// "An existing install could not be located. If you know where it is, you can help locate it."
@@ -45,9 +45,9 @@ namespace osu.Game.Localisation
         public static LocalisableString StableDirectoryLocationOkButton => new TranslatableString(getKey(@"stable_directory_location_ok_button"), @"Sure! I know where it is located!");
 
         /// <summary>
-        /// "Actually I don't have osu!stable installed."
+        /// "Actually I don't have a legacy install."
         /// </summary>
-        public static LocalisableString StableDirectoryLocationCancelButton => new TranslatableString(getKey(@"stable_directory_location_cancel_button"), @"Actually I don't have osu!stable installed.");
+        public static LocalisableString StableDirectoryLocationCancelButton => new TranslatableString(getKey(@"stable_directory_location_cancel_button"), @"Actually I don't have a legacy install.");
 
         /// <summary>
         /// "All local scores on {0}"

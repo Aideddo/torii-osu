@@ -27,7 +27,7 @@ namespace osu.Game.Overlays.Settings.Sections.DebugSettings
             {
                 CreateItem(importBeatmapsButton = new ButtonEntry
                 {
-                    Caption = @"Import beatmaps from stable",
+                    Caption = @"Import beatmaps from legacy folder",
                     Action = () =>
                     {
                         importBeatmapsButton.Enabled.Value = false;
@@ -36,7 +36,7 @@ namespace osu.Game.Overlays.Settings.Sections.DebugSettings
                 }),
                 CreateItem(importSkinsButton = new ButtonEntry
                 {
-                    Caption = @"Import skins from stable",
+                    Caption = @"Import skins from legacy folder",
                     Action = () =>
                     {
                         importSkinsButton.Enabled.Value = false;
@@ -45,7 +45,7 @@ namespace osu.Game.Overlays.Settings.Sections.DebugSettings
                 }),
                 CreateItem(importCollectionsButton = new ButtonEntry
                 {
-                    Caption = @"Import collections from stable",
+                    Caption = @"Import collections from legacy folder",
                     Action = () =>
                     {
                         importCollectionsButton.Enabled.Value = false;
@@ -54,7 +54,7 @@ namespace osu.Game.Overlays.Settings.Sections.DebugSettings
                 }),
                 CreateItem(importScoresButton = new ButtonEntry
                 {
-                    Caption = @"Import scores from stable",
+                    Caption = @"Import scores from legacy folder",
                     Action = () =>
                     {
                         importScoresButton.Enabled.Value = false;

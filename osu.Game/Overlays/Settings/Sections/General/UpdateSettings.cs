@@ -118,7 +118,7 @@ namespace osu.Game.Overlays.Settings.Sections.General
                         },
                         () => releaseStreamDropdown.Current.Value = ReleaseStream.Torii)
                     {
-                        BodyText = "Vanilla is basically Lazer but wired to work on Torii. It won't have any Torii features and the PP gotten from maps will deviate from the one stored in the server, but this is good for people with compatibility problems, lag issues, poor pcs, or weird systems like Wayland, Linux, etc."
+                        BodyText = "Vanilla is the upstream client wired to work on Torii. It won't have any Torii features and the PP gotten from maps will deviate from the one stored in the server, but this is good for people with compatibility problems, lag issues, poor pcs, or weird systems like Wayland, Linux, etc."
                     });
 
                 return;

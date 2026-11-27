@@ -14,7 +14,7 @@ namespace osu.Game.Configuration
     /// </summary>
     public enum ToriiDifficultyRecalcMode
     {
-        [Description("Gentle (lazer default, single thread)")]
+        [Description("Gentle (default, single thread)")]
         LazerDefault = 0,
 
         [Description("Half the cores (faster)")]

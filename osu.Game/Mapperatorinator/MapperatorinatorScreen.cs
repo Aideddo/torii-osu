@@ -332,7 +332,7 @@ namespace osu.Game.Mapperatorinator
                             },
                             mapperId = new FormNumberBox
                             {
-                                Caption = @"Mapper id to imitate (osu! user id, optional)",
+                                Caption = @"Mapper id to imitate (Torii user id, optional)",
                                 PlaceholderText = @"nobody in particular",
                             },
                             keycount = new FormNumberBox
@@ -1756,7 +1756,7 @@ namespace osu.Game.Mapperatorinator
 
             if (parseIntOrNull(mapperId.Current.Value) is not int id || id <= 0)
             {
-                warn(@"The mapper to imitate is an osu! user ID (a number). Ignoring it.");
+                warn(@"The mapper to imitate is a Torii user ID (a number). Ignoring it.");
                 mapperId.Current.Value = string.Empty;
                 return null;
             }

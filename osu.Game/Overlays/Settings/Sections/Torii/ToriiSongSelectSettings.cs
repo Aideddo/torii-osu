@@ -18,7 +18,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
 {
     public partial class ToriiSongSelectSettings : SettingsSubsection
     {
-        protected override LocalisableString Header => "Torii Classic (Stable)";
+        protected override LocalisableString Header => "Torii Classic";
 
         private readonly Dictionary<OsuSetting, BindableBool> staged = new Dictionary<OsuSetting, BindableBool>();
         private readonly Dictionary<OsuSetting, Bindable<bool>> persisted = new Dictionary<OsuSetting, Bindable<bool>>();
@@ -45,10 +45,10 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
                 checkbox(OsuSetting.ToriiStableUIGameplayScreens, "Classic Loading, Pause, Fail, Skip & Break Screens"),
                 checkbox(OsuSetting.ToriiStableUIGameplayLeaderboard, "Classic Gameplay Leaderboard"),
                 checkbox(OsuSetting.ToriiStableUIFpsCounter, "Classic FPS Counter"),
-                checkbox(OsuSetting.ToriiStableUIResults, "Stable Results Screen"),
-                checkbox(OsuSetting.ToriiStableUIMods, "Stable Mod Select Screen"),
-                checkbox(OsuSetting.ToriiStableUIFooter, "Stable Footer & Buttons"),
-                checkbox(OsuSetting.ToriiStableUIFonts, "Stable Classic Fonts"),
+                checkbox(OsuSetting.ToriiStableUIResults, "Classic Results Screen"),
+                checkbox(OsuSetting.ToriiStableUIMods, "Classic Mod Select Screen"),
+                checkbox(OsuSetting.ToriiStableUIFooter, "Classic Footer & Buttons"),
+                checkbox(OsuSetting.ToriiStableUIFonts, "Classic Fonts"),
                 hint = new OsuTextFlowContainer(t => t.Font = OsuFont.Style.Caption1)
                 {
                     RelativeSizeAxes = Axes.X,
@@ -100,9 +100,9 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
             bool hasPendingChanges = staged.Any(pair => pair.Value.Value != config.Get<bool>(pair.Key));
             bool needsTheme = config.Get<UIThemeOption>(OsuSetting.UITheme) != UIThemeOption.StableUI;
             applyButton.Enabled.Value = hasPendingChanges || needsTheme;
-            applyButton.Text = needsTheme ? "Enable Torii Classic (Stable)" : "Apply Changes to Theme";
+            applyButton.Text = needsTheme ? "Enable Torii Classic" : "Apply Changes to Theme";
             hint.Text = needsTheme
-                ? "These options require Torii Classic (Stable). Choose your components, then enable the theme below and restart."
+                ? "These options require Torii Classic. Choose your components, then enable the theme below and restart."
                 : "Changes take effect after restarting the game.";
         }
 

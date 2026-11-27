@@ -235,9 +235,9 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacySongSelect => new TranslatableString(getKey(@"legacy_song_select"), @"Legacy song select");
 
         /// <summary>
-        /// "Use a stable-style song select with a skinnable footer and rank panel, without the modern filter bar or information wedges. Includes the legacy footer. Reopen song select to apply."
+        /// "Use a classic-style song select with a skinnable footer and rank panel, without the modern filter bar or information wedges. Includes the legacy footer. Reopen song select to apply."
         /// </summary>
-        public static LocalisableString LegacySongSelectDescription => new TranslatableString(getKey(@"legacy_song_select_description"), @"Use a stable-style song select with a skinnable footer and rank panel, without the modern filter bar or information wedges. Includes the legacy footer. Reopen song select to apply.");
+        public static LocalisableString LegacySongSelectDescription => new TranslatableString(getKey(@"legacy_song_select_description"), @"Use a classic-style song select with a skinnable footer and rank panel, without the modern filter bar or information wedges. Includes the legacy footer. Reopen song select to apply.");
 
         /// <summary>
         /// "Skin aspect ratio"
@@ -250,9 +250,9 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacySongSelectAspectRatioDescription => new TranslatableString(getKey(@"legacy_song_select_aspect_ratio_description"), @"Use the same aspect ratio for legacy song select, loading, gameplay and legacy results to match your skin.");
 
         /// <summary>
-        /// "Follow window (stable)"
+        /// "Follow window (classic)"
         /// </summary>
-        public static LocalisableString LegacySongSelectFollowWindow => new TranslatableString(getKey(@"legacy_song_select_follow_window"), @"Follow window (stable)");
+        public static LocalisableString LegacySongSelectFollowWindow => new TranslatableString(getKey(@"legacy_song_select_follow_window"), @"Follow window (classic)");
 
         /// <summary>
         /// "Use Inter font in legacy song select"
@@ -270,9 +270,9 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacySongSelectFooter => new TranslatableString(getKey(@"legacy_song_select_footer"), @"Legacy song select footer");
 
         /// <summary>
-        /// "Show the stable-style footer and rank panel over the standard song select interface. Always enabled when legacy song select is on; your separate footer preference is preserved. Reopen song select to apply."
+        /// "Show the classic-style footer and rank panel over the standard song select interface. Always enabled when legacy song select is on; your separate footer preference is preserved. Reopen song select to apply."
         /// </summary>
-        public static LocalisableString LegacySongSelectFooterDescription => new TranslatableString(getKey(@"legacy_song_select_footer_description"), @"Show the stable-style footer and rank panel over the standard song select interface. Always enabled when legacy song select is on; your separate footer preference is preserved. Reopen song select to apply.");
+        public static LocalisableString LegacySongSelectFooterDescription => new TranslatableString(getKey(@"legacy_song_select_footer_description"), @"Show the classic-style footer and rank panel over the standard song select interface. Always enabled when legacy song select is on; your separate footer preference is preserved. Reopen song select to apply.");
 
         /// <summary>
         /// "Results"
@@ -285,9 +285,9 @@ namespace osu.Game.Localisation
         public static LocalisableString ResultsScreenStyle => new TranslatableString(getKey(@"results_screen_style"), @"Results screen style");
 
         /// <summary>
-        /// "Choose the default layout, the modern score and rank ring, or the skinnable stable-style ranking panel. Applies to newly opened results screens."
+        /// "Choose the default layout, the modern score and rank ring, or the skinnable classic-style ranking panel. Applies to newly opened results screens."
         /// </summary>
-        public static LocalisableString ResultsScreenStyleDescription => new TranslatableString(getKey(@"results_screen_style_description"), @"Choose the default layout, the modern score and rank ring, or the skinnable stable-style ranking panel. Applies to newly opened results screens.");
+        public static LocalisableString ResultsScreenStyleDescription => new TranslatableString(getKey(@"results_screen_style_description"), @"Choose the default layout, the modern score and rank ring, or the skinnable classic-style ranking panel. Applies to newly opened results screens.");
 
         /// <summary>
         /// "Default"
@@ -300,9 +300,9 @@ namespace osu.Game.Localisation
         public static LocalisableString V2ResultsStyle => new TranslatableString(getKey(@"v2_results_style"), @"Modern V2 (g0v0)");
 
         /// <summary>
-        /// "Torii (Stable)"
+        /// "Torii Classic"
         /// </summary>
-        public static LocalisableString LegacyResultsStyle => new TranslatableString(getKey(@"legacy_results_style"), @"Torii (Stable)");
+        public static LocalisableString LegacyResultsStyle => new TranslatableString(getKey(@"legacy_results_style"), @"Torii Classic");
 
         /// <summary>
         /// "What do you want to do with this beatmap?"
@@ -325,9 +325,9 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacyMainMenu => new TranslatableString(getKey(@"legacy_main_menu"), @"Legacy main menu");
 
         /// <summary>
-        /// "Use the osu!stable classic main menu with circular logo button, two-tier submenu, and top-right music controls."
+        /// "Use the Torii Classic main menu with circular logo button, two-tier submenu, and top-right music controls."
         /// </summary>
-        public static LocalisableString LegacyMainMenuDescription => new TranslatableString(getKey(@"legacy_main_menu_description"), @"Use the osu!stable classic main menu with circular logo button, two-tier submenu, and top-right music controls.");
+        public static LocalisableString LegacyMainMenuDescription => new TranslatableString(getKey(@"legacy_main_menu_description"), @"Use the Torii Classic main menu with circular logo button, two-tier submenu, and top-right music controls.");
 
         /// <summary>
         /// "Legacy mod select"
@@ -335,9 +335,9 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacyModSelect => new TranslatableString(getKey(@"legacy_mod_select"), @"Legacy mod select");
 
         /// <summary>
-        /// "Use the osu!stable classic 3-category mod selection dialog with score multiplier display and hotkeys."
+        /// "Use the Torii Classic 3-category mod selection dialog with score multiplier display and hotkeys."
         /// </summary>
-        public static LocalisableString LegacyModSelectDescription => new TranslatableString(getKey(@"legacy_mod_select_description"), @"Use the osu!stable classic 3-category mod selection dialog with score multiplier display and hotkeys.");
+        public static LocalisableString LegacyModSelectDescription => new TranslatableString(getKey(@"legacy_mod_select_description"), @"Use the Torii Classic 3-category mod selection dialog with score multiplier display and hotkeys.");
 
         /// <summary>
         /// "Mod Customization"
@@ -375,9 +375,9 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacyOptions => new TranslatableString(getKey(@"legacy_options"), @"Legacy options menu");
 
         /// <summary>
-        /// "Restore osu!stable's classic sliding options sidebar appearance and styling."
+        /// "Restore Torii Classic's sliding options sidebar appearance and styling."
         /// </summary>
-        public static LocalisableString LegacyOptionsDescription => new TranslatableString(getKey(@"legacy_options_description"), @"Restore osu!stable's classic sliding options sidebar appearance and styling.");
+        public static LocalisableString LegacyOptionsDescription => new TranslatableString(getKey(@"legacy_options_description"), @"Restore Torii Classic's sliding options sidebar appearance and styling.");
 
         /// <summary>
         /// "Restart the game to apply this change."
@@ -390,9 +390,9 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacyFpsCounter => new TranslatableString(getKey(@"legacy_fps_counter"), @"Legacy FPS counter");
 
         /// <summary>
-        /// "Show the frame rate counter as osu!stable draws it."
+        /// "Show the frame rate counter in the classic style."
         /// </summary>
-        public static LocalisableString LegacyFpsCounterDescription => new TranslatableString(getKey(@"legacy_fps_counter_description"), @"Show the frame rate counter as osu!stable draws it.");
+        public static LocalisableString LegacyFpsCounterDescription => new TranslatableString(getKey(@"legacy_fps_counter_description"), @"Show the frame rate counter in the classic style.");
 
         /// <summary>
         /// "Legacy gameplay screens"
@@ -400,10 +400,10 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacyGameplayScreens => new TranslatableString(getKey(@"legacy_gameplay_screens"), @"Legacy gameplay screens");
 
         /// <summary>
-        /// "Show the loading, pause and fail screens as osu!stable draws them, using the skin's pause and fail textures. Applies from the next play."
+        /// "Show the classic loading, pause and fail screens using the skin's pause and fail textures. Applies from the next play."
         /// </summary>
         public static LocalisableString LegacyGameplayScreensDescription => new TranslatableString(getKey(@"legacy_gameplay_screens_description"),
-            @"Show the loading, pause and fail screens as osu!stable draws them, using the skin's pause and fail textures. Applies from the next play.");
+            @"Show the classic loading, pause and fail screens using the skin's pause and fail textures. Applies from the next play.");
 
         /// <summary>
         /// "Background dim:"

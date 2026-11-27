@@ -1645,8 +1645,8 @@ namespace osu.Game
 
             loadComponentSingleFile(stableSongSelectPromo = new osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay
             {
-                Title = "Stable UI has been improved and is now more complete!",
-                ActionLabel = "Try Torii Classic (Stable)",
+                Title = "Torii Classic UI has been improved and is now more complete!",
+                ActionLabel = "Try Torii Classic",
                 DismissLabel = "Not now",
                 Credit = "Original UI and assets by telecomadm1145. Integrated into Torii with permission.",
                 Action = () => osu.Game.Overlays.Settings.UIThemeRestartCoordinator.ApplyStableUI(LocalConfig, this, dialogOverlay),
@@ -1654,7 +1654,7 @@ namespace osu.Game
 
             loadComponentSingleFile(stableSongSelectDisclaimer = new osu.Game.Overlays.ToriiBriefing.ToriiFeatureHintOverlay
             {
-                Title = "Stable song select is experimental",
+                Title = "Torii Classic song select is experimental",
                 Accent = osu.Game.Overlays.ToriiBriefing.BriefingTheme.AccentCyan,
             }, topMostOverlayContent.Add);
 
@@ -2428,7 +2428,7 @@ namespace osu.Game
             LocalConfig.SetValue(OsuSetting.ToriiToolbarHintShown, true);
 
             string body = stableContext
-                ? "For the best experience on the stable song select we recommend hiding the toolbar. Turn on auto-hide below (it slides back when you move the cursor to the top), or just hide it any time with Ctrl+T."
+                ? "For the best experience on the classic song select we recommend hiding the toolbar. Turn on auto-hide below (it slides back when you move the cursor to the top), or just hide it any time with Ctrl+T."
                 : "You use the toolbar a lot! We added an auto-hide option: it tucks away on its own and slides back when you move the cursor to the very top of the screen. Give it a try below.";
 
             autoHideHint?.Present(body);
@@ -2451,7 +2451,7 @@ namespace osu.Game
 
             LocalConfig.SetValue(OsuSetting.ToriiClassicThemePromoShown, true);
 
-            stableSongSelectPromo.Present("Previously, the classic interface had a partial song select and results screen. It now includes a much more complete song select, carousel, leaderboard, mod menu, results screen and footer.\n\nTo use it, change UI theme to Torii Classic (Stable) in Settings. You can choose which classic components to use under Torii > Torii Classic (Stable). Restart to apply.");
+            stableSongSelectPromo.Present("Previously, the classic interface had a partial song select and results screen. It now includes a much more complete song select, carousel, leaderboard, mod menu, results screen and footer.\n\nTo use it, change UI theme to Torii Classic in Settings. You can choose which classic components to use under Torii > Torii Classic. Restart to apply.");
         }
 
         /// <summary>
@@ -2498,7 +2498,7 @@ namespace osu.Game
 
             LocalConfig.SetValue(OsuSetting.ToriiStableDisclaimerSeen, true);
 
-            stableSongSelectDisclaimer?.Present("Heads up: the stable song select is experimental. Some skins may look broken and there can be bugs. You can change its components in Settings > Torii > Torii Classic (Stable), then apply and restart.");
+            stableSongSelectDisclaimer?.Present("Heads up: the classic song select is experimental. Some skins may look broken and there can be bugs. You can change its components in Settings > Torii > Torii Classic, then apply and restart.");
         }
 
         private void postStableSongSelectDisclaimer()
