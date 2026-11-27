@@ -200,7 +200,7 @@ namespace osu.Game.Tests.Configuration
         {
             var theme = UIThemeOption.StableUI;
             var description = typeof(UIThemeOption).GetField(theme.ToString())!.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>();
-            Assert.That(description!.Description, Is.EqualTo("Torii Classic (Stable)"));
+            Assert.That(description!.Description, Is.EqualTo("Torii Classic"));
             Assert.That(theme.ToString(), Is.EqualTo("StableUI"));
         }
 
