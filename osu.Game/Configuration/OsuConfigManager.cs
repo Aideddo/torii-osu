@@ -272,8 +272,8 @@ namespace osu.Game.Configuration
 
             // Gameplay
             SetDefault(OsuSetting.PositionalHitsoundsLevel, 0f, 0, 1, 0.01f);
-            SetDefault(OsuSetting.DimLevel, 0.7, 0, 1, 0.01);
-            SetDefault(OsuSetting.BlurLevel, 0, 0, 1, 0.01);
+            SetDefault(OsuSetting.DimLevel, 1.0, 0, 1, 0.01);
+            SetDefault(OsuSetting.BlurLevel, 0.15, 0, 1, 0.01);
             SetDefault(OsuSetting.LightenDuringBreaks, true);
 
             SetDefault(OsuSetting.HitLighting, false);

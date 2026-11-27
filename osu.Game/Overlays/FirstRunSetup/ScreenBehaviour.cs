@@ -58,6 +58,8 @@ namespace osu.Game.Overlays.FirstRunSetup
             var showHealthWhenCantFail = track(config.GetBindable<bool>(OsuSetting.ShowHealthDisplayWhenCantFail));
             var fadePlayfieldLowHealth = track(config.GetBindable<bool>(OsuSetting.FadePlayfieldWhenHealthLow));
             var hitLighting = track(config.GetBindable<bool>(OsuSetting.HitLighting));
+            var dimLevel = track(config.GetBindable<double>(OsuSetting.DimLevel));
+            var blurLevel = track(config.GetBindable<double>(OsuSetting.BlurLevel));
 
             var alwaysFirstComboBreak = track(config.GetBindable<bool>(OsuSetting.AlwaysPlayFirstComboBreak));
             var positionalHitsounds = track(config.GetBindable<float>(OsuSetting.PositionalHitsoundsLevel));
@@ -143,6 +145,20 @@ namespace osu.Game.Overlays.FirstRunSetup
                 {
                     Caption = GraphicsSettingsStrings.HitLighting,
                     Current = hitLighting,
+                }),
+                new SettingsItemV2(new FormSliderBar<double>
+                {
+                    Caption = GameplaySettingsStrings.BackgroundDim,
+                    Current = dimLevel,
+                    KeyboardStep = 0.01f,
+                    DisplayAsPercentage = true,
+                }),
+                new SettingsItemV2(new FormSliderBar<double>
+                {
+                    Caption = GameplaySettingsStrings.BackgroundBlur,
+                    Current = blurLevel,
+                    KeyboardStep = 0.01f,
+                    DisplayAsPercentage = true,
                 }),
                 osuRulesetSettings ?? Empty(),
                 createCategoryHeader(@"Audio & Skins"),
