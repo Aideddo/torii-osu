@@ -441,10 +441,10 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacyGameplayLeaderboard => new TranslatableString(getKey(@"legacy_gameplay_leaderboard"), @"Legacy gameplay leaderboard");
 
         /// <summary>
-        /// "Use osu!stable's scoreboard in legacy skins' default HUD. It shows during breaks, or throughout while the leaderboard is toggled on. Applies from the next play."
+        /// "Use the classic scoreboard in legacy skins' default HUD. It shows during breaks, or throughout while the leaderboard is toggled on. Applies from the next play."
         /// </summary>
         public static LocalisableString LegacyGameplayLeaderboardDescription => new TranslatableString(getKey(@"legacy_gameplay_leaderboard_description"),
-            @"Use osu!stable's scoreboard in legacy skins' default HUD. It shows during breaks, or throughout while the leaderboard is toggled on. Applies from the next play.");
+            @"Use the classic scoreboard in legacy skins' default HUD. It shows during breaks, or throughout while the leaderboard is toggled on. Applies from the next play.");
 
         /// <summary>
         /// "Press F1 to view replay"

@@ -90,7 +90,7 @@ namespace osu.Game.Tournament.Screens.Setup
                     Value = fileBasedIpc?.IPCStorage?.GetFullPath(string.Empty) ?? "Not found",
                     Failing = fileBasedIpc?.IPCStorage == null,
                     Description =
-                        "The osu!stable installation which is currently being used as a data source. If a source is not found, make sure you have created an empty ipc.txt in your stable cutting-edge installation."
+                        "The compatible circle-clicking game installation which is currently being used as a data source. If a source is not found, make sure you have created an empty ipc.txt in your classic cutting-edge installation."
                 },
                 new ActionableInfo
                 {

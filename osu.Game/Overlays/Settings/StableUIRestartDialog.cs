@@ -10,7 +10,7 @@ namespace osu.Game.Overlays.Settings
         public StableUIRestartDialog(OsuGame? game)
         {
             HeaderText = "Restart to apply changes";
-            BodyText = "Your Torii Classic (Stable) settings have been saved. Restart the game to apply the new interface.";
+            BodyText = "Your Torii Classic settings have been saved. Restart the game to apply the new interface.";
             Buttons = new PopupDialogButton[]
             {
                 new PopupDialogOkButton

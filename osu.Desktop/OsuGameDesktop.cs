@@ -76,37 +76,7 @@ namespace osu.Desktop
 
         private string? getStableInstallPath()
         {
-            static bool checkExists(string p) => Directory.Exists(Path.Combine(p, "Songs")) || File.Exists(Path.Combine(p, "osu!.cfg"));
-
-            string? stableInstallPath;
-
-            if (OperatingSystem.IsWindows())
-            {
-                try
-                {
-                    stableInstallPath = getStableInstallPathFromRegistry("osustable.File.osz");
-
-                    if (!string.IsNullOrEmpty(stableInstallPath) && checkExists(stableInstallPath))
-                        return stableInstallPath;
-
-                    stableInstallPath = getStableInstallPathFromRegistry("osu!");
-
-                    if (!string.IsNullOrEmpty(stableInstallPath) && checkExists(stableInstallPath))
-                        return stableInstallPath;
-                }
-                catch
-                {
-                }
-            }
-
-            stableInstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"osu!");
-            if (checkExists(stableInstallPath))
-                return stableInstallPath;
-
-            stableInstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".osu");
-            if (checkExists(stableInstallPath))
-                return stableInstallPath;
-
+            // Torii: no auto-detection of other installs; the user picks a folder manually if desired.
             return null;
         }
 

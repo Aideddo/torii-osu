@@ -27,30 +27,30 @@ namespace osu.Game.Configuration
     ///
     /// Why we need this
     /// ----------------
-    /// Lazer's <see cref="OsuConfigManager"/> persists every key it knows
-    /// about into the shared <c>osu.cfg</c> on disk. When a user runs the
-    /// official ppy lazer client against the same data folder, that
-    /// client's config manager doesn't know about Torii-only enum values
-    /// — it parses what it understands and rewrites the file, dropping
-    /// the keys it doesn't recognise. Returning to Torii then finds the
-    /// settings reset to defaults: hue back to purple, accent back off,
-    /// alpha unlocks gone, etc.
+    /// The config manager persists every key it knows about into the
+    /// shared config file on disk. When another client runs against the
+    /// same data folder, that client's config manager doesn't know about
+    /// Torii-only enum values — it parses what it understands and
+    /// rewrites the file, dropping the keys it doesn't recognise.
+    /// Returning to Torii then finds the settings reset to defaults: hue
+    /// back to purple, accent back off, alpha unlocks gone, etc.
     ///
-    /// To make Torii's settings survive a round-trip through official
-    /// lazer we mirror them into a sidecar file <c>torii.ini</c> in the
+    /// To make Torii's settings survive a round-trip through another
+    /// client we mirror them into a sidecar file <c>torii.ini</c> in the
     /// same storage. On Torii startup we read that file AFTER the base
-    /// IniConfigManager has loaded osu.cfg and re-apply the values onto
-    /// the existing bindables (no new bindables, no API churn). On every
-    /// subsequent change we write the same key-value back to torii.ini.
-    /// torii.ini is opaque to upstream lazer so it never gets touched.
+    /// IniConfigManager has loaded the primary config and re-apply the
+    /// values onto the existing bindables (no new bindables, no API
+    /// churn). On every subsequent change we write the same key-value
+    /// back to torii.ini. torii.ini is opaque to other clients so it
+    /// never gets touched.
     ///
     /// What we DON'T sidecar
     /// --------------------
-    /// Anything upstream lazer also understands. UIScale, ChatHeight,
+    /// Anything other clients also understand. UIScale, ChatHeight,
     /// ShowConvertedBeatmaps and friends already round-trip cleanly via
-    /// osu.cfg, and writing them in two places would risk a stale
-    /// torii.ini value clobbering a fresher osu.cfg value. The
-    /// settings table below is intentionally tight.
+    /// the primary config, and writing them in two places would risk a
+    /// stale torii.ini value clobbering a fresher primary config value.
+    /// The settings table below is intentionally tight.
     ///
     /// Implementation note
     /// -------------------
@@ -167,7 +167,7 @@ namespace osu.Game.Configuration
             }
             catch (Exception bootErr)
             {
-                Logger.Log($"[torii.ini] sidecar load failed (carrying on with osu.cfg-only): {bootErr.Message}", LoggingTarget.Runtime, LogLevel.Important);
+                Logger.Log($"[torii.ini] sidecar load failed (carrying on with primary config only): {bootErr.Message}", LoggingTarget.Runtime, LogLevel.Important);
             }
         }
 
@@ -211,8 +211,8 @@ namespace osu.Game.Configuration
             using (Stream stream = storage.GetStream(sidecar_filename, FileAccess.Write, FileMode.Create))
             using (var writer = new StreamWriter(stream))
             {
-                writer.WriteLine("# Torii sidecar settings — mirrored from osu.cfg so they survive");
-                writer.WriteLine("# being parsed away by the official ppy lazer client when the");
+                writer.WriteLine("# Torii sidecar settings — mirrored from the primary config so they survive");
+                writer.WriteLine("# being parsed away by another client when the");
                 writer.WriteLine("# data folder is shared. Do not edit by hand unless you know");
                 writer.WriteLine("# the corresponding OsuSetting enum names; unknown keys are");
                 writer.WriteLine("# ignored on load.");
@@ -234,7 +234,7 @@ namespace osu.Game.Configuration
             catch (Exception persistErr)
             {
                 // Sidecar corruption is recoverable on next launch from
-                // osu.cfg; never let a write hiccup crash the game.
+                // the primary config; never let a write hiccup crash the game.
                 Logger.Log($"[torii.ini] failed to persist {key}: {persistErr.Message}", LoggingTarget.Runtime, LogLevel.Important);
             }
         }

@@ -43,8 +43,8 @@ namespace osu.Game.Online.Chat
         /// </summary>
         private readonly string[] defaultChannels =
         {
-            @"#lazer",
-            @"#osu",
+            @"#torii",
+            @"#general",
             @"#lobby"
         };
 

@@ -13,13 +13,13 @@ using osu.Game.IO;
 namespace osu.Game.Database
 {
     /// <summary>
-    /// A class which handles importing legacy user data of a single type from osu-stable.
+    /// A class which handles importing legacy user data of a single type from a compatible circle-clicking game.
     /// </summary>
     public abstract class LegacyModelImporter<TModel>
         where TModel : class, IHasGuidPrimaryKey
     {
         /// <summary>
-        /// The relative path from osu-stable's data directory to import items from.
+        /// The relative path from the compatible circle-clicking game's data directory to import items from.
         /// </summary>
         protected virtual string ImportFromStablePath => null;
 
@@ -53,7 +53,7 @@ namespace osu.Game.Database
             {
                 string fullPath = storage.GetFullPath(ImportFromStablePath);
 
-                Logger.Log(@$"Folder ""{fullPath}"" not available in the target osu!stable installation to import {Importer.HumanisedModelName}s.", LoggingTarget.Information, LogLevel.Error);
+                Logger.Log(@$"Folder ""{fullPath}"" not available in the target compatible circle-clicking game installation to import {Importer.HumanisedModelName}s.", LoggingTarget.Information, LogLevel.Error);
                 return Task.CompletedTask;
             }
 

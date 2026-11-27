@@ -2830,7 +2830,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
         [System.ComponentModel.Description(@"V31")]
         V31,
 
-        [System.ComponentModel.Description(@"V30 (osu! only, basic)")]
+        [System.ComponentModel.Description(@"V30 (Torii only, basic)")]
         V30,
 
         [System.ComponentModel.Description(@"V29")]
@@ -2877,7 +2877,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
 
         public static bool SupportsHitsoundsToggle(this MapperatorinatorModel m) => m != MapperatorinatorModel.V30;
 
-        /// <summary>v30 was only trained on osu! standard.</summary>
+        /// <summary>v30 was only trained on Torii standard.</summary>
         public static bool SupportsGamemode(this MapperatorinatorModel m, MapperatorinatorGamemode mode) =>
             m != MapperatorinatorModel.V30 || mode == MapperatorinatorGamemode.Osu;
     }
@@ -2918,7 +2918,7 @@ print('torii-gpu-ok', torch.cuda.get_device_name(0))";
 
         public int? Year { get; set; }
 
-        /// <summary>osu! user id whose mapping style to imitate.</summary>
+        /// <summary>Torii user id whose mapping style to imitate.</summary>
         public int? MapperId { get; set; }
 
         public int? Seed { get; set; }

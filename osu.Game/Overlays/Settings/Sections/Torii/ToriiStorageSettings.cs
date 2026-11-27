@@ -27,7 +27,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
                 TooltipText = (storage as OsuStorage)?.CustomStoragePath is string customPath && !string.IsNullOrEmpty(customPath)
                     ? ToriiSettingsStrings.CurrentModeLinked(customPath)
                     : ToriiSettingsStrings.CurrentModePortable,
-                Keywords = new[] { "torii", "lazer", "storage", "folder", "maps", "skins", "scores", "portable", "data" },
+                Keywords = new[] { "torii", "storage", "folder", "maps", "skins", "scores", "portable", "data" },
                 Action = () => game?.PerformFromScreen(menu => menu.Push(new ToriiLazerDataSelectScreen())),
             });
         }

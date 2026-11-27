@@ -24,7 +24,7 @@ namespace osu.Game.Skinning
         {
             ID = Skinning.SkinInfo.CLASSIC_SKIN, // this is temporary until database storage is decided upon.
             Name = "\"classic\" (2013)",
-            Creator = "ppy",
+            Creator = "Torii",
             Protected = true,
             InstantiationInfo = typeof(DefaultLegacySkin).GetInvariantInstantiationInfo()
         };

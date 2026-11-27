@@ -61,7 +61,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
                     BackgroundColour = colours.Pink,
                     Action = apply,
                     Enabled = { Value = false },
-                    Keywords = new[] { "stable", "theme", "apply", "restart" },
+                    Keywords = new[] { "theme", "apply", "restart" },
                 },
             };
 
@@ -91,7 +91,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
                 Caption = caption,
                 Current = value,
                 ShowRevertToDefaultButton = false,
-                Keywords = new[] { "stable", "legacy", "retro", "theme", caption },
+                Keywords = new[] { "legacy", "retro", "theme", caption },
             });
         }
 

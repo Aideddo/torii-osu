@@ -407,12 +407,12 @@ namespace osu.Game.Overlays.BeatmapListing
                             BPM = first?.BPM ?? 0,
                             Covers = new BeatmapSetOnlineCovers
                             {
-                                CoverLowRes = $"https://assets.ppy.sh/beatmaps/{s.OnlineID}/covers/cover.jpg",
-                                Cover = $"https://assets.ppy.sh/beatmaps/{s.OnlineID}/covers/cover@2x.jpg",
-                                CardLowRes = $"https://assets.ppy.sh/beatmaps/{s.OnlineID}/covers/card.jpg",
-                                Card = $"https://assets.ppy.sh/beatmaps/{s.OnlineID}/covers/card@2x.jpg",
-                                ListLowRes = $"https://assets.ppy.sh/beatmaps/{s.OnlineID}/covers/list.jpg",
-                                List = $"https://assets.ppy.sh/beatmaps/{s.OnlineID}/covers/list@2x.jpg",
+                                CoverLowRes = $"https://lazer-api.shikkesora.com/api/v2/beatmapsets/{s.OnlineID}/covers/cover.jpg",
+                                Cover = $"https://lazer-api.shikkesora.com/api/v2/beatmapsets/{s.OnlineID}/covers/cover@2x.jpg",
+                                CardLowRes = $"https://lazer-api.shikkesora.com/api/v2/beatmapsets/{s.OnlineID}/covers/card.jpg",
+                                Card = $"https://lazer-api.shikkesora.com/api/v2/beatmapsets/{s.OnlineID}/covers/card@2x.jpg",
+                                ListLowRes = $"https://lazer-api.shikkesora.com/api/v2/beatmapsets/{s.OnlineID}/covers/list.jpg",
+                                List = $"https://lazer-api.shikkesora.com/api/v2/beatmapsets/{s.OnlineID}/covers/list@2x.jpg",
                             },
                             Beatmaps = s.Beatmaps.Select(b => new APIBeatmap
                             {

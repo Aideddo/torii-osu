@@ -38,13 +38,13 @@ namespace osu.Game.Localisation
         /// <summary>
         /// "Welcome to the Torii setup guide!
         ///
-        /// Torii is an independent community rhythm game project and is not affiliated with ppy Pty Ltd or osu!.
+        /// Torii is an independent community rhythm game project and is not affiliated with any other rhythm game or its creators.
         ///
         /// This guide will help you get the important choices out of the way to ensure a great first experience."
         /// </summary>
         public static LocalisableString WelcomeDescription => new TranslatableString(getKey(@"welcome_description"), @"Welcome to the Torii setup guide!
 
-Torii is an independent community rhythm game project and is not affiliated with ppy Pty Ltd or osu!.
+Torii is an independent community rhythm game project and is not affiliated with any other rhythm game or its creators.
 
 This guide will help you get the important choices out of the way to ensure a great first experience.");
 

@@ -27,7 +27,7 @@ namespace osu.Game.Skinning
         {
             ID = osu.Game.Skinning.SkinInfo.TRIANGLES_SKIN,
             Name = "\"triangles\" (2017)",
-            Creator = "ppy",
+            Creator = "Torii",
             Protected = true,
             InstantiationInfo = typeof(TrianglesSkin).GetInvariantInstantiationInfo()
         };

@@ -95,8 +95,8 @@ namespace osu.Game.Overlays.Settings
                 HeaderText = "With thanks";
                 BodyText = "GooGuTeam (g0v0) - server and client contributions.\n\n"
                            + "shigetiro - the client work Torii builds on.\n\n"
-                           + "telecomadm1145 - Stable UI improvements, integrated with permission.\n\n"
-                           + "ppy and contributors - osu! and osu!framework.\n\n"
+                           + "telecomadm1145 - Classic UI improvements, integrated with permission.\n\n"
+                           + "Built on open-source MIT framework and community contributions.\n\n"
                            + "Third-party licences and copyright notices are included with Torii. Credits do not imply endorsement.";
                 Icon = FontAwesome.Solid.Heart;
                 Buttons = new PopupDialogButton[] { new PopupDialogOkButton { Text = "Close" } };

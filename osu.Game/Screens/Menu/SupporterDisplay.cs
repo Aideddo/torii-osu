@@ -73,7 +73,7 @@ namespace osu.Game.Screens.Menu
                 },
             };
 
-            const string url = @"https://osu.ppy.sh/home/support";
+            const string url = @"https://lazer.shikkesora.com/home/support";
             considerBecomingASupporterText = localisation.GetLocalisedBindableString(SupporterDisplayStrings.ConsiderBecomingASupporter(url));
         }
 

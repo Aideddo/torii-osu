@@ -9,7 +9,7 @@ namespace osu.Game.Users
     {
         public string Name { get; set; }
         public string InternalName { get; set; }
-        public string ImageUrl => $@"https://s.ppy.sh/images/medals-client/{InternalName}@2x.png";
+        public string ImageUrl => $@"https://lazer-api.shikkesora.com/images/medals-client/{InternalName}@2x.png";
         public string Description { get; set; }
     }
 }

@@ -98,7 +98,7 @@ namespace osu.Game.Overlays.Settings.Sections.Torii
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = "Auto-hide toolbar",
-                    HintText = "Keep the top toolbar hidden and only reveal it when you move the cursor to the very top of the screen, then it tucks away again on its own. Great with the stable song select, where a hidden toolbar gives the full classic layout.",
+                    HintText = "Keep the top toolbar hidden and only reveal it when you move the cursor to the very top of the screen, then it tucks away again on its own. Great with the classic song select, where a hidden toolbar gives the full classic layout.",
                     Current = config.GetBindable<bool>(OsuSetting.ToriiAutoHideToolbar),
                     NewFeatureId = NewFeatureRegistry.AutoHideToolbar,
                 })

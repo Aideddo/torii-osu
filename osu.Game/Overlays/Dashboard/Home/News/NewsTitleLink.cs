@@ -40,7 +40,7 @@ namespace osu.Game.Overlays.Dashboard.Home.News
             HoverColour = colourProvider.Light1;
 
             TooltipText = CommonStrings.ViewInBrowser;
-            Action = () => host.OpenUrlExternally("https://osu.ppy.sh/home/news/" + post.Slug);
+            Action = () => host.OpenUrlExternally("https://lazer.shikkesora.com/home/news/" + post.Slug);
         }
     }
 }

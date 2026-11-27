@@ -107,11 +107,11 @@ namespace osu.Game
     {
 #if DEBUG
         // Different port allows running release and debug builds alongside each other.
-        public const string IPC_PIPE_NAME = "osu-lazer-debug";
+        public const string IPC_PIPE_NAME = "torii-debug";
 #else
         // toriirefresh: unique IPC pipe so this fork's single-instance check doesn't
         // collide with a running stock osu!lazer (which would make us hand off + exit).
-        public const string IPC_PIPE_NAME = "osu-toriirefresh";
+        public const string IPC_PIPE_NAME = "torii-refresh";
 #endif
 
         /// <summary>

@@ -158,7 +158,7 @@ namespace osu.Game.Tournament.IPC
             }
             catch (Exception e)
             {
-                Logger.Error(e, "Stable installation could not be found; disabling file based IPC");
+                Logger.Error(e, "Legacy installation could not be found; disabling file based IPC");
             }
 
             return IPCStorage;
@@ -198,7 +198,7 @@ namespace osu.Game.Tournament.IPC
                                         findFromLocalAppData() ??
                                         findFromDotFolder();
 
-            Logger.Log($"Stable path for tourney usage: {stableInstallPath}");
+            Logger.Log($"Legacy path for tourney usage: {stableInstallPath}");
             return stableInstallPath;
         }
 
@@ -206,7 +206,7 @@ namespace osu.Game.Tournament.IPC
         {
             try
             {
-                Logger.Log("Trying to find stable with environment variables");
+                Logger.Log("Trying to find legacy install with environment variables");
                 string? stableInstallPath = Environment.GetEnvironmentVariable("OSU_STABLE_PATH");
 
                 if (ipcFileExistsInDirectory(stableInstallPath))
@@ -221,7 +221,7 @@ namespace osu.Game.Tournament.IPC
 
         private string? findFromLocalAppData()
         {
-            Logger.Log("Trying to find stable in %LOCALAPPDATA%");
+            Logger.Log("Trying to find legacy install in %LOCALAPPDATA%");
             string stableInstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"osu!");
 
             if (ipcFileExistsInDirectory(stableInstallPath))
@@ -232,7 +232,7 @@ namespace osu.Game.Tournament.IPC
 
         private string? findFromDotFolder()
         {
-            Logger.Log("Trying to find stable in dotfolders");
+            Logger.Log("Trying to find legacy install in dotfolders");
             string stableInstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".osu");
 
             if (ipcFileExistsInDirectory(stableInstallPath))
@@ -243,7 +243,7 @@ namespace osu.Game.Tournament.IPC
 
         private string? findFromRegistry()
         {
-            Logger.Log("Trying to find stable in registry");
+            Logger.Log("Trying to find legacy install in registry");
 
             try
             {

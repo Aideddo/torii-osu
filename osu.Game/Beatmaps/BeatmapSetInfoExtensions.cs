@@ -47,8 +47,8 @@ namespace osu.Game.Beatmaps
         }
 
         /// <summary>
-        /// Get the official osu! (osu.ppy.sh) beatmapset page URL, or <c>null</c> if unavailable.
-        /// Torii beatmapset OnlineIDs mirror the real osu! ids, so this resolves on the official site.
+        /// Get the official Torii beatmapset page URL, or <c>null</c> if unavailable.
+        /// Torii beatmapset OnlineIDs mirror the real ids, so this resolves on the official site.
         /// </summary>
         public static string? GetOfficialOnlineURL(this IBeatmapSetInfo beatmapSetInfo, IRulesetInfo? ruleset = null)
         {
@@ -56,9 +56,9 @@ namespace osu.Game.Beatmaps
                 return null;
 
             if (ruleset != null)
-                return $@"https://osu.ppy.sh/beatmapsets/{beatmapSetInfo.OnlineID}#{ruleset.ShortName}";
+                return $@"https://lazer.shikkesora.com/beatmapsets/{beatmapSetInfo.OnlineID}#{ruleset.ShortName}";
 
-            return $@"https://osu.ppy.sh/beatmapsets/{beatmapSetInfo.OnlineID}";
+            return $@"https://lazer.shikkesora.com/beatmapsets/{beatmapSetInfo.OnlineID}";
         }
     }
 }

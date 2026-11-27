@@ -27,7 +27,7 @@ namespace osu.Game.Skinning
         {
             ID = Skinning.SkinInfo.ARGON_SKIN,
             Name = "\"argon\" (2022)",
-            Creator = "ppy",
+            Creator = "Torii",
             Protected = true,
             InstantiationInfo = typeof(ArgonSkin).GetInvariantInstantiationInfo()
         };

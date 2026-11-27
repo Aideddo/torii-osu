@@ -29,7 +29,7 @@ namespace osu.Game.Overlays.Wiki
 
         public const float CONTROL_HEIGHT = 32;
 
-        private const string github_wiki_base = @"https://github.com/ppy/osu-wiki/blob/master/wiki";
+        private const string github_wiki_base = @"https://lazer.shikkesora.com/wiki";
 
         public readonly Bindable<APIWikiPage> WikiPageData = new Bindable<APIWikiPage>();
         public readonly Bindable<Language> CurrentLanguage = new Bindable<Language>();

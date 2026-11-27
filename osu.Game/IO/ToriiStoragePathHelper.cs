@@ -10,13 +10,7 @@ namespace osu.Game.IO
     {
         public static string? GetLikelyLazerStoragePath()
         {
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-
-            if (string.IsNullOrWhiteSpace(appData))
-                return null;
-
-            string candidate = Path.Combine(appData, "osu");
-            return LooksLikeLazerStoragePath(candidate) ? candidate : null;
+            return null;
         }
 
         public static bool LooksLikeLazerStoragePath(string? path)

@@ -577,7 +577,7 @@ namespace osu.Game.Overlays.ToriiBriefing
                 && !state.ConsumedPromotionMigrations.Contains(promotionMigrationKey)
                 && state.Users.TryGetValue(stableSnapshotKey, out var stableSnapshot))
             {
-                // The first pp-dev briefing after Torii promoted pp-dev to the main osu! variant
+                // The first pp-dev briefing after Torii promoted pp-dev to the main Torii variant
                 // should compare against the user's last stable snapshot, even if a blank/partial
                 // pp-dev snapshot was already written earlier in the same update window.
                 previousSnapshot = stableSnapshot;

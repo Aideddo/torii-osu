@@ -84,14 +84,14 @@ namespace osu.Game.Overlays.Settings
                 Caption = "UI theme",
                 Items = ThemeOrder,
                 HintText = "Cosmetic chrome palette. \"Grayscale by fsyori\" strips saturation from "
-                           + "every UI accent for the monochrome look and mounts a stable-style "
+                           + "every UI accent for the monochrome look and mounts a classic-style "
                            + "user-stats panel in song select. The Midnight family keeps that "
                            + "structural reskin (sharp corners, mounted stats panel) but reuses the "
                            + "default slanted chrome, with three hue variants: Mauve (violet), "
                            + "Crimson (deep red), and Cerulean (deep cyan). For end-to-end skin "
-                           + "matching (including gameplay), drop any stable-era .osk into your "
+                           + "matching (including gameplay), drop any classic-era .osk into your "
                            + "Skins folder and pick it from the skin dropdown above. Changing this "
-                           + "option requires a restart. Torii Classic (Stable) includes configurable classic screens under Torii > Torii Classic (Stable).",
+                           + "option requires a restart. Torii Classic includes configurable classic screens under Torii > Torii Classic.",
                 Current = themeBindable,
                 Keywords = new[] { @"theme", @"palette", @"grayscale", @"greyscale", @"monochrome", @"black", @"white", @"fsyori", @"chrome", @"ui", @"midnight", @"mauve", @"crimson", @"cerulean", @"purple", @"red", @"cyan", @"blue" },
             }.CreateDrawable(renderer ?? LazerSettingsRenderer.DEFAULT);

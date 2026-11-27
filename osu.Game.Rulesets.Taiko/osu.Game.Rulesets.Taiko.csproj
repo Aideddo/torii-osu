@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Nuget">
-    <Title>osu!taiko (ruleset)</Title>
+    <Title>Torii Drums (ruleset)</Title>
     <PackageId>ppy.osu.Game.Rulesets.Taiko</PackageId>
     <IsPackable>true</IsPackable>
   </PropertyGroup>

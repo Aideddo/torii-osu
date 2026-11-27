@@ -99,7 +99,7 @@ namespace osu.Game.Tournament.Screens.Setup
                                                 Anchor = Anchor.Centre,
                                                 Origin = Anchor.Centre,
                                                 Width = 300,
-                                                Text = "Select stable path",
+                                                Text = "Select classic path",
                                                 Action = ChangePath
                                             },
                                             new RoundedButton
@@ -131,14 +131,14 @@ namespace osu.Game.Tournament.Screens.Setup
         {
             string target = directorySelector.CurrentPath.Value.FullName;
             var fileBasedIpc = ipc as FileBasedIPC;
-            Logger.Log($"Changing Stable CE location to {target}");
+            Logger.Log($"Changing classic CE location to {target}");
 
             if (!fileBasedIpc?.SetIPCLocation(target) ?? true)
             {
                 overlay = new DialogOverlay();
-                overlay.Push(new IPCErrorDialog("This is an invalid IPC Directory", "Select a directory that contains an osu! stable cutting edge installation and make sure it has an empty ipc.txt file in it."));
+                overlay.Push(new IPCErrorDialog("This is an invalid IPC Directory", "Select a directory that contains a compatible classic cutting edge installation and make sure it has an empty ipc.txt file in it."));
                 AddInternal(overlay);
-                Logger.Log("Folder is not an osu! stable CE directory");
+                Logger.Log("Folder is not a compatible classic CE directory");
                 return;
             }
 
@@ -152,7 +152,7 @@ namespace osu.Game.Tournament.Screens.Setup
             if (!fileBasedIpc?.AutoDetectIPCLocation() ?? true)
             {
                 overlay = new DialogOverlay();
-                overlay.Push(new IPCErrorDialog("Failed to auto detect", "An osu! stable cutting-edge installation could not be auto detected.\nPlease try and manually point to the directory."));
+                overlay.Push(new IPCErrorDialog("Failed to auto detect", "A compatible classic cutting-edge installation could not be auto detected.\nPlease try and manually point to the directory."));
                 AddInternal(overlay);
             }
             else

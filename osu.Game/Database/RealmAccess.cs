@@ -834,7 +834,7 @@ namespace osu.Game.Database
         {
             // This is currently the only usage of temporary files at the osu! side.
             // If we use the temporary folder in more situations in the future, this should be moved to a higher level (helper method or OsuGameBase).
-            string tempPathLocation = Path.Combine(Path.GetTempPath(), @"lazer");
+            string tempPathLocation = Path.Combine(Path.GetTempPath(), @"torii");
             if (!Directory.Exists(tempPathLocation))
                 Directory.CreateDirectory(tempPathLocation);
 
@@ -1235,7 +1235,7 @@ namespace osu.Game.Database
                     // - All actions are renumbered to remove the old offsets.
                     void remapKeyBindingsForVariant(int columns, bool dual)
                     {
-                        // https://github.com/ppy/osu/blob/8773c2f7ebc226942d6124eb95c07a83934272ea/osu.Game.Rulesets.Mania/ManiaRuleset.cs#L327-L336
+                        // ManiaRuleset.cs#L327-L336
                         int variant = dual ? 1000 + (columns * 2) : columns;
 
                         var oldKeyBindingsQuery = migration.NewRealm
@@ -1245,7 +1245,7 @@ namespace osu.Game.Database
 
                         migration.NewRealm.RemoveRange(oldKeyBindingsQuery);
 
-                        // https://github.com/ppy/osu/blob/8773c2f7ebc226942d6124eb95c07a83934272ea/osu.Game.Rulesets.Mania/ManiaInputManager.cs#L22-L31
+                        // ManiaInputManager.cs#L22-L31
                         int oldNormalAction = 10; // Old Key1 offset
                         int oldSpecialAction = 1; // Old Special1 offset
 

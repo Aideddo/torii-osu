@@ -78,7 +78,7 @@ namespace osu.Game.Updater
                         Icon = FontAwesome.Brands.Github,
                         Activated = () =>
                         {
-                            osuGame?.OpenUrlExternally(@"https://github.com/ppy/osu", LinkWarnMode.NeverWarn);
+                            osuGame?.OpenUrlExternally(@"https://github.com/ShikkesoraSIM/torii", LinkWarnMode.NeverWarn);
                             return true;
                         },
                     });

@@ -43,7 +43,7 @@ namespace osu.Game.Rulesets.Taiko
                     Current = config.GetBindable<bool>(TaikoRulesetSetting.RateAdjustedHitAnimation)
                 })
                 {
-                    Keywords = new[] { "taiko", "hit", "animation", "celebrate", "stable", "vanish" }
+                    Keywords = new[] { "taiko", "hit", "animation", "celebrate", "vanish" }
                 },
             };
         }
