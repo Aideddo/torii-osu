@@ -48,18 +48,6 @@ Torii is an independent community rhythm game project and is not affiliated with
 
 This guide will help you get the important choices out of the way to ensure a great first experience.");
 
-        public static LocalisableString ExperienceModePrompt => new TranslatableString(getKey(@"experience_mode_prompt"), @"How familiar are you with circle-clicking rhythm games?");
-
-        public static LocalisableString ExperienceModeNew => new TranslatableString(getKey(@"experience_mode_new"), @"I'm new to this");
-
-        public static LocalisableString ExperienceModeNewSub => new TranslatableString(getKey(@"experience_mode_new_sub"), @"Walk me through the basics with Torii Recommended options highlighted.");
-
-        public static LocalisableString ExperienceModeExperienced => new TranslatableString(getKey(@"experience_mode_experienced"), @"I already know how this works");
-
-        public static LocalisableString ExperienceModeExperiencedSub => new TranslatableString(getKey(@"experience_mode_experienced_sub"), @"I'm familiar with rhythm games and just want to import or tune my settings.");
-
-        public static LocalisableString ToriiRecommendedBadge => new TranslatableString(getKey(@"torii_recommended_badge"), @"Torii Recommended");
-
         /// <summary>
         /// "The size of the Torii user interface can be adjusted to your liking."
         /// </summary>
