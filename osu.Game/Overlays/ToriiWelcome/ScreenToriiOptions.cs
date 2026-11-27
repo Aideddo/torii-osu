@@ -56,19 +56,17 @@ namespace osu.Game.Overlays.ToriiWelcome
                     HintText = ToriiWelcomeStrings.OptionsAutoHideToolbarHint,
                     Current = config.GetBindable<bool>(OsuSetting.ToriiAutoHideToolbar),
                 }),
-                // prenderlo dispara el disclaimer de "esto es experimental" que ya escucha OsuGame sobre
-                // este mismo bindable, asi que el aviso sale igual que si lo prendieran desde Settings.
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = ToriiWelcomeStrings.OptionsLegacySongSelect,
-                    HintText = ToriiWelcomeStrings.OptionsLegacySongSelectHint,
-                    Current = config.GetBindable<bool>(OsuSetting.ToriiLegacyFooterUseSkin),
+                    Caption = ToriiWelcomeStrings.OptionsServerPulse,
+                    HintText = ToriiWelcomeStrings.OptionsServerPulseHint,
+                    Current = config.GetBindable<bool>(OsuSetting.ToriiServerPulseEnabled),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = ToriiWelcomeStrings.OptionsStableResults,
-                    HintText = @"Show the classic osu!(stable) results screen after a play instead of the lazer one.",
-                    Current = config.GetBindable<bool>(OsuSetting.ToriiStableResults),
+                    Caption = ToriiWelcomeStrings.OptionsPerformanceCounter,
+                    HintText = ToriiWelcomeStrings.OptionsPerformanceCounterHint,
+                    Current = config.GetBindable<bool>(OsuSetting.ToriiPerformanceCounter),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

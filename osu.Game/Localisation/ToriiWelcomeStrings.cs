@@ -11,7 +11,7 @@ namespace osu.Game.Localisation
 
         public static LocalisableString WelcomeTitle => new TranslatableString(getKey(@"welcome_title"), @"Welcome to Torii!");
 
-        public static LocalisableString WelcomeDescription => new TranslatableString(getKey(@"welcome_description"), @"The parts that aren't in stock osu!");
+        public static LocalisableString WelcomeDescription => new TranslatableString(getKey(@"welcome_description"), @"A quick look at what's unique to Torii.");
 
         public static LocalisableString ClickToResumeWelcome => new TranslatableString(getKey(@"click_to_resume_welcome"), @"Click to resume the Torii welcome guide at any point");
 
@@ -19,9 +19,9 @@ namespace osu.Game.Localisation
 
         public static LocalisableString IntroTitle => new TranslatableString(getKey(@"intro_title"), @"Torii");
 
-        public static LocalisableString IntroDescription => new TranslatableString(getKey(@"intro_description"), @"Torii is a private osu! server with its own client: the same game you know, running against our servers, with a pile of extras built on top.
+        public static LocalisableString IntroDescription => new TranslatableString(getKey(@"intro_description"), @"Torii is an independent rhythm game community and server with its own client and extras built on top.
 
-Everything you play here counts here. Your scores, your pp and your leaderboard spot are yours and live on Torii, completely separate from the official server, so you can chase ranks without touching your osu! account.");
+Everything you play here stays here. Your scores, pp, and leaderboard spots live on Torii, completely separate from any other server.");
 
         public static LocalisableString IntroPointsTitle => new TranslatableString(getKey(@"intro_points_title"), @"Points and cosmetics");
 
@@ -39,7 +39,7 @@ Everything you play here counts here. Your scores, your pp and your leaderboard 
 
         public static LocalisableString ShortcutsTitle => new TranslatableString(getKey(@"shortcuts_title"), @"Shortcuts");
 
-        public static LocalisableString ShortcutsDescription => new TranslatableString(getKey(@"shortcuts_description"), @"Torii adds a shortcut osu! doesn't have: resize your cursor without opening settings.");
+        public static LocalisableString ShortcutsDescription => new TranslatableString(getKey(@"shortcuts_description"), @"Resize your gameplay cursor anytime without opening settings.");
 
         public static LocalisableString ShortcutsIncreaseCursorSize => new TranslatableString(getKey(@"shortcuts_increase_cursor_size"), @"Bigger cursor");
 
@@ -55,13 +55,13 @@ Everything you play here counts here. Your scores, your pp and your leaderboard 
 
         public static LocalisableString ThemesTitle => new TranslatableString(getKey(@"themes_title"), @"Themes");
 
-        public static LocalisableString ThemesDescription => new TranslatableString(getKey(@"themes_description"), @"Torii ships its own interface themes. ""Torii"" is the default: translucent glass panels you can see the game through, with soft rounded corners. ""Torii Legacy"" is the classic lazer look if you'd rather keep that. There's also a desaturated monochrome theme and the Midnight family in three hues.
+        public static LocalisableString ThemesDescription => new TranslatableString(getKey(@"themes_description"), @"Torii ships its own interface themes. ""Torii"" is the default: translucent glass panels you can see the game through, with soft rounded corners. ""Torii Legacy"" is the classic look if you'd rather keep that. There's also a desaturated monochrome theme and the Midnight family in three hues.
 
 You can change this whenever you want from Settings, this is just the fastest place to try one.");
 
         public static LocalisableString ThemesRestartNote => new TranslatableString(getKey(@"themes_restart_note"), @"Picking a different theme closes the game, because the palette is baked in when the interface is built. Open it again and you'll come straight back to this guide.");
 
-        public static LocalisableString ThemesHueDescription => new TranslatableString(getKey(@"themes_hue_description"), @"Want your own colour instead? Tint the entire interface to whatever hue you like. This one applies instantly, no restart.");
+        public static LocalisableString ThemesHueDescription => new TranslatableString(getKey(@"themes_hue_description"), @"Want your own colour instead? Tint the interface to whatever hue you like.");
 
         // ── paso 4: opciones ──
 
@@ -77,14 +77,13 @@ You can change this whenever you want from Settings, this is just the fastest pl
 
         public static LocalisableString OptionsAutoHideToolbarHint => new TranslatableString(getKey(@"options_auto_hide_toolbar_hint"), @"Keeps the top bar hidden and only reveals it when you push the cursor to the very top of the screen, then it tucks itself away again.");
 
-        /// <summary>
-        /// "Stable-style results screen (might cause lag)"
-        /// </summary>
-        public static LocalisableString OptionsStableResults => new TranslatableString(getKey(@"options_stable_results"), @"Stable-style results screen (might cause lag)");
+        public static LocalisableString OptionsServerPulse => new TranslatableString(getKey(@"options_server_pulse"), @"Show server pulse on toolbar");
 
-        public static LocalisableString OptionsLegacySongSelect => new TranslatableString(getKey(@"options_legacy_song_select"), @"Stable-style song select (might cause lag)");
+        public static LocalisableString OptionsServerPulseHint => new TranslatableString(getKey(@"options_server_pulse_hint"), @"Shows how many people are currently playing on Torii in the top toolbar.");
 
-        public static LocalisableString OptionsLegacySongSelectHint => new TranslatableString(getKey(@"options_legacy_song_select_hint"), @"Makes song select look like osu!stable: the skinnable legacy footer and your rank panel, with the modern filter bar and info wedges hidden. It's experimental, so expect the odd rough edge.");
+        public static LocalisableString OptionsPerformanceCounter => new TranslatableString(getKey(@"options_performance_counter"), @"Show performance counter");
+
+        public static LocalisableString OptionsPerformanceCounterHint => new TranslatableString(getKey(@"options_performance_counter_hint"), @"Shows a compact FPS and frame-time counter in the corner.");
 
         public static LocalisableString OptionsUserAuras => new TranslatableString(getKey(@"options_user_auras"), @"Show user auras");
 

@@ -74,6 +74,15 @@ namespace osu.Game.Graphics.Backgrounds
             var request = new GetSeasonalBackgroundsRequest();
             request.Success += response =>
             {
+                if (response.Backgrounds != null)
+                {
+                    response.Backgrounds = response.Backgrounds
+                        .Where(b => !string.IsNullOrEmpty(b.Url)
+                                    && Uri.TryCreate(b.Url, UriKind.Absolute, out var uri)
+                                    && !uri.Host.EndsWith(@"ppy.sh", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+
                 seasonalBackgrounds.Value = response;
                 current = RNG.Next(0, response.Backgrounds?.Count ?? 0);
             };
@@ -92,7 +101,9 @@ namespace osu.Game.Graphics.Backgrounds
             if (!shouldShowSeasonal)
                 return null;
 
-            var backgrounds = seasonalBackgrounds.Value.Backgrounds;
+            var backgrounds = seasonalBackgrounds.Value?.Backgrounds;
+            if (backgrounds == null || backgrounds.Count == 0)
+                return null;
 
             // a pinned index replaces the rotation with a single image.
             int index = pinnedSeasonalBackground.Value ? pinnedSeasonalBackgroundIndex.Value : -1;
