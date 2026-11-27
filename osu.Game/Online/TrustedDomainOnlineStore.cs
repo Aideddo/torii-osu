@@ -15,7 +15,7 @@ namespace osu.Game.Online
             if (IsAllowedUrl(url))
                 return url;
 
-            Logger.Log($@"Blocking resource lookup from external website: {url}", LoggingTarget.Network, LogLevel.Important);
+            Logger.Log($@"Blocking resource lookup from external website: {url}", LoggingTarget.Network, LogLevel.Verbose);
             return string.Empty;
         }
 
