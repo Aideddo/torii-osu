@@ -10,7 +10,7 @@ env:
   DOTNET_VERSION: '11.0.100-rc.2.26504.105'
   FRAMEWORK_REPOSITORY: 'ShikkesoraSIM/torii-framework'
   FRAMEWORK_REF: '25e68d530f7116437c4cfaf127169ac4d6619927'
-  RESOURCES_REPOSITORY: 'ShikkesoraSIM/torii-resources'
+  RESOURCES_REPOSITORY: 'ShikkesoraSIM/torii-assets'
   RESOURCES_REF: '052c77623424f3f1a571d8bcbac0d608d458f8f8'
 
 jobs:
