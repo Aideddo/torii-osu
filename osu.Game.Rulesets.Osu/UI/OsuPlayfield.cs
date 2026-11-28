@@ -71,6 +71,10 @@ namespace osu.Game.Rulesets.Osu.UI
                 HitObjectContainer,
                 judgementAboveHitObjectLayer = new Container { RelativeSizeAxes = Axes.Both },
                 approachCircles = new ProxyContainer { RelativeSizeAxes = Axes.Both },
+                // torii: draws the opponent's cursor during breaks when this play is a
+                // ghost race. It resolves the race state itself and does nothing at all
+                // when there isn't one, so a normal play pays for an empty container.
+                new GhostCursor(),
             };
 
             HitPolicy = new StartTimeOrderedHitPolicy();

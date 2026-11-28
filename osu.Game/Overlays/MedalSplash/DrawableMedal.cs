@@ -55,12 +55,13 @@ namespace osu.Game.Overlays.MedalSplash
                         {
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
-                            Scale = new Vector2(0.41f),
+                            Scale = new Vector2(0.65f),
                         },
                         medalGlow = new Sprite
                         {
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
+                            Alpha = 0f,
                         },
                     },
                 },
@@ -120,7 +121,6 @@ namespace osu.Game.Overlays.MedalSplash
         private void load(OsuColour colours, TextureStore textures, LargeTextureStore largeTextures)
         {
             medalSprite.Texture = largeTextures.Get(medal.ImageUrl);
-            medalGlow.Texture = textures.Get(@"MedalSplash/medal-glow");
             description.Colour = colours.BlueLight;
         }
 

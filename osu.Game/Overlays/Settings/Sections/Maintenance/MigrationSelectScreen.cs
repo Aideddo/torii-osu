@@ -52,7 +52,7 @@ namespace osu.Game.Overlays.Settings.Sections.Maintenance
                     // Quick test for whether there's already an osu! install at the target path.
                     if (fileInfos.Any(f => f.Name == OsuGameBase.CLIENT_DATABASE_FILENAME))
                     {
-                        dialogOverlay.Push(new ConfirmDialog(MaintenanceSettingsStrings.TargetDirectoryAlreadyInstalledOsu, () =>
+                        dialogOverlay.Push(new ConfirmDialog(@"The target directory already seems to have a Torii install. Use that data instead? Torii will restart.", () =>
                             {
                                 (storage as OsuStorage)?.ChangeDataPath(target.FullName);
                                 game.RestartAppWhenExited();

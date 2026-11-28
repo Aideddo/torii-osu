@@ -49,6 +49,18 @@ namespace osu.Game.Screens.Select
         void PresentScore(ScoreInfo score, ScorePresentType presentType = ScorePresentType.Results);
 
         /// <summary>
+        /// torii: starts a play on the current beatmap with <paramref name="score"/> as a
+        /// ghost to race against.
+        /// </summary>
+        /// <param name="score">The score to race. Must have a local replay.</param>
+        /// <param name="useCurrentMods">
+        /// When false the play uses the ghost's own mods, which is the like-for-like
+        /// race. When true it keeps whatever the player currently has selected, so a
+        /// harder run can still be measured against an old one.
+        /// </param>
+        void StartGhostRace(ScoreInfo score, bool useCurrentMods);
+
+        /// <summary>
         /// Add provided string to the current filter text query.
         /// </summary>
         void AddToSearch(string query);

@@ -326,6 +326,11 @@ namespace osu.Game.Screens.Select
                         : null,
                     ShowReplay = songSelect?.CanPresentScore == true
                         ? info => songSelect.PresentScore(info, ScorePresentType.Gameplay)
+                        : null,
+                    // torii: racing needs a replay on disk, same condition the watch and
+                    // export entries already use below.
+                    StartRace = songSelect?.CanPresentScore == true
+                        ? (info, useCurrentMods) => songSelect.StartGhostRace(info, useCurrentMods)
                         : null
                 };
             }), loadedScores =>

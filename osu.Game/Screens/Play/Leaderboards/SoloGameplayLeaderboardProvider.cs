@@ -7,8 +7,10 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Caching;
 using osu.Framework.Graphics;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Scoring;
+using osu.Game.Screens.Play.Ghost;
 
 namespace osu.Game.Screens.Play.Leaderboards
 {
@@ -23,6 +25,17 @@ namespace osu.Game.Screens.Play.Leaderboards
         [Resolved]
         private GameplayState? gameplayState { get; set; }
 
+        // torii: only set when this play is a ghost race. A normal play caches no
+        // state, so this stays null and everything below behaves as upstream.
+        [Resolved(CanBeNull = true)]
+        private GhostRaceState? ghostRace { get; set; }
+
+        [Resolved]
+        private IGameplayClock? gameplayClock { get; set; }
+
+        private GameplayLeaderboardScore? ghostScore;
+        private readonly BindableLong ghostTotalScore = new BindableLong();
+
         private readonly Cached sorting = new Cached();
         private bool isPartial;
 
@@ -32,16 +45,51 @@ namespace osu.Game.Screens.Play.Leaderboards
 
             var globalScores = leaderboardManager?.Scores.Value;
 
-            isPartial = globalScores == null || globalScores.IsPartial;
+            // torii: a race is one against one. Leaving the usual leaderboard up turns
+            // it into two anonymous rows climbing through a dozen strangers, and you
+            // can't tell which one is you. Racing hides everyone else.
+            bool racing = ghostRace?.Timeline != null;
+
+            // With only the two of us there are no gaps to reason about, so positions
+            // are simply first and second.
+            isPartial = !racing && (globalScores == null || globalScores.IsPartial);
 
             List<GameplayLeaderboardScore> newScores = new List<GameplayLeaderboardScore>();
 
-            if (globalScores != null)
+            if (globalScores != null && !racing)
             {
                 foreach (var topScore in globalScores.AllScores.OrderByTotalScore())
                 {
                     newScores.Add(new GameplayLeaderboardScore(topScore, false, GameplayLeaderboardScore.ComboDisplayMode.Highest));
                 }
+            }
+
+            // torii: the ghost sits on the leaderboard like any other score, which is
+            // the whole trick: the existing sorting, positions and display all work on
+            // it for free, and the race reads as "you versus them" without a second UI.
+            if (racing)
+            {
+                var ghostUser = ghostRace!.GhostScore.User;
+
+                ghostScore = new GameplayLeaderboardScore(new APIUser
+                {
+                    // Same id so the avatar still loads, but the name has to say what
+                    // this row is. Racing your own score otherwise puts two identical
+                    // names and two identical pictures next to each other.
+                    Id = ghostUser.OnlineID,
+                    Username = $"{ghostUser.Username} (ghost)",
+                }, tracked: false, ghostTotalScore)
+                {
+                    // A ghost is being chased, so ties go to the player: matching its
+                    // score should read as having caught up, not as still behind.
+                    TotalScoreTiebreaker = long.MinValue,
+                };
+
+                ghostScore.Accuracy.Value = 1;
+                ghostScore.Combo.Value = 0;
+                ghostTotalScore.BindValueChanged(_ => sorting.Invalidate());
+
+                newScores.Add(ghostScore);
             }
 
             if (gameplayState != null)
@@ -59,6 +107,24 @@ namespace osu.Game.Screens.Play.Leaderboards
 
             sort();
             Scheduler.AddDelayed(sort, 1000, true);
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // torii: walk the ghost along its timeline. Reading it every frame rather
+            // than scheduling updates keeps it exactly in step with the map, including
+            // through rewinds, pauses and rate-changing mods, because the gameplay
+            // clock is the single source of truth for "where are we".
+            if (ghostScore == null || ghostRace?.Timeline == null || gameplayClock == null)
+                return;
+
+            var sample = ghostRace.Timeline.SampleAt(gameplayClock.CurrentTime);
+
+            ghostTotalScore.Value = sample.TotalScore;
+            ghostScore.Accuracy.Value = sample.Accuracy;
+            ghostScore.Combo.Value = sample.Combo;
         }
 
         // logic shared with PlaylistsGameplayLeaderboardProvider

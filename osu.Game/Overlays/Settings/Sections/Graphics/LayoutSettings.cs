@@ -141,7 +141,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                 }),
                 CreateItem(new CheckboxEntry
                 {
-                    Caption = GraphicsSettingsStrings.MinimiseOnFocusLoss,
+                    Caption = @"Minimise Torii when switching to another app",
                     Current = config.GetBindable<bool>(FrameworkSetting.MinimiseOnFocusLossInFullscreen),
                     CanBeShown = { BindTarget = minimiseOnFocusLossCanBeShown },
                     Keywords = new[] { "alt-tab", "minimize", "focus", "hide" },
@@ -370,7 +370,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                         break;
 
                     case FullscreenCapability.Capable:
-                        windowModeDropdownNote.Value = new SettingsNote.Data(LayoutSettingsStrings.OsuIsRunningExclusiveFullscreen, SettingsNote.Type.Informational);
+                        windowModeDropdownNote.Value = new SettingsNote.Data(@"Torii is running in exclusive fullscreen, guaranteeing low latency!", SettingsNote.Type.Informational);
                         break;
 
                     case FullscreenCapability.Incapable:

@@ -128,7 +128,13 @@ namespace osu.Game.Screens.Play
 
             if (req == null)
             {
-                handleTokenFailure(new InvalidOperationException("Request could not be constructed."));
+                // torii: upstream se comia este caso en silencio absoluto. handleTokenFailure
+                // solo loguea si displayNotification o shouldExit, y para solo los dos son
+                // false, asi que el jugador terminaba un mapa entero sin enterarse nunca de
+                // que no iba a contar. un tipo perdio 33 plays en 6 dias asi, una de ellas un
+                // FC que le hubiera entrado de top play. ahora avisamos siempre, con el motivo
+                // que deja la implementacion de CreateTokenRequest.
+                handleTokenFailure(new InvalidOperationException(TokenUnavailableReason ?? "Request could not be constructed."), displayNotification: true);
                 return false;
             }
 
@@ -287,6 +293,15 @@ namespace osu.Game.Screens.Play
                 }).FireAndForget();
             }
         }
+
+        /// <summary>
+        /// torii: motivo en criollo de por que <see cref="CreateTokenRequest"/> devolvio null.
+        /// Lo setea la implementacion antes de devolver null y se lo mostramos al jugador,
+        /// asi nunca mas se pierde una play sin que se entere. Si queda null cae un texto
+        /// generico.
+        /// </summary>
+        [CanBeNull]
+        protected string TokenUnavailableReason { get; set; }
 
         /// <summary>
         /// Construct a request to be used for retrieval of the score token.

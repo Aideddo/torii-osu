@@ -62,6 +62,12 @@ namespace osu.Game.Screens.Select
         public HighlightType? Highlight { get; init; }
         public Action<ScoreInfo>? ShowReplay { get; init; }
 
+        /// <summary>
+        /// torii: starts a ghost race against this score. The bool is whether to keep
+        /// the player's current mods instead of adopting the ghost's.
+        /// </summary>
+        public Action<ScoreInfo, bool>? StartRace { get; init; }
+
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
 
@@ -650,6 +656,18 @@ namespace osu.Game.Screens.Select
 
                 if (Score.OnlineID > 0)
                     items.Add(new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => game?.CopyToClipboard($@"{api.Endpoints.WebsiteUrl}/scores/{Score.OnlineID}")));
+
+                // torii: racing only needs a replay to EXIST, not to already be on this
+                // machine. A score off the global leaderboard gets its replay pulled
+                // down by the loader, so it is offered here alongside the local ones.
+                if (StartRace != null && (Score.Files.Count > 0 || Score.HasOnlineReplay))
+                {
+                    if (items.Count > 0)
+                        items.Add(new OsuMenuItemSpacer());
+
+                    items.Add(new OsuMenuItem(ToriiGhostRaceStrings.Race, MenuItemType.Highlighted, () => StartRace.Invoke(Score, false)));
+                    items.Add(new OsuMenuItem(ToriiGhostRaceStrings.RaceWithYourMods, MenuItemType.Standard, () => StartRace.Invoke(Score, true)));
+                }
 
                 if (Score.Files.Count <= 0) return items.ToArray();
 

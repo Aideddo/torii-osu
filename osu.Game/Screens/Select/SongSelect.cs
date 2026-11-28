@@ -48,6 +48,7 @@ using osu.Game.Overlays.Volume;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
+using osu.Game.Screens.Play.Ghost;
 using osu.Game.Screens.Footer;
 using osu.Game.Screens.Select.Filter;
 using osu.Game.Screens.Menu;
@@ -208,6 +209,10 @@ namespace osu.Game.Screens.Select
 
         [Resolved]
         private BeatmapManager beatmaps { get; set; } = null!;
+
+        // torii: used by the ghost race to pull a stored replay off disk.
+        [Resolved]
+        private ScoreManager scoreManager { get; set; } = null!;
 
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
@@ -1691,6 +1696,21 @@ namespace osu.Game.Screens.Select
         #region Implementation of ISongSelect
 
         void ISongSelect.AddToSearch(string query) => FilterControl.AddToSearch(query);
+
+        // torii: ghost race. Pull the replay off disk, then start a perfectly ordinary
+        // play that happens to carry the ghost along with it.
+        void ISongSelect.StartGhostRace(ScoreInfo score, bool useCurrentMods)
+        {
+            // The like-for-like race puts you under the ghost's mods. Without this you
+            // could "beat" a hidden run with nomod and the comparison would be hollow.
+            if (!useCurrentMods)
+                Mods.Value = score.Mods.Where(m => m.Type != ModType.System).ToArray();
+
+            // Getting hold of the replay is the loader's job, because a score from the
+            // global leaderboard has to be downloaded first and the loading screen is
+            // the right place for the player to wait for that.
+            this.Push(new GhostRacePlayerLoader(new GhostRaceState(score)));
+        }
 
         bool ISongSelect.CanPresentScore => true;
 

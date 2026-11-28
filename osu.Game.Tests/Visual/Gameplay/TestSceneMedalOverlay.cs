@@ -47,8 +47,8 @@ namespace osu.Game.Tests.Visual.Gameplay
         {
             awardMedal(new UserAchievementUnlock
             {
-                Title = "Time And A Half",
-                Description = "Having a right ol' time. One and a half of them, almost.",
+                Title = "Twin Velocity",
+                Description = "Push the tempo past its normal limits.",
                 Slug = @"all-intro-doubletime"
             });
             AddUntilStep("overlay shown", () => overlay.State.Value, () => Is.EqualTo(Visibility.Visible));
@@ -62,8 +62,8 @@ namespace osu.Game.Tests.Visual.Gameplay
         {
             awardMedal(new UserAchievementUnlock
             {
-                Title = "Time And A Half",
-                Description = "Having a right ol' time. One and a half of them, almost.",
+                Title = "Twin Velocity",
+                Description = "Push the tempo past its normal limits.",
                 Slug = @"all-intro-doubletime"
             });
             awardMedal(new UserAchievementUnlock
@@ -74,8 +74,8 @@ namespace osu.Game.Tests.Visual.Gameplay
             });
             awardMedal(new UserAchievementUnlock
             {
-                Title = "500 Combo",
-                Description = "500 big ones! You're moving up in the world!",
+                Title = "500x Spark",
+                Description = "500 hits linked without breaking stride.",
                 Slug = @"osu-combo-500"
             });
         }
@@ -86,8 +86,8 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddStep("disable overlay activation", () => overlayActivationMode.Value = OverlayActivation.Disabled);
             awardMedal(new UserAchievementUnlock
             {
-                Title = "Time And A Half",
-                Description = "Having a right ol' time. One and a half of them, almost.",
+                Title = "Twin Velocity",
+                Description = "Push the tempo past its normal limits.",
                 Slug = @"all-intro-doubletime"
             });
             AddUntilStep("overlay hidden", () => overlay.State.Value, () => Is.EqualTo(Visibility.Hidden));
