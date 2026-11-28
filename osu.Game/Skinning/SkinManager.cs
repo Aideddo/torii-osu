@@ -53,7 +53,7 @@ namespace osu.Game.Skinning
 
         public readonly Bindable<Skin> CurrentSkin = new Bindable<Skin>();
 
-        public readonly Bindable<Live<SkinInfo>> CurrentSkinInfo = new Bindable<Live<SkinInfo>>(ArgonSkin.CreateInfo().ToLiveUnmanaged());
+        public readonly Bindable<Live<SkinInfo>> CurrentSkinInfo = new Bindable<Live<SkinInfo>>(TrianglesSkin.CreateInfo().ToLiveUnmanaged());
 
         /// <summary>torii: skins pinneadas (favoritos). estado en un sidecar JSON, no en el realm.</summary>
         public readonly PinnedSkinsStore PinnedSkins;
@@ -106,8 +106,6 @@ namespace osu.Game.Skinning
             {
                 DefaultClassicSkin = new DefaultLegacySkin(this),
                 trianglesSkin = new TrianglesSkin(this),
-                argonSkin = new ArgonSkin(this),
-                new ArgonProSkin(this),
             };
 
             // Ensure the default entries are present.
@@ -125,7 +123,7 @@ namespace osu.Game.Skinning
                 CurrentSkin.Value = skin.NewValue.PerformRead(GetSkin);
             };
 
-            CurrentSkin.Value = argonSkin;
+            CurrentSkin.Value = trianglesSkin;
             CurrentSkin.ValueChanged += skin =>
             {
                 if (!skin.NewValue.SkinInfo.Equals(CurrentSkinInfo.Value))
@@ -200,7 +198,7 @@ namespace osu.Game.Skinning
 
                 if (randomChoices.Length == 0)
                 {
-                    CurrentSkinInfo.Value = ArgonSkin.CreateInfo().ToLiveUnmanaged();
+                    CurrentSkinInfo.Value = TrianglesSkin.CreateInfo().ToLiveUnmanaged();
                     return;
                 }
 
@@ -443,7 +441,7 @@ namespace osu.Game.Skinning
                 Guid currentUserSkin = CurrentSkinInfo.Value.ID;
 
                 if (items.Any(s => s.ID == currentUserSkin))
-                    scheduler.Add(() => CurrentSkinInfo.Value = ArgonSkin.CreateInfo().ToLiveUnmanaged());
+                    scheduler.Add(() => CurrentSkinInfo.Value = TrianglesSkin.CreateInfo().ToLiveUnmanaged());
 
                 Delete(items.ToList(), silent);
             });
